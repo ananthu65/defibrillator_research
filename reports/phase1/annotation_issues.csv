@@ -1,0 +1,415 @@
+﻿severity,code,archive,task_path,canonical_task_id,label,frame,details
+warning,object_label_used_as_tag,kartheepan/P05_LL.zip,.,P05_LL,apical_placement_zone,287,
+warning,object_label_used_as_tag,Rashad.zip,task_0,P42_LL,learner_hand,287,
+warning,object_label_used_as_tag,Rashad.zip,task_0,P42_LL,paddle_apical,287,
+warning,object_label_used_as_tag,Rashad.zip,task_0,P42_LL,paddle_apical,289,
+warning,object_label_used_as_tag,Rashad.zip,task_0,P42_LL,apical_placement_zone,318,
+warning,object_label_used_as_tag,Rashad.zip,task_0,P42_LL,paddle_sternal,457,
+warning,object_label_used_as_tag,Rashad.zip,task_1,P42_LS,apical_placement_zone,382,
+warning,object_label_used_as_tag,Rashad.zip,task_1,P42_LS,sternal_placement_zone,483,
+warning,object_label_used_as_tag,Rashad.zip,task_1,P42_LS,shock_symbol,519,
+warning,object_label_used_as_tag,Rashad.zip,task_3,P43_LL,apical_placement_zone,172,
+warning,object_label_used_as_tag,Rashad.zip,task_4,P43_LS,shock_symbol,514,
+warning,object_label_used_as_tag,Rashad.zip,task_7,P44_LS,shock_symbol,504,
+warning,object_label_used_as_tag,Rashad.zip,task_13,P46_LS,shock_symbol,538,
+warning,object_label_used_as_tag,Sharmilan.zip,task_10,P50_LS,shock_symbol,425,
+warning,task_name_normalized,defibliration2.zip,task_14,P26_LL,,,'P26_LL.' normalized using media 'P26_LL.MP4'
+warning,task_name_normalized,defibliration2.zip,task_2,P30_LL,,,'P30_LL.' normalized using media 'P30_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_0,P42_LL,,,'P42_LL.MP4' normalized using media 'P42_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_1,P42_LS,,,'P42_LS.mp4' normalized using media 'P42_LS.mp4'
+warning,task_name_normalized,Rashad.zip,task_2,P42_T,,,'P42_T.MOV' normalized using media 'P42_T.MOV'
+warning,task_name_normalized,Rashad.zip,task_3,P43_LL,,,'P43_LL.MP4' normalized using media 'P43_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_4,P43_LS,,,'P43_LS.mp4' normalized using media 'P43_LS.mp4'
+warning,task_name_normalized,Rashad.zip,task_5,P43_T,,,'P43_T.MOV' normalized using media 'P43_T.MOV'
+warning,task_name_normalized,Rashad.zip,task_6,P44_LL,,,'P44_LL.MP4' normalized using media 'P44_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_7,P44_LS,,,'P44_LS.mp4' normalized using media 'P44_LS.mp4'
+warning,task_name_normalized,Rashad.zip,task_8,P44_T,,,'P44_T.MOV' normalized using media 'P44_T.MOV'
+warning,task_name_normalized,Rashad.zip,task_9,P45_LL,,,'P45_LL.MP4' normalized using media 'P45_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_10,P45_LS,,,'P45_LS.mp4' normalized using media 'P45_LS.mp4'
+warning,task_name_normalized,Rashad.zip,task_11,P45_T,,,'P45_T.MOV' normalized using media 'P45_T.MOV'
+warning,task_name_normalized,Rashad.zip,task_12,P46_LL,,,'P46_LL.MP4' normalized using media 'P46_LL.MP4'
+warning,task_name_normalized,Rashad.zip,task_13,P46_LS,,,'P46_LS.mp4' normalized using media 'P46_LS.mp4'
+warning,task_name_normalized,Rashad.zip,task_14,P46_T,,,'P46_T.MOV' normalized using media 'P46_T.MOV'
+warning,task_name_normalized,Sharmilan.zip,task_4,P48_LS,,,'PP48_LS' normalized using media 'P48_LS.mp4'
+warning,task_name_normalized,Sharmilan.zip,task_5,P48_T,,,'P_48T' normalized using media 'P48_T.MOV'
+review,coordinates_outside_frame,kartheepan/P01_LL.zip,.,P01_LL,paddle_apical,412,keyframes=8; resolution=1920x1080; frame_range=412-419
+review,coordinates_outside_frame,kartheepan/P01_LS.zip,.,P01_LS,learner_hand,300,keyframes=18; resolution=1920x1080; frame_range=300-331
+review,coordinates_outside_frame,kartheepan/P01_LS.zip,.,P01_LS,paddle_apical,430,keyframes=5; resolution=1920x1080; frame_range=430-550
+review,coordinates_outside_frame,kartheepan/P03_LS.zip,.,P03_LS,learner_hand,183,keyframes=33; resolution=1920x1080; frame_range=183-235
+review,coordinates_outside_frame,kartheepan/P03_LS.zip,.,P03_LS,paddle_apical,342,keyframes=26; resolution=1920x1080; frame_range=342-497
+review,coordinates_outside_frame,kartheepan/P03_LS.zip,.,P03_LS,paddle_sternal,398,keyframes=14; resolution=1920x1080; frame_range=398-496
+review,coordinates_outside_frame,kartheepan/P04_LS.zip,.,P04_LS,paddle_apical,345,keyframes=16; resolution=1920x1080; frame_range=345-470
+review,coordinates_outside_frame,kartheepan/P04_LS.zip,.,P04_LS,paddle_sternal,395,keyframes=8; resolution=1920x1080; frame_range=395-467
+review,coordinates_outside_frame,kartheepan/P04_LS.zip,.,P04_LS,learner_hand,86,keyframes=23; resolution=1920x1080; frame_range=86-111
+review,coordinates_outside_frame,kartheepan/P05_LS.zip,.,P05_LS,learner_hand,205,keyframes=19; resolution=1920x1080; frame_range=205-238
+review,coordinates_outside_frame,kartheepan/P05_LS.zip,.,P05_LS,paddle_apical,402,keyframes=12; resolution=1920x1080; frame_range=402-618
+review,coordinates_outside_frame,kartheepan/P05_LS.zip,.,P05_LS,paddle_sternal,498,keyframes=9; resolution=1920x1080; frame_range=498-618
+review,coordinates_outside_frame,kartheepan/P06_T.zip,.,P06_T,defibrillator_screen,0,keyframes=5; resolution=1920x1080; frame_range=0-636
+review,coordinates_outside_frame,kartheepan/P07_LS.zip,.,P07_LS,learner_hand,240,keyframes=7; resolution=1920x1080; frame_range=240-269
+review,coordinates_outside_frame,kartheepan/P07_LS.zip,.,P07_LS,paddle_sternal,555,keyframes=8; resolution=1920x1080; frame_range=555-697
+review,coordinates_outside_frame,kartheepan/P07_LS.zip,.,P07_LS,paddle_apical,693,keyframes=6; resolution=1920x1080; frame_range=693-698
+review,coordinates_outside_frame,kartheepan/P07_T.zip,.,P07_T,defibrillator_screen,0,keyframes=6; resolution=1920x1080; frame_range=0-555
+review,coordinates_outside_frame,kartheepan/P12_LS.zip,.,P12_LS,learner_hand,167,keyframes=7; resolution=1920x1080; frame_range=167-174
+review,coordinates_outside_frame,kartheepan/P12_LS.zip,.,P12_LS,paddle_sternal,450,keyframes=9; resolution=1920x1080; frame_range=450-460
+review,coordinates_outside_frame,kartheepan/P12_LS.zip,.,P12_LS,paddle_apical,453,keyframes=14; resolution=1920x1080; frame_range=453-466
+review,coordinates_outside_frame,kartheepan/P12_T.zip,.,P12_T,paddle_apical,243,keyframes=21; resolution=1920x1080; frame_range=243-427
+review,coordinates_outside_frame,kartheepan/P13_LS.zip,.,P13_LS,defibrillator_screen,0,keyframes=1; resolution=1920x1080; frame_range=0-0
+review,coordinates_outside_frame,kartheepan/P13_T.zip,.,P13_T,learner_hand,146,keyframes=13; resolution=1920x1080; frame_range=146-174
+review,coordinates_outside_frame,kartheepan/P13_T.zip,.,P13_T,paddle_apical,266,keyframes=32; resolution=1920x1080; frame_range=266-415
+review,coordinates_outside_frame,kartheepan/P14_LS.zip,.,P14_LS,defibrillator_screen,422,keyframes=1; resolution=1920x1080; frame_range=422-422
+review,coordinates_outside_frame,kartheepan/P14_T.zip,.,P14_T,learner_hand,172,keyframes=2; resolution=1920x1080; frame_range=172-173
+review,coordinates_outside_frame,kartheepan/P14_T.zip,.,P14_T,paddle_sternal,305,keyframes=12; resolution=1920x1080; frame_range=305-429
+review,coordinates_outside_frame,kartheepan/P14_T.zip,.,P14_T,paddle_apical,423,keyframes=6; resolution=1920x1080; frame_range=423-437
+review,coordinates_outside_frame,kartheepan/P15_LS.zip,.,P15_LS,defibrillator_screen,0,keyframes=4; resolution=1920x1080; frame_range=0-650
+review,coordinates_outside_frame,kartheepan/P15_T.zip,.,P15_T,paddle_apical,454,keyframes=16; resolution=1920x1080; frame_range=454-596
+review,coordinates_outside_frame,defibliration2.zip,task_42,P16_T,learner_hand,169,keyframes=12; resolution=1080x1920; frame_range=169-183
+review,coordinates_outside_frame,defibliration2.zip,task_0,P30_T,defibrillator_screen,230,keyframes=1; resolution=1080x1920; frame_range=230-230
+review,coordinates_outside_frame,kartheepan/P32_T.zip,.,P32_T,learner_hand,200,keyframes=9; resolution=1080x1920; frame_range=200-208
+review,coordinates_outside_frame,kartheepan/P32_T.zip,.,P32_T,paddle_apical,444,keyframes=4; resolution=1080x1920; frame_range=444-454
+review,coordinates_outside_frame,kartheepan/P33_T.zip,.,P33_T,learner_hand,415,keyframes=2; resolution=1920x1080; frame_range=415-446
+review,coordinates_outside_frame,kartheepan/P33_T.zip,.,P33_T,paddle_apical,889,keyframes=2; resolution=1920x1080; frame_range=889-890
+review,coordinates_outside_frame,Sharmilan.zip,task_2,P47_T,paddle_apical,519,keyframes=9; resolution=1920x1080; frame_range=519-663
+review,coordinates_outside_frame,Sharmilan.zip,task_8,P49_T,learner_hand,218,keyframes=14; resolution=1920x1080; frame_range=218-288
+review,coordinates_outside_frame,Sharmilan.zip,task_8,P49_T,paddle_apical,353,keyframes=21; resolution=1920x1080; frame_range=353-514
+review,coordinates_outside_frame,Sharmilan.zip,task_11,P50_T,learner_hand,199,keyframes=5; resolution=1080x1920; frame_range=199-205
+review,coordinates_outside_frame,Sharmilan.zip,task_14,P51_T,learner_hand,339,keyframes=11; resolution=1080x1920; frame_range=339-378
+review,coordinates_outside_frame,Sharmilan.zip,task_14,P51_T,paddle_apical,495,keyframes=5; resolution=1080x1920; frame_range=495-510
+review,event_order_violation,defibliration2.zip,task_28,P21_LS,both_paddle_buttons_pressed,407,paddles_firmly_on_chest@410 -> both_paddle_buttons_pressed@407
+review,event_order_violation,Rashad.zip,task_2,P42_T,both_paddle_buttons_pressed,542,paddles_firmly_on_chest@549 -> both_paddle_buttons_pressed@542
+review,event_order_violation,sujeevan.zip,task_1,P52_LS,shock_delivered_on_screen,371,both_paddle_buttons_pressed@374 -> shock_delivered_on_screen@371
+review,event_order_violation,sujeevan.zip,task_2,P52_T,both_paddle_buttons_pressed,377,paddles_firmly_on_chest@391 -> both_paddle_buttons_pressed@377
+review,repeated_event_tag,kartheepan/P01_LS.zip,.,P01_LS,Gel applied,,"frames=288,323"
+review,repeated_event_tag,kartheepan/P01_T.zip,.,P01_T,Gel applied,,"frames=260,296"
+review,repeated_event_tag,kartheepan/P03_LS.zip,.,P03_LS,Gel applied,,"frames=198,226"
+review,repeated_event_tag,kartheepan/P03_T.zip,.,P03_T,Gel applied,,"frames=166,193"
+review,repeated_event_tag,kartheepan/P04_LS.zip,.,P04_LS,Gel applied,,"frames=101,126"
+review,repeated_event_tag,kartheepan/P05_LS.zip,.,P05_LS,Gel applied,,"frames=223,261"
+review,repeated_event_tag,kartheepan/P06_LS.zip,.,P06_LS,Gel applied,,"frames=226,259,260"
+review,repeated_event_tag,kartheepan/P07_LS.zip,.,P07_LS,Gel applied,,"frames=259,303"
+review,repeated_event_tag,kartheepan/P07_T.zip,.,P07_T,Gel applied,,"frames=197,250"
+review,repeated_event_tag,kartheepan/P12_LS.zip,.,P12_LS,Gel applied,,"frames=164,179"
+review,repeated_event_tag,kartheepan/P13_LS.zip,.,P13_LS,Gel applied,,"frames=170,199"
+review,repeated_event_tag,kartheepan/P14_LS.zip,.,P14_LS,Gel applied,,"frames=186,211"
+review,repeated_event_tag,defibliration2.zip,task_37,P18_LS,first_paddle_taken,,"frames=323,324"
+review,repeated_event_tag,defibliration2.zip,task_20,P24_LL,second_paddle_taken,,"frames=292,293"
+review,repeated_event_tag,defibliration2.zip,task_15,P25_T,Gel applied,,"frames=159,160"
+review,repeated_event_tag,defibliration2.zip,task_15,P25_T,second_paddle_taken,,"frames=363,365"
+review,repeated_event_tag,defibliration2.zip,task_14,P26_LL,first_paddle_taken,,"frames=263,264"
+review,repeated_event_tag,defibliration2.zip,task_14,P26_LL,second_paddle_taken,,"frames=281,282"
+review,repeated_event_tag,defibliration2.zip,task_9,P27_T,both_paddle_buttons_pressed,,"frames=368,374"
+review,repeated_event_tag,kartheepan/P32_LS.zip,.,P32_LS,Gel applied,,"frames=179,210"
+review,repeated_event_tag,Rashad.zip,task_3,P43_LL,Gel applied,,"frames=144,146,172,175,188"
+review,repeated_event_tag,Rashad.zip,task_4,P43_LS,Gel applied,,"frames=167,203"
+review,repeated_event_tag,Rashad.zip,task_7,P44_LS,Gel applied,,"frames=190,207"
+review,repeated_event_tag,Sharmilan.zip,task_1,P47_LS,paddles_removed_after_shock,,"frames=630,632"
+review,repeated_event_tag,Sharmilan.zip,task_7,P49_LS,Gel applied,,"frames=231,232"
+review,repeated_event_tag,Sharmilan.zip,task_9,P50_LL,Gel applied,,"frames=153,154"
+review,repeated_event_tag,sujeevan.zip,task_0,P52_LL,first_paddle_taken,,"frames=221,225"
+review,repeated_event_tag,sujeevan.zip,task_0,P52_LL,second_paddle_taken,,"frames=277,282"
+review,standalone_shape_in_video_task,defibliration2.zip,task_4,P29_LS,learner_hand,303,
+review,standalone_shape_in_video_task,Sharmilan.zip,task_7,P49_LS,sternal_placement_zone,226,
+info,blank_cvat_subset,kartheepan/P01_LL.zip,.,P01_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P04_LL.zip,.,P04_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P06_LL.zip,.,P06_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P06_LS.zip,.,P06_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P13_T.zip,.,P13_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_44,P16_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_43,P16_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_42,P16_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_41,P17_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_40,P17_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_39,P17_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_38,P18_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_37,P18_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_36,P18_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_35,P19_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_34,P19_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_33,P19_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_32,P20_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_31,P20_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_30,P20_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_29,P21_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_28,P21_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_27,P21_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_26,P22_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_25,P22_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_24,P22_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_23,P23_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_22,P23_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_21,P23_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_20,P24_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_19,P24_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_18,P24_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_17,P25_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_16,P25_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_15,P25_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_14,P26_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_13,P26_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_12,P26_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_11,P27_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_10,P27_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_9,P27_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_8,P28_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_7,P28_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_6,P28_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_5,P29_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_4,P29_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_3,P29_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_2,P30_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_1,P30_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,defibliration2.zip,task_0,P30_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P31_LL.zip,.,P31_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P32_T.zip,.,P32_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P33_LL.zip,.,P33_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,kartheepan/P33_T.zip,.,P33_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_0,P37_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_1,P37_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_2,P37_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_3,P38_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_4,P38_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_5,P38_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_6,P39_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_7,P39_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_8,P39_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_9,P40_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_10,P40_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_11,P40_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_12,P41_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_13,P41_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Kishonithan 37 to 41.zip,task_14,P41_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_0,P47_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_1,P47_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_2,P47_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_3,P48_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_4,P48_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_5,P48_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_6,P49_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_7,P49_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_8,P49_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_9,P50_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_10,P50_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_11,P50_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_12,P51_LL,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_13,P51_LS,,,A new grouped split will be generated; CVAT subset is ignored.
+info,blank_cvat_subset,Sharmilan.zip,task_14,P51_T,,,A new grouped split will be generated; CVAT subset is ignored.
+info,missing_event_tags,kartheepan/P01_LL.zip,.,P01_LL,,,"second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P03_LL.zip,.,P03_LL,,,"second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P04_LL.zip,.,P04_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P05_LL.zip,.,P05_LL,,,"first_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P06_LL.zip,.,P06_LL,,,"paddles_firmly_on_chest, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P06_LS.zip,.,P06_LS,,,shock_delivered_on_screen
+info,missing_event_tags,kartheepan/P06_T.zip,.,P06_T,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P07_LL.zip,.,P07_LL,,,"second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P12_LL.zip,.,P12_LL,,,"Gel applied, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P12_T.zip,.,P12_T,,,Gel applied
+info,missing_event_tags,kartheepan/P13_LL.zip,.,P13_LL,,,"paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P14_LL.zip,.,P14_LL,,,"Gel applied, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P15_LL.zip,.,P15_LL,,,"paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P15_T.zip,.,P15_T,,,both_paddle_buttons_pressed
+info,missing_event_tags,defibliration2.zip,task_44,P16_LL,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_42,P16_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_41,P17_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_39,P17_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_38,P18_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_36,P18_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_35,P19_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_34,P19_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_33,P19_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_32,P20_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_30,P20_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_29,P21_LL,,,"paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_28,P21_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_27,P21_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_26,P22_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_25,P22_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_24,P22_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_23,P23_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_22,P23_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_21,P23_T,,,"Gel applied, first_paddle_taken, second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen, paddles_removed_after_shock"
+info,missing_event_tags,defibliration2.zip,task_20,P24_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_19,P24_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_18,P24_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_17,P25_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_16,P25_LS,,,"Gel applied, first_paddle_taken, second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen, paddles_removed_after_shock"
+info,missing_event_tags,defibliration2.zip,task_15,P25_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_14,P26_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_13,P26_LS,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_12,P26_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_11,P27_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_9,P27_T,,,"paddles_firmly_on_chest, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_8,P28_LL,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_6,P28_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_5,P29_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_3,P29_T,,,shock_delivered_on_screen
+info,missing_event_tags,defibliration2.zip,task_2,P30_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_1,P30_LS,,,"first_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,defibliration2.zip,task_0,P30_T,,,shock_delivered_on_screen
+info,missing_event_tags,kartheepan/P31_LL.zip,.,P31_LL,,,"Gel applied, second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P31_LS.zip,.,P31_LS,,,both_paddle_buttons_pressed
+info,missing_event_tags,kartheepan/P31_T.zip,.,P31_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P32_LL.zip,.,P32_LL,,,"second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P32_T.zip,.,P32_T,,,shock_delivered_on_screen
+info,missing_event_tags,kartheepan/P33_LL.zip,.,P33_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P33_LS.zip,.,P33_LS,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,kartheepan/P33_T.zip,.,P33_T,,,shock_delivered_on_screen
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_0,P37_LL,,,shock_delivered_on_screen
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_1,P37_LS,,,Gel applied
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_2,P37_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_3,P38_LL,,,"paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_5,P38_T,,,shock_delivered_on_screen
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_6,P39_LL,,,"second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_8,P39_T,,,shock_delivered_on_screen
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_9,P40_LL,,,"paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_11,P40_T,,,shock_delivered_on_screen
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_12,P41_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Kishonithan 37 to 41.zip,task_14,P41_T,,,shock_delivered_on_screen
+info,missing_event_tags,Rashad.zip,task_0,P42_LL,,,"Gel applied, first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_1,P42_LS,,,"Gel applied, first_paddle_taken, second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_2,P42_T,,,"Gel applied, first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_3,P43_LL,,,"first_paddle_taken, second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_4,P43_LS,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_5,P43_T,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_6,P44_LL,,,"first_paddle_taken, second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_7,P44_LS,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_8,P44_T,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_9,P45_LL,,,"first_paddle_taken, second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_10,P45_LS,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_11,P45_T,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_12,P46_LL,,,"first_paddle_taken, second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen, paddles_removed_after_shock"
+info,missing_event_tags,Rashad.zip,task_13,P46_LS,,,"first_paddle_taken, second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Rashad.zip,task_14,P46_T,,,"first_paddle_taken, second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_0,P47_LL,,,"second_paddle_taken, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_1,P47_LS,,,"second_paddle_taken, both_paddle_buttons_pressed"
+info,missing_event_tags,Sharmilan.zip,task_2,P47_T,,,"second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_3,P48_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_4,P48_LS,,,both_paddle_buttons_pressed
+info,missing_event_tags,Sharmilan.zip,task_5,P48_T,,,shock_delivered_on_screen
+info,missing_event_tags,Sharmilan.zip,task_6,P49_LL,,,shock_delivered_on_screen
+info,missing_event_tags,Sharmilan.zip,task_7,P49_LS,,,both_paddle_buttons_pressed
+info,missing_event_tags,Sharmilan.zip,task_8,P49_T,,,shock_delivered_on_screen
+info,missing_event_tags,Sharmilan.zip,task_9,P50_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_10,P50_LS,,,shock_delivered_on_screen
+info,missing_event_tags,Sharmilan.zip,task_11,P50_T,,,shock_delivered_on_screen
+info,missing_event_tags,Sharmilan.zip,task_12,P51_LL,,,"both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,Sharmilan.zip,task_14,P51_T,,,shock_delivered_on_screen
+info,missing_event_tags,sujeevan.zip,task_0,P52_LL,,,"shock_delivered_on_screen, paddles_removed_after_shock"
+info,missing_event_tags,sujeevan.zip,task_2,P52_T,,,shock_delivered_on_screen
+info,missing_event_tags,sujeevan.zip,task_3,P53_LL,,,"second_paddle_taken, shock_delivered_on_screen"
+info,missing_event_tags,sujeevan.zip,task_5,P53_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_event_tags,sujeevan.zip,task_6,P54_LL,,,"second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen, paddles_removed_after_shock"
+info,missing_event_tags,sujeevan.zip,task_7,P54_LS,,,"first_paddle_taken, second_paddle_taken"
+info,missing_event_tags,sujeevan.zip,task_8,P54_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_event_tags,sujeevan.zip,task_9,P55_LL,,,shock_delivered_on_screen
+info,missing_event_tags,sujeevan.zip,task_11,P55_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_event_tags,sujeevan.zip,task_12,P56_LL,,,"second_paddle_taken, paddles_firmly_on_chest, both_paddle_buttons_pressed, shock_delivered_on_screen"
+info,missing_event_tags,sujeevan.zip,task_14,P56_T,,,"Gel applied, shock_delivered_on_screen"
+info,missing_expected_participant,,,P02,,,No task backup found for this participant.
+info,missing_expected_participant,,,P08,,,No task backup found for this participant.
+info,missing_expected_participant,,,P09,,,No task backup found for this participant.
+info,missing_expected_participant,,,P10,,,No task backup found for this participant.
+info,missing_expected_participant,,,P11,,,No task backup found for this participant.
+info,missing_expected_participant,,,P34,,,No task backup found for this participant.
+info,missing_expected_participant,,,P35,,,No task backup found for this participant.
+info,missing_expected_participant,,,P36,,,No task backup found for this participant.
+info,missing_expected_participant,,,P57,,,No task backup found for this participant.
+info,missing_track_labels,kartheepan/P01_LL.zip,.,P01_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P03_LL.zip,.,P03_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P04_LL.zip,.,P04_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P05_LL.zip,.,P05_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P06_LL.zip,.,P06_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P06_LS.zip,.,P06_LS,,,shock_symbol
+info,missing_track_labels,kartheepan/P06_T.zip,.,P06_T,,,shock_symbol
+info,missing_track_labels,kartheepan/P07_LL.zip,.,P07_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P12_LL.zip,.,P12_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P13_LL.zip,.,P13_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P14_LL.zip,.,P14_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P15_LL.zip,.,P15_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_44,P16_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_42,P16_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_41,P17_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_39,P17_T,,,"defibrillator_screen, learner_hand, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_38,P18_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_36,P18_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_35,P19_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_34,P19_LS,,,"learner_hand, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_33,P19_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_32,P20_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_30,P20_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_29,P21_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_28,P21_LS,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_27,P21_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_26,P22_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_24,P22_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_23,P23_LL,,,"paddle_sternal, defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_21,P23_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_20,P24_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_18,P24_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_17,P25_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_16,P25_LS,,,"paddle_sternal, paddle_apical, learner_hand"
+info,missing_track_labels,defibliration2.zip,task_15,P25_T,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_14,P26_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_13,P26_LS,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_12,P26_T,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_11,P27_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_9,P27_T,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_8,P28_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_6,P28_T,,,"learner_hand, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_5,P29_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_3,P29_T,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_2,P30_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,defibliration2.zip,task_1,P30_LS,,,shock_symbol
+info,missing_track_labels,defibliration2.zip,task_0,P30_T,,,"paddle_sternal, shock_symbol"
+info,missing_track_labels,kartheepan/P31_LL.zip,.,P31_LL,,,"paddle_sternal, defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P31_T.zip,.,P31_T,,,shock_symbol
+info,missing_track_labels,kartheepan/P32_LL.zip,.,P32_LL,,,"paddle_sternal, defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P32_T.zip,.,P32_T,,,shock_symbol
+info,missing_track_labels,kartheepan/P33_LL.zip,.,P33_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,kartheepan/P33_LS.zip,.,P33_LS,,,shock_symbol
+info,missing_track_labels,kartheepan/P33_T.zip,.,P33_T,,,shock_symbol
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_0,P37_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_2,P37_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_3,P38_LL,,,"defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_5,P38_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_6,P39_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_8,P39_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_9,P40_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_11,P40_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_12,P41_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_13,P41_LS,,,sternal_placement_zone
+info,missing_track_labels,Kishonithan 37 to 41.zip,task_14,P41_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_0,P42_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_1,P42_LS,,,"paddle_sternal, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_2,P42_T,,,"defibrillator_screen, learner_hand, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_3,P43_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_4,P43_LS,,,shock_symbol
+info,missing_track_labels,Rashad.zip,task_5,P43_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_6,P44_LL,,,"sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_7,P44_LS,,,shock_symbol
+info,missing_track_labels,Rashad.zip,task_8,P44_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_9,P45_LL,,,"sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_10,P45_LS,,,shock_symbol
+info,missing_track_labels,Rashad.zip,task_11,P45_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_12,P46_LL,,,"sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Rashad.zip,task_14,P46_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_0,P47_LL,,,"paddle_apical, defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_2,P47_T,,,"defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_3,P48_LL,,,"paddle_sternal, defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_4,P48_LS,,,apical_placement_zone
+info,missing_track_labels,Sharmilan.zip,task_5,P48_T,,,"defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_6,P49_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_7,P49_LS,,,sternal_placement_zone
+info,missing_track_labels,Sharmilan.zip,task_8,P49_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_9,P50_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_11,P50_T,,,"defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_12,P51_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,Sharmilan.zip,task_14,P51_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_0,P52_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_2,P52_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_3,P53_LL,,,"defibrillator_screen, sternal_placement_zone, apical_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_5,P53_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_6,P54_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_8,P54_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_9,P55_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_11,P55_T,,,"defibrillator_screen, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_12,P56_LL,,,"defibrillator_screen, sternal_placement_zone, shock_symbol"
+info,missing_track_labels,sujeevan.zip,task_14,P56_T,,,"defibrillator_screen, apical_placement_zone, shock_symbol"

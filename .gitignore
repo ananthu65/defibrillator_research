@@ -1,1 +1,10 @@
 extracted_audio/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Generated training data and model artifacts
+datasets/
+runs/
+weights/
+*.pt
