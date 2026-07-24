@@ -51,3 +51,30 @@ label, and review-issue distributions.
 See [Phase 3 grouped video split](docs/phase3-video-split.md) for the frozen
 assignments and validation results.
 
+## Video dataset Phase 4
+
+The Phase 4 converter samples frames from the frozen split, interpolates CVAT
+video tracks, and generates local YOLO images and labels. Source ZIPs are read
+only, and generated recordings remain under the Git-ignored `datasets/`
+directory.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\build_yolo_video_dataset.py `
+  --backup-root 'C:\path\to\cvat-backups' `
+  --output datasets\phase4_yolo `
+  --report-output reports\phase4
+
+.\.venv\Scripts\python.exe scripts\validate_yolo_dataset.py `
+  --dataset datasets\phase4_yolo `
+  --output reports\phase4\validation.json `
+  --verify-images
+```
+
+The current build contains 20,138 frames and 56,737 boxes from all 144 videos.
+Its structural validation passes with zero corrupt images and no participant
+leakage. One source-annotation issue in validation task `P50_T` must be reviewed
+before final model-selection metrics are considered clean.
+
+See [Phase 4 sampled YOLO dataset](docs/phase4-yolo-dataset.md) for class
+mapping, sampling rules, validation, privacy constraints, and known findings.
+
