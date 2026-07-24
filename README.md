@@ -78,3 +78,24 @@ before final model-selection metrics are considered clean.
 See [Phase 4 sampled YOLO dataset](docs/phase4-yolo-dataset.md) for class
 mapping, sampling rules, validation, privacy constraints, and known findings.
 
+## Local video training Phase 5
+
+Phase 5 trains a seven-class YOLOv8n detector locally. It uses the frozen
+participant-grouped split, leaves the official test set untouched during model
+development, and excludes known-invalid task `P50_T` from scored data.
+
+Prepare the local training views and run the one-epoch smoke test:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_phase5_logged.ps1 `
+  -Mode prepare
+
+powershell -ExecutionPolicy Bypass -File scripts\run_phase5_logged.ps1 `
+  -Mode smoke
+```
+
+Each launcher invocation writes timestamped PowerShell and Python console logs
+under the Git-ignored `logs\phase5\` directory. See
+[Phase 5 local training](docs/phase5-local-training.md) for the complete
+workflow, current smoke-test result, interpretation, and next command.
+
