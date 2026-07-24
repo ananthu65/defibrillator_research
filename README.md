@@ -30,3 +30,24 @@ Run its standard-library tests:
 See [Phase 1 data audit](docs/phase1-data-audit.md) for the current findings and
 report descriptions.
 
+## Video dataset Phase 3
+
+The grouped split generator consumes the Phase 1 reports and keeps all T, LS,
+and LL videos from a participant in the same split. It constrains every
+annotation source to appear in train, validation, and test, then balances frame,
+label, and review-issue distributions.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\create_grouped_video_split.py `
+  --phase1-reports reports\phase1 `
+  --output splits\phase3 `
+  --train 33 `
+  --val 6 `
+  --test 9 `
+  --seed 42 `
+  --iterations 30000
+```
+
+See [Phase 3 grouped video split](docs/phase3-video-split.md) for the frozen
+assignments and validation results.
+
