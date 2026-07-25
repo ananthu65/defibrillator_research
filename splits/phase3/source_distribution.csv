@@ -1,0 +1,19 @@
+﻿split,annotation_source,participant_sets
+train,Kishonithan 37 to 41,3
+train,Rashad,3
+train,Sharmilan,3
+train,defibliration2,11
+train,kartheepan,10
+train,sujeevan,3
+val,Kishonithan 37 to 41,1
+val,Rashad,1
+val,Sharmilan,1
+val,defibliration2,1
+val,kartheepan,1
+val,sujeevan,1
+test,Kishonithan 37 to 41,1
+test,Rashad,1
+test,Sharmilan,1
+test,defibliration2,3
+test,kartheepan,2
+test,sujeevan,1

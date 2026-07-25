@@ -1,0 +1,4 @@
+﻿split,participant_sets,videos,frames,media_size_bytes,event_tags,tracks,track_keyframes,warning_issues,review_issues
+train,33,99,59371,3281600983,559,602,10547,23,55
+val,6,18,10354,616131162,100,115,1642,4,8
+test,9,27,15522,851836010,154,172,3241,6,13

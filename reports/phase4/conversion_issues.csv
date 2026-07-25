@@ -1,0 +1,16 @@
+﻿severity,code,split,canonical_task_id,label,frame,details
+warning,object_tag_excluded_no_geometry,test,P05_LL,apical_placement_zone,287,
+review,degenerate_boxes_skipped,train,P13_T,,,count=1
+warning,object_tag_excluded_no_geometry,train,P42_LL,learner_hand,287,
+warning,object_tag_excluded_no_geometry,train,P42_LL,paddle_apical,287,
+warning,object_tag_excluded_no_geometry,train,P42_LL,paddle_apical,289,
+warning,object_tag_excluded_no_geometry,train,P42_LL,apical_placement_zone,318,
+warning,object_tag_excluded_no_geometry,train,P42_LL,paddle_sternal,457,
+warning,object_tag_excluded_no_geometry,train,P42_LS,apical_placement_zone,382,
+warning,object_tag_excluded_no_geometry,train,P42_LS,sternal_placement_zone,483,
+warning,object_tag_excluded_no_geometry,train,P42_LS,shock_symbol,519,
+warning,object_tag_excluded_no_geometry,test,P43_LL,apical_placement_zone,172,
+warning,object_tag_excluded_no_geometry,test,P43_LS,shock_symbol,514,
+warning,object_tag_excluded_no_geometry,train,P44_LS,shock_symbol,504,
+warning,object_tag_excluded_no_geometry,train,P46_LS,shock_symbol,538,
+warning,object_tag_excluded_no_geometry,val,P50_LS,shock_symbol,425,

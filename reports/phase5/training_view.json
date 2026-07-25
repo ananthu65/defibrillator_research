@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "status": "preliminary",
+  "policy": {
+    "quarantined_tasks": [
+      "P50_T"
+    ],
+    "quarantine_is_scored_test": false,
+    "reason": "Known-invalid ground truth is excluded from all metrics.",
+    "frozen_phase3_split_modified": false
+  },
+  "full": {
+    "train": {
+      "participants": 33,
+      "videos": 99,
+      "images": 13955,
+      "boxes": 39570,
+      "classes_present": 7
+    },
+    "val": {
+      "participants": 6,
+      "videos": 17,
+      "images": 2326,
+      "boxes": 6732,
+      "classes_present": 7
+    },
+    "test": {
+      "participants": 9,
+      "videos": 27,
+      "images": 3714,
+      "boxes": 10172,
+      "classes_present": 7
+    }
+  },
+  "quarantine": {
+    "participants": 1,
+    "videos": 1,
+    "images": 143,
+    "boxes": 263,
+    "classes_present": 3
+  },
+  "smoke": {
+    "train": {
+      "participants": 33,
+      "videos": 99,
+      "images": 594,
+      "boxes": 1736,
+      "classes_present": 7
+    },
+    "val": {
+      "participants": 6,
+      "videos": 17,
+      "images": 102,
+      "boxes": 300,
+      "classes_present": 7
+    },
+    "images_per_task_target": 6
+  }
+}

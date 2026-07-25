@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "experiment": "yolov8n_smoke_p50t_quarantined",
+  "preliminary": true,
+  "config": {
+    "name": "yolov8n_smoke_p50t_quarantined",
+    "model": "weights/yolov8n.pt",
+    "data": "datasets/phase4_yolo/phase5/dataset_smoke.yaml",
+    "epochs": 1,
+    "imgsz": 640,
+    "batch": 2,
+    "workers": 0,
+    "cache": false,
+    "amp": true,
+    "seed": 42,
+    "deterministic": true,
+    "patience": 0,
+    "optimizer": "auto",
+    "plots": true
+  },
+  "environment": {
+    "python": "3.11.0",
+    "torch": "2.7.0+cu126",
+    "cuda_runtime": "12.6",
+    "ultralytics": "8.4.60",
+    "gpu": "NVIDIA GeForce GTX 1650 with Max-Q Design",
+    "gpu_total_mib": 4096
+  },
+  "reproducibility": {
+    "git_commit_at_start": "04b516edcbe9c15a463fc1e6eeaeabe4d2b9bcff",
+    "config_sha256": "505ea7757eb052eedbb57171830403089a019bf81011cd73c50a324e341c1580",
+    "dataset_yaml_sha256": "6e36b04ab8ed82fac735e6fc7459500ed5701c7fab3938ce352291669de10501"
+  },
+  "started_utc": "2026-07-24T12:33:24.956346+00:00",
+  "duration_seconds": 170.73,
+  "completed_utc": "2026-07-24T12:36:15.752915+00:00",
+  "metrics": {
+    "metrics/precision(B)": 0.41736060184844626,
+    "metrics/recall(B)": 0.3090406492136958,
+    "metrics/mAP50(B)": 0.23339579075736402,
+    "metrics/mAP50-95(B)": 0.12913529056034925,
+    "fitness": 0.12913529056034925
+  },
+  "peak_gpu_memory_mib": 484.8,
+  "artifacts": "runs/phase5/yolov8n_smoke_p50t_quarantined"
+}

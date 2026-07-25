@@ -1,0 +1,9 @@
+# Phase 4 video decoding and image generation
+imageio-ffmpeg==0.6.0
+Pillow>=10,<12
+
+# Phase 5 local CUDA training (install with pip >= 26)
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.7.0+cu126
+torchvision==0.22.0+cu126
+ultralytics==8.4.60
