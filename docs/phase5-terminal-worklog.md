@@ -505,6 +505,72 @@ Validation after the change:
 - PowerShell launcher parsing passed.
 - Patch whitespace validation found no errors.
 
+## 20. User-run full-data one-epoch result
+
+The user ran:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_phase5_logged.ps1 `
+  -Mode full-one-epoch
+```
+
+Verification commands read the compact report, `results.csv`, checkpoint
+metadata, recent log files, and current GPU state.
+
+Result:
+
+- Status: `completed`.
+- Training: 13,955 frames from all 99 videos belonging to the 33 training
+  participants.
+- Validation: 2,326 scored frames; the official test list remained unused.
+- Precision: 0.599; recall: 0.568.
+- mAP50: 0.562; mAP50-95: 0.271.
+- Training-script duration: 1,858.4 seconds (30 minutes 58 seconds).
+- Peak PyTorch allocated GPU memory: 1,682.5 MiB.
+- `best.pt` and `last.pt`: 6,222,122 bytes each.
+- The GPU was idle after completion.
+- PowerShell log:
+  `logs/phase5/20260725_100226_full-one-epoch_powershell.txt`.
+- Python console log:
+  `logs/phase5/20260725_100226_full-one-epoch_console.txt`.
+
+The compact JSON report is tracked. Private images, model checkpoints,
+training plots, and raw logs remain ignored.
+
+## 21. Pre-push privacy and ignore audit
+
+Commands:
+
+```powershell
+git status --short --branch
+git status --short --ignored
+git check-ignore -v .venv datasets runs weights logs extracted_audio
+git ls-files
+```
+
+Result:
+
+- The branch was `ananthu_dev`, five commits ahead of its remote before the
+  final result commit.
+- The only non-ignored untracked file was the completed compact one-epoch
+  report.
+- `.venv`, datasets, runs, checkpoints, logs, extracted audio, and Python
+  caches were ignored correctly.
+- No video, audio, archive, dataset, run, checkpoint, or log artifact was
+  already tracked.
+- Ignore rules were expanded for private source-media/archive locations,
+  common Python/notebook caches, external experiment folders, exported model
+  formats, and operating-system metadata.
+
+Final validation:
+
+- Synthetic private-media and model-export paths matched the intended ignore
+  rules.
+- No private/generated pattern matched any tracked file.
+- Patch whitespace validation passed with only expected Windows line-ending
+  warnings.
+- All 25 repository tests passed.
+
 ## Continuing this record
 
 Every later terminal action should be added here with:

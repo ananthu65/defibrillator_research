@@ -2,10 +2,44 @@ extracted_audio/
 .venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
 
-# Generated training data and model artifacts
+# Private source recordings and CVAT exports
+videos/
+cvat_backups/
+data/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+
+# Generated training data, logs, integrations, and model artifacts
 datasets/
 runs/
 weights/
 logs/
+wandb/
+mlruns/
 *.pt
+*.onnx
+*.engine
+*.torchscript
+*.tflite
+
+# Operating-system files
+.DS_Store
+Thumbs.db

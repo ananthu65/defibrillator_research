@@ -194,6 +194,26 @@ Start-Process `
 `val_batch0_pred.jpg` contains the model's boxes for the corresponding
 validation images.
 
+The first full-data pilot completed on 25 July 2026:
+
+| Item | Result |
+| --- | ---: |
+| Training participants | 33 |
+| Training videos | 99 |
+| Training frames | 13,955 |
+| Validation frames | 2,326 |
+| Precision | 0.599 |
+| Recall | 0.568 |
+| mAP50 | 0.562 |
+| mAP50-95 | 0.271 |
+| Training-script duration | 1,858.4 seconds |
+| Peak allocated GPU memory | 1,682.5 MiB |
+
+The measured end-to-end duration was 30 minutes 58 seconds. Both `best.pt` and
+`last.pt` were saved at 6,222,122 bytes. This confirms that the full
+33-participant local workflow completes correctly; it is still a one-epoch
+pilot rather than a final model.
+
 To predict one individual annotated validation frame:
 
 ```powershell
