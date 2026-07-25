@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "phase1_dataset_digest_sha256": "ec4c810df4e17197e697e4b5c80f2167d84a273fe4375843fa41ea18be6e9305",
+  "phase3_split_config_sha256": "abf66708768851574526b836178718fd3e62f0f2387946445794dfaa2c5cd78b",
+  "sampling": {
+    "sample_fps": 5.0,
+    "event_context_seconds": 0.1,
+    "jpeg_quality": 85,
+    "include_test": true,
+    "only_task_ids": [],
+    "always_include": [
+      "event frames and context",
+      "standalone-shape frames",
+      "track boundaries",
+      "shock_symbol keyframes"
+    ]
+  },
+  "classes": {
+    "0": "paddle_sternal",
+    "1": "paddle_apical",
+    "2": "defibrillator_screen",
+    "3": "learner_hand",
+    "4": "sternal_placement_zone",
+    "5": "apical_placement_zone",
+    "6": "shock_symbol"
+  },
+  "counts": {
+    "videos": 144,
+    "images": 20138,
+    "boxes": 56737,
+    "events": 799,
+    "issues": {
+      "review": 1,
+      "warning": 14
+    }
+  }
+}

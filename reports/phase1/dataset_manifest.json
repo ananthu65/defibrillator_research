@@ -1,0 +1,838 @@
+{
+  "schema_version": 1,
+  "dataset_digest_sha256": "ec4c810df4e17197e697e4b5c80f2167d84a273fe4375843fa41ea18be6e9305",
+  "counts": {
+    "archives": 44,
+    "tasks": 144,
+    "participants": 48,
+    "videos": 144,
+    "frames": 85247,
+    "event_tags": 813,
+    "standalone_shapes": 2,
+    "tracks": 889,
+    "track_keyframes": 15430
+  },
+  "issue_counts": {
+    "info": 305,
+    "review": 76,
+    "warning": 33
+  },
+  "participants": [
+    {
+      "participant_id": "P01",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P01_LL",
+        "P01_LS",
+        "P01_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P03",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P03_LL",
+        "P03_LS",
+        "P03_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P04",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P04_LL",
+        "P04_LS",
+        "P04_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P05",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P05_LL",
+        "P05_LS",
+        "P05_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P06",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P06_LL",
+        "P06_LS",
+        "P06_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P07",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P07_LL",
+        "P07_LS",
+        "P07_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P12",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P12_LL",
+        "P12_LS",
+        "P12_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P13",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P13_LL",
+        "P13_LS",
+        "P13_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P14",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P14_LL",
+        "P14_LS",
+        "P14_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P15",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P15_LL",
+        "P15_LS",
+        "P15_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P16",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P16_LL",
+        "P16_LS",
+        "P16_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P17",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P17_LL",
+        "P17_LS",
+        "P17_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P18",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P18_LL",
+        "P18_LS",
+        "P18_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P19",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P19_LL",
+        "P19_LS",
+        "P19_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P20",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P20_LL",
+        "P20_LS",
+        "P20_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P21",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P21_LL",
+        "P21_LS",
+        "P21_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P22",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P22_LL",
+        "P22_LS",
+        "P22_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P23",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P23_LL",
+        "P23_LS",
+        "P23_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P24",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P24_LL",
+        "P24_LS",
+        "P24_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P25",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P25_LL",
+        "P25_LS",
+        "P25_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P26",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P26_LL",
+        "P26_LS",
+        "P26_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P27",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P27_LL",
+        "P27_LS",
+        "P27_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P28",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P28_LL",
+        "P28_LS",
+        "P28_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P29",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P29_LL",
+        "P29_LS",
+        "P29_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P30",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P30_LL",
+        "P30_LS",
+        "P30_T"
+      ],
+      "annotation_sources": [
+        "defibliration2"
+      ]
+    },
+    {
+      "participant_id": "P31",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P31_LL",
+        "P31_LS",
+        "P31_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P32",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P32_LL",
+        "P32_LS",
+        "P32_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P33",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P33_LL",
+        "P33_LS",
+        "P33_T"
+      ],
+      "annotation_sources": [
+        "kartheepan"
+      ]
+    },
+    {
+      "participant_id": "P37",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P37_LL",
+        "P37_LS",
+        "P37_T"
+      ],
+      "annotation_sources": [
+        "Kishonithan 37 to 41"
+      ]
+    },
+    {
+      "participant_id": "P38",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P38_LL",
+        "P38_LS",
+        "P38_T"
+      ],
+      "annotation_sources": [
+        "Kishonithan 37 to 41"
+      ]
+    },
+    {
+      "participant_id": "P39",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P39_LL",
+        "P39_LS",
+        "P39_T"
+      ],
+      "annotation_sources": [
+        "Kishonithan 37 to 41"
+      ]
+    },
+    {
+      "participant_id": "P40",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P40_LL",
+        "P40_LS",
+        "P40_T"
+      ],
+      "annotation_sources": [
+        "Kishonithan 37 to 41"
+      ]
+    },
+    {
+      "participant_id": "P41",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P41_LL",
+        "P41_LS",
+        "P41_T"
+      ],
+      "annotation_sources": [
+        "Kishonithan 37 to 41"
+      ]
+    },
+    {
+      "participant_id": "P42",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P42_LL",
+        "P42_LS",
+        "P42_T"
+      ],
+      "annotation_sources": [
+        "Rashad"
+      ]
+    },
+    {
+      "participant_id": "P43",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P43_LL",
+        "P43_LS",
+        "P43_T"
+      ],
+      "annotation_sources": [
+        "Rashad"
+      ]
+    },
+    {
+      "participant_id": "P44",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P44_LL",
+        "P44_LS",
+        "P44_T"
+      ],
+      "annotation_sources": [
+        "Rashad"
+      ]
+    },
+    {
+      "participant_id": "P45",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P45_LL",
+        "P45_LS",
+        "P45_T"
+      ],
+      "annotation_sources": [
+        "Rashad"
+      ]
+    },
+    {
+      "participant_id": "P46",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P46_LL",
+        "P46_LS",
+        "P46_T"
+      ],
+      "annotation_sources": [
+        "Rashad"
+      ]
+    },
+    {
+      "participant_id": "P47",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P47_LL",
+        "P47_LS",
+        "P47_T"
+      ],
+      "annotation_sources": [
+        "Sharmilan"
+      ]
+    },
+    {
+      "participant_id": "P48",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P48_LL",
+        "P48_LS",
+        "P48_T"
+      ],
+      "annotation_sources": [
+        "Sharmilan"
+      ]
+    },
+    {
+      "participant_id": "P49",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P49_LL",
+        "P49_LS",
+        "P49_T"
+      ],
+      "annotation_sources": [
+        "Sharmilan"
+      ]
+    },
+    {
+      "participant_id": "P50",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P50_LL",
+        "P50_LS",
+        "P50_T"
+      ],
+      "annotation_sources": [
+        "Sharmilan"
+      ]
+    },
+    {
+      "participant_id": "P51",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P51_LL",
+        "P51_LS",
+        "P51_T"
+      ],
+      "annotation_sources": [
+        "Sharmilan"
+      ]
+    },
+    {
+      "participant_id": "P52",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P52_LL",
+        "P52_LS",
+        "P52_T"
+      ],
+      "annotation_sources": [
+        "sujeevan"
+      ]
+    },
+    {
+      "participant_id": "P53",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P53_LL",
+        "P53_LS",
+        "P53_T"
+      ],
+      "annotation_sources": [
+        "sujeevan"
+      ]
+    },
+    {
+      "participant_id": "P54",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P54_LL",
+        "P54_LS",
+        "P54_T"
+      ],
+      "annotation_sources": [
+        "sujeevan"
+      ]
+    },
+    {
+      "participant_id": "P55",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P55_LL",
+        "P55_LS",
+        "P55_T"
+      ],
+      "annotation_sources": [
+        "sujeevan"
+      ]
+    },
+    {
+      "participant_id": "P56",
+      "views": [
+        "LL",
+        "LS",
+        "T"
+      ],
+      "complete_three_view_set": true,
+      "tasks": [
+        "P56_LL",
+        "P56_LS",
+        "P56_T"
+      ],
+      "annotation_sources": [
+        "sujeevan"
+      ]
+    }
+  ]
+}

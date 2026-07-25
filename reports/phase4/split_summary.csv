@@ -1,0 +1,4 @@
+﻿split,participant_sets,videos,sampled_images,labelled_images,empty_images,boxes,event_tags
+train,33,99,13955,13502,453,39570,549
+val,6,18,2469,2399,70,6995,99
+test,9,27,3714,3564,150,10172,151

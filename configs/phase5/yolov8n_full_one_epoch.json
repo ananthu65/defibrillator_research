@@ -1,0 +1,16 @@
+{
+  "name": "yolov8n_full_one_epoch_p50t_quarantined",
+  "model": "weights/yolov8n.pt",
+  "data": "datasets/phase4_yolo/phase5/dataset_preliminary.yaml",
+  "epochs": 1,
+  "imgsz": 640,
+  "batch": 8,
+  "workers": 0,
+  "cache": false,
+  "amp": true,
+  "seed": 42,
+  "deterministic": true,
+  "patience": 0,
+  "optimizer": "auto",
+  "plots": true
+}

@@ -1,0 +1,145 @@
+﻿split,participant_id,canonical_task_id,camera_view,annotation_source,archive,task_path,media_name,frame_count,tag_count,track_count,track_keyframe_count
+val,P01,P01_T,T,kartheepan,kartheepan/P01_T.zip,.,P01_T.MOV,617,8,7,135
+val,P01,P01_LS,LS,kartheepan,kartheepan/P01_LS.zip,.,P01_LS.MOV,610,8,7,103
+val,P01,P01_LL,LL,kartheepan,kartheepan/P01_LL.zip,.,P01_LL.mp4,473,4,6,89
+train,P03,P03_T,T,kartheepan,kartheepan/P03_T.zip,.,P03_T.MOV,537,8,7,120
+train,P03,P03_LS,LS,kartheepan,kartheepan/P03_LS.zip,.,P03_LS.MOV,636,8,7,120
+train,P03,P03_LL,LL,kartheepan,kartheepan/P03_LL.zip,.,P03_LL.MP4,483,4,5,120
+train,P04,P04_T,T,kartheepan,kartheepan/P04_T.zip,.,P04_T.MOV,513,7,7,153
+train,P04,P04_LS,LS,kartheepan,kartheepan/P04_LS.zip,.,P04_LS.MOV,541,8,7,126
+train,P04,P04_LL,LL,kartheepan,kartheepan/P04_LL.zip,.,P04_LL.MP4,486,5,6,163
+test,P05,P05_T,T,kartheepan,kartheepan/P05_T.zip,.,P05_T.MOV,661,7,7,127
+test,P05,P05_LS,LS,kartheepan,kartheepan/P05_LS.zip,.,P05_LS.MOV,694,8,7,163
+test,P05,P05_LL,LL,kartheepan,kartheepan/P05_LL.zip,.,P05_LL.MP4,564,4,7,169
+train,P06,P06_T,T,kartheepan,kartheepan/P06_T.zip,.,P06_T.MOV,750,5,6,125
+train,P06,P06_LS,LS,kartheepan,kartheepan/P06_LS.zip,.,P06_LS.MOV,803,8,6,165
+train,P06,P06_LL,LL,kartheepan,kartheepan/P06_LL.zip,.,P06_LL.MP4,661,5,5,144
+train,P07,P07_T,T,kartheepan,kartheepan/P07_T.zip,.,P07_T.MOV,716,8,7,133
+train,P07,P07_LS,LS,kartheepan,kartheepan/P07_LS.zip,.,P07_LS.MOV,762,8,8,143
+train,P07,P07_LL,LL,kartheepan,kartheepan/P07_LL.zip,.,P07_LL.MP4,589,5,6,141
+train,P12,P12_T,T,kartheepan,kartheepan/P12_T.zip,.,P12_T.mov,492,6,7,109
+train,P12,P12_LS,LS,kartheepan,kartheepan/P12_LS.zip,.,P12_LS.MOV,515,8,7,121
+train,P12,P12_LL,LL,kartheepan,kartheepan/P12_LL.zip,.,P12_LL.MP4,423,3,5,129
+train,P13,P13_T,T,kartheepan,kartheepan/P13_T.zip,.,P13_T.mov,510,7,7,129
+train,P13,P13_LS,LS,kartheepan,kartheepan/P13_LS.zip,.,P13_LS.MOV,504,8,7,134
+train,P13,P13_LL,LL,kartheepan,kartheepan/P13_LL.zip,.,P13_LL.MP4,401,4,5,110
+train,P14,P14_T,T,kartheepan,kartheepan/P14_T.zip,.,P14_T.mov,529,7,7,129
+train,P14,P14_LS,LS,kartheepan,kartheepan/P14_LS.zip,.,P14_LS.MOV,565,8,7,155
+train,P14,P14_LL,LL,kartheepan,kartheepan/P14_LL.zip,.,P14_LL.MP4,434,4,6,132
+test,P15,P15_T,T,kartheepan,kartheepan/P15_T.zip,.,P15_T.mov,678,6,7,111
+test,P15,P15_LS,LS,kartheepan,kartheepan/P15_LS.zip,.,P15_LS.MOV,709,7,7,204
+test,P15,P15_LL,LL,kartheepan,kartheepan/P15_LL.zip,.,P15_LL.MP4,572,4,5,158
+train,P16,P16_T,T,defibliration2,defibliration2.zip,task_42,P16_T.MOV,742,6,5,68
+train,P16,P16_LS,LS,defibliration2,defibliration2.zip,task_43,P16_LS.MOV,763,7,7,77
+train,P16,P16_LL,LL,defibliration2,defibliration2.zip,task_44,P16_LL.MP4,606,6,7,72
+test,P17,P17_T,T,defibliration2,defibliration2.zip,task_39,P17_T.MOV,424,6,4,26
+test,P17,P17_LS,LS,defibliration2,defibliration2.zip,task_40,P17_LS.MOV,460,7,9,51
+test,P17,P17_LL,LL,defibliration2,defibliration2.zip,task_41,P17_LL.MP4,404,5,6,34
+val,P18,P18_T,T,defibliration2,defibliration2.zip,task_36,P18_T.MOV,503,6,6,61
+val,P18,P18_LS,LS,defibliration2,defibliration2.zip,task_37,P18_LS.MOV,500,8,7,68
+val,P18,P18_LL,LL,defibliration2,defibliration2.zip,task_38,P18_LL.MP4,414,5,4,41
+train,P19,P19_T,T,defibliration2,defibliration2.zip,task_33,P19_T.MOV,484,6,5,59
+train,P19,P19_LS,LS,defibliration2,defibliration2.zip,task_34,P19_LS.MOV,452,6,5,31
+train,P19,P19_LL,LL,defibliration2,defibliration2.zip,task_35,P19_LL.MP4,386,5,5,49
+train,P20,P20_T,T,defibliration2,defibliration2.zip,task_30,P20_T.MOV,557,6,5,43
+train,P20,P20_LS,LS,defibliration2,defibliration2.zip,task_31,P20_LS.MOV,532,7,7,63
+train,P20,P20_LL,LL,defibliration2,defibliration2.zip,task_32,P20_LL.MP4,415,5,5,51
+test,P21,P21_T,T,defibliration2,defibliration2.zip,task_27,P21_T.MOV,454,6,5,46
+test,P21,P21_LS,LS,defibliration2,defibliration2.zip,task_28,P21_LS.MOV,486,6,6,39
+test,P21,P21_LL,LL,defibliration2,defibliration2.zip,task_29,P21_LL.MP4,397,4,5,66
+train,P22,P22_T,T,defibliration2,defibliration2.zip,task_24,P22_T.MOV,1168,6,5,73
+train,P22,P22_LS,LS,defibliration2,defibliration2.zip,task_25,P22_LS.MOV,1228,6,7,60
+train,P22,P22_LL,LL,defibliration2,defibliration2.zip,task_26,P22_LL.MP4,1042,5,4,56
+train,P23,P23_T,T,defibliration2,defibliration2.zip,task_21,P23_T.MOV,560,0,5,39
+train,P23,P23_LS,LS,defibliration2,defibliration2.zip,task_22,P23_LS.MOV,593,6,7,67
+train,P23,P23_LL,LL,defibliration2,defibliration2.zip,task_23,P23_LL.MP4,492,5,3,41
+train,P24,P24_T,T,defibliration2,defibliration2.zip,task_18,P24_T.MOV,353,6,5,48
+train,P24,P24_LS,LS,defibliration2,defibliration2.zip,task_19,P24_LS.MOV,509,6,7,404
+train,P24,P24_LL,LL,defibliration2,defibliration2.zip,task_20,P24_LL.MP4,408,6,4,43
+test,P25,P25_T,T,defibliration2,defibliration2.zip,task_15,P25_T.MOV,515,8,6,106
+test,P25,P25_LS,LS,defibliration2,defibliration2.zip,task_16,P25_LS.MOV,566,0,4,611
+test,P25,P25_LL,LL,defibliration2,defibliration2.zip,task_17,P25_LL.MP4,463,5,5,58
+train,P26,P26_T,T,defibliration2,defibliration2.zip,task_12,P26_T.MOV,555,6,6,90
+train,P26,P26_LS,LS,defibliration2,defibliration2.zip,task_13,P26_LS.MOV,600,6,7,161
+train,P26,P26_LL,LL,defibliration2,defibliration2.zip,task_14,P26_LL.MP4,482,7,4,100
+train,P27,P27_T,T,defibliration2,defibliration2.zip,task_9,P27_T.MOV,492,6,7,98
+train,P27,P27_LS,LS,defibliration2,defibliration2.zip,task_10,P27_LS.MOV,528,7,8,105
+train,P27,P27_LL,LL,defibliration2,defibliration2.zip,task_11,P27_LL.MP4,489,5,7,121
+train,P28,P28_T,T,defibliration2,defibliration2.zip,task_6,P28_T.MOV,646,6,5,116
+train,P28,P28_LS,LS,defibliration2,defibliration2.zip,task_7,P28_LS.MOV,669,7,11,196
+train,P28,P28_LL,LL,defibliration2,defibliration2.zip,task_8,P28_LL.MP4,536,6,6,135
+train,P29,P29_T,T,defibliration2,defibliration2.zip,task_3,P29_T.MOV,511,6,8,126
+train,P29,P29_LS,LS,defibliration2,defibliration2.zip,task_4,P29_LS.MOV,589,7,8,200
+train,P29,P29_LL,LL,defibliration2,defibliration2.zip,task_5,P29_LL.MP4,464,5,6,162
+train,P30,P30_T,T,defibliration2,defibliration2.zip,task_0,P30_T.MOV,496,6,6,79
+train,P30,P30_LS,LS,defibliration2,defibliration2.zip,task_1,P30_LS.MOV,532,5,9,119
+train,P30,P30_LL,LL,defibliration2,defibliration2.zip,task_2,P30_LL.MP4,404,5,6,95
+train,P31,P31_T,T,kartheepan,kartheepan/P31_T.zip,.,P31_T.MOV,1073,5,7,135
+train,P31,P31_LS,LS,kartheepan,kartheepan/P31_LS.zip,.,P31_LS.mp4,622,6,7,133
+train,P31,P31_LL,LL,kartheepan,kartheepan/P31_LL.zip,.,P31_LL.MP4,482,2,3,112
+train,P32,P32_T,T,kartheepan,kartheepan/P32_T.zip,.,P32_T.MOV,531,6,6,78
+train,P32,P32_LS,LS,kartheepan,kartheepan/P32_LS.zip,.,P32_LS.mp4,576,8,7,104
+train,P32,P32_LL,LL,kartheepan,kartheepan/P32_LL.zip,.,P32_LL.MP4,414,3,3,107
+train,P33,P33_T,T,kartheepan,kartheepan/P33_T.zip,.,P33_T.MOV,938,6,6,129
+train,P33,P33_LS,LS,kartheepan,kartheepan/P33_LS.zip,.,P33_LS.mp4,965,5,6,138
+train,P33,P33_LL,LL,kartheepan,kartheepan/P33_LL.zip,.,P33_LL.MP4,791,5,4,141
+train,P37,P37_T,T,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_2,P37_T.MOV,719,5,6,130
+train,P37,P37_LS,LS,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_1,P37_LS.mp4,674,6,9,122
+train,P37,P37_LL,LL,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_0,P37_LL.MP4,564,6,4,133
+val,P38,P38_T,T,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_5,P38_T.MOV,733,6,6,124
+val,P38,P38_LS,LS,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_4,P38_LS.mp4,747,7,8,139
+val,P38,P38_LL,LL,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_3,P38_LL.MP4,594,4,4,129
+train,P39,P39_T,T,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_8,P39_T.MOV,753,6,6,118
+train,P39,P39_LS,LS,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_7,P39_LS.mp4,747,7,8,127
+train,P39,P39_LL,LL,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_6,P39_LL.MP4,614,3,6,130
+train,P40,P40_T,T,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_11,P40_T.MOV,677,6,6,126
+train,P40,P40_LS,LS,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_10,P40_LS.mp4,814,7,9,148
+train,P40,P40_LL,LL,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_9,P40_LL.MP4,567,4,5,142
+test,P41,P41_T,T,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_14,P41_T.MOV,619,6,6,102
+test,P41,P41_LS,LS,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_13,P41_LS.mp4,630,7,8,130
+test,P41,P41_LL,LL,Kishonithan 37 to 41,Kishonithan 37 to 41.zip,task_12,P41_LL.MP4,555,5,5,166
+train,P42,P42_T,T,Rashad,Rashad.zip,task_2,P42_T.MOV,683,3,4,30
+train,P42,P42_LS,LS,Rashad,Rashad.zip,task_1,P42_LS.mp4,618,5,5,41
+train,P42,P42_LL,LL,Rashad,Rashad.zip,task_0,P42_LL.MP4,516,8,5,114
+test,P43,P43_T,T,Rashad,Rashad.zip,task_5,P43_T.MOV,641,4,4,79
+test,P43,P43_LS,LS,Rashad,Rashad.zip,task_4,P43_LS.mp4,641,6,6,84
+test,P43,P43_LL,LL,Rashad,Rashad.zip,task_3,P43_LL.MP4,528,8,7,98
+train,P44,P44_T,T,Rashad,Rashad.zip,task_8,P44_T.MOV,634,4,4,67
+train,P44,P44_LS,LS,Rashad,Rashad.zip,task_7,P44_LS.mp4,616,6,6,85
+train,P44,P44_LL,LL,Rashad,Rashad.zip,task_6,P44_LL.MP4,533,3,5,91
+val,P45,P45_T,T,Rashad,Rashad.zip,task_11,P45_T.MOV,682,4,6,46
+val,P45,P45_LS,LS,Rashad,Rashad.zip,task_10,P45_LS.mp4,671,4,6,76
+val,P45,P45_LL,LL,Rashad,Rashad.zip,task_9,P45_LL.MP4,536,2,5,81
+train,P46,P46_T,T,Rashad,Rashad.zip,task_14,P46_T.MOV,651,4,5,27
+train,P46,P46_LS,LS,Rashad,Rashad.zip,task_13,P46_LS.mp4,645,4,7,61
+train,P46,P46_LL,LL,Rashad,Rashad.zip,task_12,P46_LL.MP4,590,1,5,78
+train,P47,P47_T,T,Sharmilan,Sharmilan.zip,task_2,P47_T.MOV,755,5,4,66
+train,P47,P47_LS,LS,Sharmilan,Sharmilan.zip,task_1,P47_LS.mp4,720,6,8,139
+train,P47,P47_LL,LL,Sharmilan,Sharmilan.zip,task_0,P47_LL.MP4,601,4,3,163
+train,P48,P48_T,T,Sharmilan,Sharmilan.zip,task_5,P48_T.MOV,643,6,6,79
+train,P48,P48_LS,LS,Sharmilan,Sharmilan.zip,task_4,P48_LS.mp4,589,6,8,155
+train,P48,P48_LL,LL,Sharmilan,Sharmilan.zip,task_3,P48_LL.MP4,582,5,3,127
+train,P49,P49_T,T,Sharmilan,Sharmilan.zip,task_8,P49_T.MOV,598,6,9,92
+train,P49,P49_LS,LS,Sharmilan,Sharmilan.zip,task_7,P49_LS.mp4,567,7,8,135
+train,P49,P49_LL,LL,Sharmilan,Sharmilan.zip,task_6,P49_LL.MP4,471,6,7,176
+val,P50,P50_T,T,Sharmilan,Sharmilan.zip,task_11,P50_T.MOV,574,6,8,85
+val,P50,P50_LS,LS,Sharmilan,Sharmilan.zip,task_10,P50_LS.mp4,582,7,10,117
+val,P50,P50_LL,LL,Sharmilan,Sharmilan.zip,task_9,P50_LL.MP4,509,6,7,182
+test,P51,P51_T,T,Sharmilan,Sharmilan.zip,task_14,P51_T.MOV,725,6,7,74
+test,P51,P51_LS,LS,Sharmilan,Sharmilan.zip,task_13,P51_LS.mp4,733,7,10,135
+test,P51,P51_LL,LL,Sharmilan,Sharmilan.zip,task_12,P51_LL.MP4,582,5,11,215
+train,P52,P52_T,T,sujeevan,sujeevan.zip,task_2,P52_T.MOV,471,6,8,38
+train,P52,P52_LS,LS,sujeevan,sujeevan.zip,task_1,P52_LS.mp4,496,7,9,71
+train,P52,P52_LL,LL,sujeevan,sujeevan.zip,task_0,P52_LL.MP4,390,7,4,75
+test,P53,P53_T,T,sujeevan,sujeevan.zip,task_5,P53_T.MOV,618,5,6,50
+test,P53,P53_LS,LS,sujeevan,sujeevan.zip,task_4,P53_LS.mp4,682,7,8,83
+test,P53,P53_LL,LL,sujeevan,sujeevan.zip,task_3,P53_LL.MP4,521,5,4,56
+train,P54,P54_T,T,sujeevan,sujeevan.zip,task_8,P54_T.MOV,615,5,4,46
+train,P54,P54_LS,LS,sujeevan,sujeevan.zip,task_7,P54_LS.mp4,628,5,8,55
+train,P54,P54_LL,LL,sujeevan,sujeevan.zip,task_6,P54_LL.MP4,504,2,4,60
+train,P55,P55_T,T,sujeevan,sujeevan.zip,task_11,P55_T.MOV,581,5,7,48
+train,P55,P55_LS,LS,sujeevan,sujeevan.zip,task_10,P55_LS.mp4,540,7,7,58
+train,P55,P55_LL,LL,sujeevan,sujeevan.zip,task_9,P55_LL.MP4,480,6,4,69
+val,P56,P56_T,T,sujeevan,sujeevan.zip,task_14,P56_T.MOV,568,5,5,46
+val,P56,P56_LS,LS,sujeevan,sujeevan.zip,task_13,P56_LS.mp4,562,7,9,66
+val,P56,P56_LL,LL,sujeevan,sujeevan.zip,task_12,P56_LL.MP4,479,3,4,54
