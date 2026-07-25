@@ -1,4 +1,10 @@
 extracted_audio/
+
+venv/
+__pycache__/
+*.wav
+*.mp4
+data/
 .venv/
 __pycache__/
 *.py[cod]
