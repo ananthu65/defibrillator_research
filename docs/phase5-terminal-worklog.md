@@ -476,6 +476,35 @@ Result:
 - No machine-specific absolute repository path was present in tracked project
   content.
 
+## 19. One-epoch user workflow inspection
+
+Read-only commands inspected the generated Phase 5 file lists, full-data YAML,
+installed YOLO executable, training configuration, logged launcher, and preview
+renderer.
+
+Result:
+
+- `dataset_preliminary.yaml` points to `train.txt`, `val.txt`, and `test.txt`.
+- The full view contains 13,955 training and 2,326 scored validation frames.
+- `.\.venv\Scripts\yolo.exe` is installed.
+- The existing `preliminary` mode is a continuous 50-epoch experiment.
+- The first validation-list frame is an intentional background frame with an
+  empty label.
+- The first validation frame with a non-empty label is
+  `P18_LL_f000132.jpg`, containing an `apical_placement_zone` box.
+
+A distinct `full-one-epoch` configuration and launcher mode were added so the
+user can measure a complete pass through all 33 training participants without
+accidentally starting the long run. No training was started during this step.
+
+Validation after the change:
+
+- All 25 repository tests passed.
+- The new configuration loaded successfully and confirmed `epochs=1` with the
+  full preliminary dataset YAML.
+- PowerShell launcher parsing passed.
+- Patch whitespace validation found no errors.
+
 ## Continuing this record
 
 Every later terminal action should be added here with:

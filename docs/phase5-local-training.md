@@ -82,8 +82,18 @@ Run commands from the repository root.
      -Mode batch-probe
    ```
 
-4. After reviewing the successful batch probe, run the 50-epoch preliminary
-   baseline:
+4. Run one complete epoch with all 33 training participants:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\run_phase5_logged.ps1 `
+     -Mode full-one-epoch
+   ```
+
+5. Review its report, curves, ground-truth validation mosaic, and prediction
+   mosaic before choosing a longer run.
+
+6. After reviewing the one-epoch result, run the 50-epoch preliminary baseline
+   only when a long experiment is intended:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts\run_phase5_logged.ps1 `
@@ -146,8 +156,99 @@ about 36%. The tracked 50-epoch preliminary configuration therefore uses batch
 size 8.
 
 Based only on the smoke throughput, the full local run may require roughly
-12–20 hours. Actual duration can differ with thermals, validation time, and
+18–25 hours. Actual duration can differ with thermals, validation time, and
 early stopping. Keep the laptop powered, ventilated, and awake.
+
+## Full-data one-epoch pilot
+
+The `full-one-epoch` mode is the next recommended command. It processes all
+13,955 sampled training frames from all 99 videos belonging to the 33 training
+participants. It then evaluates all 2,326 scored validation frames. It does not
+open the official test list.
+
+After it completes, inspect the compact result:
+
+```powershell
+Get-Content `
+  reports\phase5\yolov8n_full_one_epoch_p50t_quarantined.json
+```
+
+Inspect the CSV row containing epoch losses and metrics:
+
+```powershell
+Get-Content `
+  runs\phase5\yolov8n_full_one_epoch_p50t_quarantined\results.csv
+```
+
+Open the actual validation annotations and the model predictions:
+
+```powershell
+Start-Process `
+  runs\phase5\yolov8n_full_one_epoch_p50t_quarantined\val_batch0_labels.jpg
+
+Start-Process `
+  runs\phase5\yolov8n_full_one_epoch_p50t_quarantined\val_batch0_pred.jpg
+```
+
+`val_batch0_labels.jpg` contains the human-provided ground-truth boxes.
+`val_batch0_pred.jpg` contains the model's boxes for the corresponding
+validation images.
+
+To predict one individual annotated validation frame:
+
+```powershell
+$validationImage = Get-Content `
+  datasets\phase4_yolo\phase5\val.txt |
+  Where-Object {
+    $candidateLabel = [System.IO.Path]::ChangeExtension(
+      ($_ -replace '/images/', '/labels/'),
+      '.txt'
+    )
+    (Test-Path -LiteralPath $candidateLabel) -and
+      ((Get-Item -LiteralPath $candidateLabel).Length -gt 0)
+  } |
+  Select-Object -First 1
+
+$validationImage
+
+.\.venv\Scripts\yolo.exe predict `
+  model="runs\phase5\yolov8n_full_one_epoch_p50t_quarantined\weights\best.pt" `
+  source="$validationImage" `
+  imgsz=640 `
+  conf=0.25 `
+  device=0 `
+  save=True `
+  project="runs\phase5" `
+  name="full_one_epoch_validation_prediction" `
+  exist_ok=True
+
+Start-Process `
+  runs\phase5\full_one_epoch_validation_prediction\P18_LL_f000132.jpg
+```
+
+The selected example is a validation frame, not an official test frame.
+
+## How epochs 1 through 50 work
+
+Do not launch 50 separate one-epoch training commands. A completed one-epoch
+checkpoint has its optimizer state stripped, so repeatedly restarting from it
+would reset optimizer and learning-rate state and would not equal one
+continuous 50-epoch experiment.
+
+The `preliminary` command automatically performs epoch 1, then epoch 2, and so
+on, using the same optimizer state. Each row appended to `results.csv`
+represents one completed epoch. In a second PowerShell window, monitor it with:
+
+```powershell
+Get-Content `
+  runs\phase5\yolov8n_preliminary_p50t_quarantined\results.csv `
+  -Wait
+```
+
+Pressing `Ctrl+C` in the monitoring window stops only the monitor. Do not press
+it in the training window unless training must be interrupted. The one-epoch
+pilot is a separate sanity experiment and is not counted as epoch 1 of the
+later continuous 50-epoch experiment.
 
 ## Outputs and interpretation
 

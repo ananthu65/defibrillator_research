@@ -1,6 +1,12 @@
 param(
     [Parameter(Mandatory = $false)]
-    [ValidateSet("prepare", "smoke", "batch-probe", "preliminary")]
+    [ValidateSet(
+        "prepare",
+        "smoke",
+        "batch-probe",
+        "full-one-epoch",
+        "preliminary"
+    )]
     [string]$Mode = "smoke"
 )
 
@@ -50,6 +56,12 @@ try {
         $arguments = @(
             "scripts\train_yolo_local.py",
             "--config", "configs\phase5\yolov8n_batch8_probe.json"
+        )
+    }
+    elseif ($Mode -eq "full-one-epoch") {
+        $arguments = @(
+            "scripts\train_yolo_local.py",
+            "--config", "configs\phase5\yolov8n_full_one_epoch.json"
         )
     }
     else {
