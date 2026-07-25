@@ -1,0 +1,32 @@
+{
+  "P01": {
+    "commands": [
+      {"command": "free_flow_oxygen_away", "said": true, "time_seconds": 4.5},
+      {"command": "continue_chest_compressions", "said": false, "time_seconds": null},
+      {"command": "all_stand_clear", "said": true, "time_seconds": 6.0},
+      {"command": "stop_chest_compressions", "said": true, "time_seconds": 11.0},
+      {"command": "apply_gel", "said": true, "time_seconds": 9.5},
+      {"command": "start_chest_compressions", "said": true, "time_seconds": 17.5}
+    ]
+  },
+  "P10": {
+    "commands": [
+      {"command": "free_flow_oxygen_away", "said": true, "time_seconds": null},
+      {"command": "continue_chest_compressions", "said": true, "time_seconds": null},
+      {"command": "all_stand_clear", "said": true, "time_seconds": null},
+      {"command": "stop_chest_compressions", "said": true, "time_seconds": null},
+      {"command": "apply_gel", "said": true, "time_seconds": null},
+      {"command": "start_chest_compressions", "said": true, "time_seconds": null}
+    ]
+  },
+  "P31": {
+    "commands": [
+      {"command": "free_flow_oxygen_away", "said": true, "time_seconds": null},
+      {"command": "continue_chest_compressions", "said": true, "time_seconds": null},
+      {"command": "all_stand_clear", "said": true, "time_seconds": null},
+      {"command": "stop_chest_compressions", "said": true, "time_seconds": null},
+      {"command": "apply_gel", "said": true, "time_seconds": null},
+      {"command": "start_chest_compressions", "said": true, "time_seconds": null}
+    ]
+  }
+}
