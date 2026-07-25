@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "verify_images": true,
+  "summary": {
+    "videos": 144,
+    "participants": 48,
+    "images": 20138,
+    "labelled_images": 19465,
+    "empty_images": 673,
+    "boxes": 56737,
+    "event_tags": 799,
+    "corrupt_images": 0,
+    "findings": {}
+  },
+  "splits": {
+    "train": {
+      "participants": 33,
+      "videos": 99,
+      "expected_videos": 99,
+      "images": 13955,
+      "boxes": 39570,
+      "classes_present": 7
+    },
+    "val": {
+      "participants": 6,
+      "videos": 18,
+      "expected_videos": 18,
+      "images": 2469,
+      "boxes": 6995,
+      "classes_present": 7
+    },
+    "test": {
+      "participants": 9,
+      "videos": 27,
+      "expected_videos": 27,
+      "images": 3714,
+      "boxes": 10172,
+      "classes_present": 7
+    }
+  },
+  "findings": []
+}

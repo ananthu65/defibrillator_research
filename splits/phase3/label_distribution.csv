@@ -1,0 +1,43 @@
+﻿split,annotation_kind,label,annotations,videos_present
+train,event_tag,Gel applied,99,86
+train,event_tag,first_paddle_taken,89,87
+train,event_tag,second_paddle_taken,82,79
+train,event_tag,paddles_firmly_on_chest,88,88
+train,event_tag,both_paddle_buttons_pressed,67,66
+train,event_tag,shock_delivered_on_screen,28,28
+train,event_tag,paddles_removed_after_shock,96,95
+train,track,paddle_sternal,93,93
+train,track,paddle_apical,98,98
+train,track,defibrillator_screen,50,50
+train,track,learner_hand,96,96
+train,track,sternal_placement_zone,64,64
+train,track,apical_placement_zone,89,89
+train,track,shock_symbol,32,32
+val,event_tag,Gel applied,20,17
+val,event_tag,first_paddle_taken,16,15
+val,event_tag,second_paddle_taken,13,13
+val,event_tag,paddles_firmly_on_chest,15,15
+val,event_tag,both_paddle_buttons_pressed,12,12
+val,event_tag,shock_delivered_on_screen,5,5
+val,event_tag,paddles_removed_after_shock,18,18
+val,track,paddle_sternal,18,18
+val,track,paddle_apical,18,18
+val,track,defibrillator_screen,8,8
+val,track,learner_hand,18,18
+val,track,sternal_placement_zone,11,11
+val,track,apical_placement_zone,15,15
+val,track,shock_symbol,6,6
+test,event_tag,Gel applied,32,25
+test,event_tag,first_paddle_taken,22,22
+test,event_tag,second_paddle_taken,23,22
+test,event_tag,paddles_firmly_on_chest,23,23
+test,event_tag,both_paddle_buttons_pressed,17,17
+test,event_tag,shock_delivered_on_screen,8,8
+test,event_tag,paddles_removed_after_shock,26,26
+test,track,paddle_sternal,26,26
+test,track,paddle_apical,26,26
+test,track,defibrillator_screen,12,12
+test,track,learner_hand,25,25
+test,track,sternal_placement_zone,17,17
+test,track,apical_placement_zone,24,24
+test,track,shock_symbol,9,9

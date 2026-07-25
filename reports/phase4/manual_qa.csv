@@ -1,0 +1,2 @@
+split,canonical_task_id,source_frame,annotation_source,severity,code,details,recommended_action
+val,P50_T,222,Sharmilan,review,paddle_sternal_source_track_noise,"A paddle_sternal polygon is present in all 143 sampled frames although no paddle is visible at reviewed frame 222; 43 sampled frames contain two paddle_sternal boxes. The source CVAT track has keyframes at 0, 48, 261, and 399 and no outside termination.","Review/correct the P50_T paddle_sternal tracks in CVAT, rerun Phases 1/4, and keep P50 in validation. Until corrected, treat Phase 5 results as preliminary."
