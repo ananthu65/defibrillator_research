@@ -1,106 +1,105 @@
 """
 rule_definitions.py
 
-Central repository of assessment rule definitions.
+Defines every assessment rule used by the Rule Engine.
 
-NOTE:
-Clinical timing thresholds, accepted phrase variants and safety-critical
-conditions are placeholders until approved by the supervising professor.
+Version 1:
+- Presence
+- Order
+- Dependencies
+
+Future versions will extend this with timing,
+confidence and inference rules.
 """
 
-AUDIO_RULES = [
-    {
-        "criterion_id": "A1",
-        "event_name": "oxygen_away",
-        "display_name": "Free Flow Oxygen Away",
-        "required": True,
-        "order": 1,
-        "timing": None,
-        "critical": False,
-        "description": "Student gives the verbal command 'Free Flow Oxygen Away'."
-    },
-    {
-        "criterion_id": "A2",
-        "event_name": "continue_chest_compressions",
-        "display_name": "Continue Chest Compressions",
-        "required": True,
-        "order": 2,
-        "timing": None,
-        "critical": False,
-        "description": "Student instructs to continue chest compressions."
-    },
-    {
-        "criterion_id": "A3",
-        "event_name": "all_stand_clear",
-        "display_name": "All Stand Clear",
-        "required": True,
-        "order": 3,
-        "timing": None,
-        "critical": True,   # Placeholder until supervisor confirmation
-        "description": "Student instructs everyone to stand clear."
-    },
-    {
-        "criterion_id": "A4",
-        "event_name": "stop_chest_compressions",
-        "display_name": "Stop Chest Compressions",
-        "required": True,
-        "order": 4,
-        "timing": None,
-        "critical": False,
-        "description": "Student instructs to stop chest compressions."
-    },
-    {
-        "criterion_id": "A5",
-        "event_name": "start_chest_compressions",
-        "display_name": "Start Chest Compressions",
-        "required": True,
-        "order": 5,
-        "timing": None,
-        "critical": False,
-        "description": "Student instructs to resume chest compressions."
-    },
-]
+from dataclasses import dataclass, field
 
 
-VIDEO_RULES = [
-    {
-        "criterion_id": "R1",
-        "event_name": "first_paddle_taken",
-        "display_name": "Take One Paddle at a Time",
-        "required": True,
-        "order": 1,
-        "timing": None,
-        "critical": False,
-        "description": "Student picks up the first paddle."
-    },
-    {
-        "criterion_id": "R2",
-        "event_name": "paddles_firmly_on_chest",
-        "display_name": "Place Paddles Firmly on Chest",
-        "required": True,
-        "order": 2,
-        "timing": None,
-        "critical": False,
-        "description": "Student places both paddles firmly on the chest."
-    },
-    {
-        "criterion_id": "R3",
-        "event_name": "shock_delivered",
-        "display_name": "Deliver Shock",
-        "required": True,
-        "order": 3,
-        "timing": None,
-        "critical": True,   # Placeholder
-        "description": "Shock is delivered."
-    },
-    {
-        "criterion_id": "R4",
-        "event_name": "remove_paddles",
-        "display_name": "Remove Paddles",
-        "required": True,
-        "order": 4,
-        "timing": None,
-        "critical": False,
-        "description": "Student removes the paddles after shock."
-    },
+@dataclass(frozen=True)
+class Rule:
+    """
+    Definition of one assessment criterion.
+    """
+
+    criterion_id: str
+
+    event_name: str
+
+    must_follow: str | None = None
+
+    depends_on: list[str] = field(default_factory=list)
+
+
+RULES = [
+
+    #
+    # -------------------------
+    # Visual Rules
+    # -------------------------
+    #
+
+    Rule(
+        criterion_id="R1",
+        event_name="gel_applied",
+    ),
+
+    Rule(
+        criterion_id="R2",
+        event_name="take_second_paddle",
+        must_follow="take_first_paddle",
+        depends_on=[
+            "take_first_paddle",
+        ],
+    ),
+
+    Rule(
+        criterion_id="R3",
+        event_name="place_paddles",
+        depends_on=[
+            "take_first_paddle",
+            "take_second_paddle",
+        ],
+    ),
+
+    Rule(
+        criterion_id="R4",
+        event_name="shock_button_pressed",
+        depends_on=[
+            "place_paddles",
+        ],
+    ),
+
+    Rule(
+        criterion_id="R5",
+        event_name="shock_delivered",
+        must_follow="shock_button_pressed",
+        depends_on=[
+            "shock_button_pressed",
+        ],
+    ),
+
+    Rule(
+        criterion_id="R6",
+        event_name="remove_paddles",
+        must_follow="shock_delivered",
+        depends_on=[
+            "shock_delivered",
+        ],
+    ),
+
+    #
+    # -------------------------
+    # Audio Rule
+    # -------------------------
+    #
+
+    Rule(
+        criterion_id="R7",
+        event_name="start_chest_compressions",
+        must_follow="shock_delivered",
+        depends_on=[
+            "shock_delivered",
+        ],
+    ),
+
 ]

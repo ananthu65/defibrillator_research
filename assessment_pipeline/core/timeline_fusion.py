@@ -1,66 +1,47 @@
-import logging
-from typing import List
+"""
+timeline_fusion.py
 
-from events import Event
+Timeline Fusion Engine
 
-logger = logging.getLogger(__name__)
+Version 1 Responsibilities
 
-DUPLICATE_WINDOW_SECONDS = 0.5
+- Merge audio events
+- Merge video events
+- Sort chronologically
 
+No clinical reasoning is performed here.
+"""
 
-def _valid_timestamp(timestamp) -> bool:
-    """Return True if the timestamp is a valid numeric value."""
-    return isinstance(timestamp, (int, float))
+from assessment_pipeline.core.events import Event
 
 
 def merge_timelines(
-    audio_events: List[Event],
-    video_events: List[Event],
-) -> List[Event]:
+    audio_events: list[Event],
+    video_events: list[Event]
+) -> list[Event]:
     """
-    Merge audio and video events into a single time-sorted timeline.
+    Merge audio and video events into one chronological timeline.
 
-    Rules:
-    - Invalid timestamps are skipped with a warning.
-    - Events with the same event_name occurring within 0.5 seconds
-      are treated as duplicates, keeping the higher-confidence event.
+    Parameters
+    ----------
+    audio_events
+        Events detected by the audio analysis engine.
+
+    video_events
+        Events detected by the video analysis engine.
+
+    Returns
+    -------
+    list[Event]
+        Chronologically sorted timeline.
     """
 
-    valid_events = []
+    timeline = []
 
-    for event in list(audio_events) + list(video_events):
-        if not _valid_timestamp(event.timestamp):
-            logger.warning(
-                "Skipping event '%s' due to invalid timestamp: %r",
-                event.event_name,
-                event.timestamp,
-            )
-            continue
+    timeline.extend(audio_events)
 
-        valid_events.append(event)
+    timeline.extend(video_events)
 
-    valid_events.sort(key=lambda e: e.timestamp)
+    timeline.sort(key=lambda event: event.timestamp)
 
-    merged = []
-
-    for event in valid_events:
-        duplicate_index = None
-
-        for i, existing in enumerate(merged):
-            if (
-                existing.event_name == event.event_name
-                and abs(existing.timestamp - event.timestamp)
-                <= DUPLICATE_WINDOW_SECONDS
-            ):
-                duplicate_index = i
-                break
-
-        if duplicate_index is None:
-            merged.append(event)
-        else:
-            if event.confidence > merged[duplicate_index].confidence:
-                merged[duplicate_index] = event
-
-    merged.sort(key=lambda e: e.timestamp)
-
-    return merged
+    return timeline
