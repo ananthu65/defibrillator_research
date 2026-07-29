@@ -11,6 +11,20 @@ Version 1 Responsibilities
 
 No clinical reasoning is performed here.
 """
+"""
+Timeline Fusion Engine
+
+Version 2 Responsibilities
+
+- Merge audio events
+- Merge video events
+- Produce a unified chronological timeline
+- Preserve event ordering
+
+The Timeline Fusion Engine performs no clinical reasoning,
+assessment, inference, or feedback generation.
+"""
+
 
 from assessment_pipeline.core.events import Event
 
