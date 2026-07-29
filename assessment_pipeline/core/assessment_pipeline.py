@@ -1,22 +1,25 @@
 """
 assessment_pipeline.py
 
-Main entry point for the rule-based assessment pipeline.
+Version 2 Assessment Pipeline
 
 Pipeline
 
 Timeline
     ↓
+Clinical Logic
+    ↓
 Rule Engine
     ↓
 Feedback
     ↓
-Assessment Results
+Final Assessment Report
 """
 
-from assessment_pipeline.core.events import (
-    Event,
-    CriterionEvaluation,
+from assessment_pipeline.core.events import Event
+
+from assessment_pipeline.core.clinical_logic import (
+    apply_clinical_logic,
 )
 
 from assessment_pipeline.core.rule_engine import (
@@ -27,43 +30,60 @@ from assessment_pipeline.core.feedback import (
     generate_feedback,
 )
 
+from assessment_pipeline.core.final_assessment import (
+    build_final_assessment,
+)
+
 
 class AssessmentPipeline:
     """
-    Executes the complete assessment pipeline.
+    Executes the complete Version 2 assessment pipeline.
     """
 
     def __init__(self, events: list[Event]):
 
         self.events = sorted(events, key=lambda e: e.timestamp)
 
-    def run(self) -> list[CriterionEvaluation]:
-        """
-        Execute the assessment pipeline.
-        """
+    def run(self):
 
         #
-        # Evaluate Rules
+        # Clinical Logic
         #
 
-        evaluations = evaluate_rules(self.events)
+        clinical_events = apply_clinical_logic(
+            self.events
+        )
 
         #
-        # Generate Feedback
+        # Rule Evaluation
         #
 
-        evaluations = generate_feedback(evaluations)
+        evaluations = evaluate_rules(
+            clinical_events
+        )
 
-        return evaluations
+        #
+        # Feedback Generation
+        #
+
+        evaluations = generate_feedback(
+            evaluations
+        )
+
+        #
+        # Final Assessment Report
+        #
+
+        report = build_final_assessment(
+            evaluations
+        )
+
+        return report
 
 
-def assess(events: list[Event]) -> list[CriterionEvaluation]:
+def assess(events: list[Event]):
     """
     Convenience function.
-
-    Example
-    -------
-    results = assess(events)
     """
 
     pipeline = AssessmentPipeline(events)
