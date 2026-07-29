@@ -4,7 +4,7 @@ from clinical_logic import resolve_clinical_events
 
 from rule_engine import evaluate_rules
 
-from scoring import calculate_score
+from assessment_pipeline.core.assessment_report import calculate_score
 
 
 def run_pipeline(audio_events, video_events):
