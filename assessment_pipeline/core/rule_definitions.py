@@ -1,15 +1,14 @@
 """
 rule_definitions.py
 
-Defines every assessment rule used by the Rule Engine.
+Defines every assessment rule used by the Rule Evaluation Engine.
 
-Version 1:
+Version 2:
 - Presence
-- Order
 - Dependencies
-
-Future versions will extend this with timing,
-confidence and inference rules.
+- Order
+- Timing
+- Inference
 """
 
 from dataclasses import dataclass, field
@@ -28,6 +27,12 @@ class Rule:
     must_follow: str | None = None
 
     depends_on: list[str] = field(default_factory=list)
+
+    # Version 2 additions
+
+    max_delay: float | None = None
+
+    infer_from: list[str] = field(default_factory=list)
 
 
 RULES = [
@@ -59,6 +64,11 @@ RULES = [
             "take_first_paddle",
             "take_second_paddle",
         ],
+        infer_from=[
+            "shock_button_pressed",
+            "shock_delivered",
+            "remove_paddles",
+        ],
     ),
 
     Rule(
@@ -66,6 +76,9 @@ RULES = [
         event_name="shock_button_pressed",
         depends_on=[
             "place_paddles",
+        ],
+        infer_from=[
+            "shock_delivered",
         ],
     ),
 
@@ -89,7 +102,7 @@ RULES = [
 
     #
     # -------------------------
-    # Audio Rule
+    # Audio Rules
     # -------------------------
     #
 
@@ -100,6 +113,16 @@ RULES = [
         depends_on=[
             "shock_delivered",
         ],
+        max_delay=2.0,
     ),
 
+    Rule(
+        criterion_id="R8",
+        event_name="shock_delivered",
+        must_follow="stop_chest_compressions",
+        depends_on=[
+            "stop_chest_compressions",
+        ],
+        max_delay=5.0,
+    ),
 ]

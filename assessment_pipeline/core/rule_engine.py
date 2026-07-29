@@ -1,17 +1,17 @@
 """
 rule_engine.py
 
-Version 1 Rule Evaluation Engine
+Version 2 Rule Evaluation Engine
 
-Checks:
-- Presence
-- Dependencies
-- Order
+Evaluation sequence
 
-Future versions:
-- Timing
-- Inference
-- Confidence
+1. Presence
+2. Dependencies
+3. Order
+4. Timing
+5. Inference
+
+The Rule Engine performs deterministic assessment only.
 """
 
 from assessment_pipeline.core.events import (
@@ -62,6 +62,24 @@ class RuleEngine:
 
         if event is None:
 
+            inferred = self._infer_event(rule)
+
+            if inferred is not None:
+
+                return CriterionEvaluation(
+                    criterion_id=rule.criterion_id,
+                    result=CriterionResult.PASS_INFERRED,
+                    evidence_type=EvidenceType.INFERRED,
+                    supporting_events=[inferred.event_name],
+                    feedback_message=(
+                        f"{rule.event_name} inferred from "
+                        f"{inferred.event_name}"
+                    ),
+                    timestamps={
+                        inferred.event_name: inferred.timestamp,
+                    },
+                )
+
             return CriterionEvaluation(
                 criterion_id=rule.criterion_id,
                 result=CriterionResult.FAIL,
@@ -70,7 +88,7 @@ class RuleEngine:
             )
 
         #
-        # Dependency Check
+        # Dependencies
         #
 
         for dependency in rule.depends_on:
@@ -87,7 +105,7 @@ class RuleEngine:
                 )
 
         #
-        # Order Check
+        # Order
         #
 
         if rule.must_follow is not None:
@@ -122,6 +140,33 @@ class RuleEngine:
                     },
                 )
 
+            #
+            # Timing
+            #
+
+            if rule.max_delay is not None:
+
+                elapsed = event.timestamp - previous.timestamp
+
+                if elapsed > rule.max_delay:
+
+                    return CriterionEvaluation(
+                        criterion_id=rule.criterion_id,
+                        result=CriterionResult.FAIL,
+                        failure_reason=(
+                            f"Maximum delay exceeded "
+                            f"({elapsed:.2f}s > {rule.max_delay:.2f}s)"
+                        ),
+                        supporting_events=[
+                            rule.must_follow,
+                            rule.event_name,
+                        ],
+                        timestamps={
+                            rule.must_follow: previous.timestamp,
+                            rule.event_name: event.timestamp,
+                        },
+                    )
+
         #
         # PASS
         #
@@ -145,6 +190,17 @@ class RuleEngine:
         for event in self.events:
 
             if event.event_name == event_name:
+                return event
+
+        return None
+
+    def _infer_event(self, rule: Rule):
+
+        for supporting_event in rule.infer_from:
+
+            event = self._find_event(supporting_event)
+
+            if event is not None:
                 return event
 
         return None
