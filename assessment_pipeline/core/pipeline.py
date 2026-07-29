@@ -1,38 +1,52 @@
-from timeline_fusion import merge_timelines
+"""
+pipeline.py
 
-from clinical_logic import resolve_clinical_events
+Version 2 Assessment Pipeline
+"""
 
-from rule_engine import evaluate_rules
+from assessment_pipeline.core.timeline_fusion import merge_timelines
 
-from assessment_pipeline.core.assessment_report import calculate_score
+from assessment_pipeline.core.clinical_logic import apply_clinical_logic
+
+from assessment_pipeline.core.rule_engine import evaluate_rules
+
+from assessment_pipeline.core.final_assessment import (
+    build_final_assessment,
+)
 
 
 def run_pipeline(audio_events, video_events):
+    """
+    Execute the complete assessment pipeline.
+
+    Flow
+
+    Audio + Video
+            ↓
+    Timeline Fusion
+            ↓
+    Clinical Logic
+            ↓
+    Rule Evaluation
+            ↓
+    Final Assessment Report
+    """
 
     timeline = merge_timelines(
-
         audio_events,
-
-        video_events
-
+        video_events,
     )
 
-    clinical_events = resolve_clinical_events(
-
-        timeline
-
+    clinical_events = apply_clinical_logic(
+        timeline,
     )
 
-    rule_results = evaluate_rules(
-
-        clinical_events
-
+    evaluations = evaluate_rules(
+        clinical_events,
     )
 
-    report = calculate_score(
-
-        rule_results
-
+    report = build_final_assessment(
+        evaluations,
     )
 
     return report
