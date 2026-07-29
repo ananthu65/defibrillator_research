@@ -1,11 +1,9 @@
 """
 feedback.py
 
-Generates human-readable feedback from rule evaluations.
+Version 2 Feedback Generator
 
-Version 1:
-- Fixed PASS/FAIL messages.
-- No scoring.
+Populates feedback messages for each evaluated criterion.
 """
 
 from assessment_pipeline.core.events import (
@@ -15,24 +13,32 @@ from assessment_pipeline.core.events import (
 
 
 PASS_MESSAGES = {
-    "R1": "Gel was applied correctly.",
-    "R2": "Paddles were taken one at a time.",
-    "R3": "Paddles were placed correctly.",
-    "R4": "Shock button was pressed correctly.",
-    "R5": "Shock delivery was confirmed.",
-    "R6": "Paddles were removed after shock.",
-    "R7": "Chest compressions were restarted promptly.",
+    "R1": "Gel/pads were applied correctly.",
+    "R2": "Paddles were picked up one at a time.",
+    "R3": "Paddles were placed firmly on the chest.",
+    "R4": "Shock buttons were pressed correctly.",
+    "R5": "Shock was successfully delivered.",
+    "R6": "Paddles were removed after shock delivery.",
+    "R7": "Chest compressions resumed promptly after shock.",
+    "R8": "Shock was delivered within 5 seconds after stopping chest compressions.",
 }
 
 
 FAIL_MESSAGES = {
-    "R1": "Apply gel before using the paddles.",
-    "R2": "Take one paddle first, then the second paddle.",
-    "R3": "Place both paddles correctly before shock.",
-    "R4": "Press the shock button only after correct paddle placement.",
-    "R5": "Deliver the shock after completing the required steps.",
+    "R1": "Apply gel/pads before attempting defibrillation.",
+    "R2": "Pick up one paddle before taking the second.",
+    "R3": "Place both paddles firmly on the patient's chest.",
+    "R4": "Press both discharge buttons simultaneously.",
+    "R5": "Deliver the shock after pressing both discharge buttons.",
     "R6": "Remove the paddles after shock delivery.",
-    "R7": "Restart chest compressions after shock.",
+    "R7": "Resume chest compressions within 2 seconds after shock.",
+    "R8": "Deliver the shock within 5 seconds after stopping chest compressions.",
+}
+
+
+INFERRED_MESSAGES = {
+    "R3": "Paddle placement was inferred from subsequent events.",
+    "R4": "Button press was inferred from shock delivery.",
 }
 
 
@@ -40,21 +46,23 @@ def generate_feedback(
     evaluations: list[CriterionEvaluation],
 ) -> list[CriterionEvaluation]:
     """
-    Adds feedback messages to each CriterionEvaluation.
-
-    Returns the same list with feedback populated.
+    Populate feedback messages for every criterion.
     """
 
     for evaluation in evaluations:
 
-        if evaluation.result in (
-            CriterionResult.PASS_DIRECT,
-            CriterionResult.PASS_INFERRED,
-        ):
+        if evaluation.result == CriterionResult.PASS_DIRECT:
 
             evaluation.feedback_message = PASS_MESSAGES.get(
                 evaluation.criterion_id,
                 "Criterion passed.",
+            )
+
+        elif evaluation.result == CriterionResult.PASS_INFERRED:
+
+            evaluation.feedback_message = INFERRED_MESSAGES.get(
+                evaluation.criterion_id,
+                "Criterion passed using inferred evidence.",
             )
 
         elif evaluation.result == CriterionResult.FAIL:
@@ -67,7 +75,7 @@ def generate_feedback(
         elif evaluation.result == CriterionResult.UNABLE_TO_ASSESS:
 
             evaluation.feedback_message = (
-                "Unable to assess this criterion."
+                "Insufficient evidence to assess this criterion."
             )
 
         elif evaluation.result == CriterionResult.MANUAL_REVIEW:
@@ -79,7 +87,7 @@ def generate_feedback(
         elif evaluation.result == CriterionResult.CRITICAL_ERROR:
 
             evaluation.feedback_message = (
-                "Critical error detected."
+                "Critical safety error detected."
             )
 
     return evaluations
