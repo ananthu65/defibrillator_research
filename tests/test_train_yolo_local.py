@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.train_yolo_local import load_config
+from video.train import load_config
 
 
 class TrainingConfigTests(unittest.TestCase):
@@ -17,7 +17,7 @@ class TrainingConfigTests(unittest.TestCase):
     def valid(self) -> dict[str, object]:
         return {
             "name": "smoke",
-            "model": "weights/yolov8n.pt",
+            "model": "data/weights/video/yolov8n.pt",
             "data": "dataset.yaml",
             "epochs": 1,
             "imgsz": 640,

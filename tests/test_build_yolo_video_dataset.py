@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from scripts.build_yolo_video_dataset import (
+from annotation.build_yolo_video_dataset import (
     Box,
     Track,
     build_sample_reasons,

@@ -1,3 +1,4 @@
+-r ../requirements.txt
 # Phase 4 video decoding and image generation
 imageio-ffmpeg==0.6.0
 Pillow>=10,<12

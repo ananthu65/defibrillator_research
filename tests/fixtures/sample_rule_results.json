@@ -1,0 +1,7 @@
+[
+  {"schema_version": 1, "rule_id": "DEMO_PASS", "status": "pass_direct", "reason": "Synthetic UI fixture, not a clinical criterion", "supporting_events": ["demo_event_1"], "timestamps": {"observed": 2.0}},
+  {"schema_version": 1, "rule_id": "DEMO_INFERRED", "status": "pass_inferred", "reason": "Synthetic inferred-result wording example", "supporting_events": ["demo_event_1"], "timestamps": {"support": 2.0}},
+  {"schema_version": 1, "rule_id": "DEMO_FAIL", "status": "fail", "reason": "Synthetic failure for UI development", "supporting_events": [], "timestamps": {}},
+  {"schema_version": 1, "rule_id": "DEMO_MISSING", "status": "unable_to_assess", "reason": "No evidence in this synthetic example", "supporting_events": [], "timestamps": {}},
+  {"schema_version": 1, "rule_id": "DEMO_CRITICAL", "status": "critical_error", "reason": "Synthetic critical-result wording example", "supporting_events": ["demo_event_1"], "timestamps": {"observed": 2.0}}
+]

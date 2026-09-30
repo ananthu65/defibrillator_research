@@ -1,0 +1,21 @@
+schema_version: 1
+# A new adapter needs only its own module and an entry here, not pipeline edits.
+# Implementation paths are trusted local Python code, not user-uploaded config.
+video:
+  yolo:
+    implementation: video.detectors.yolo:YOLODetector
+    defaults:
+      weights: data/runs/video/phase5/yolov8n_full_one_epoch_p50t_quarantined/weights/best.pt
+  rtdetr:
+    implementation: video.detectors.rtdetr:RTDETRDetector
+    defaults:
+      weights: data/weights/video/rtdetr.pt
+  faster_rcnn:
+    implementation: video.detectors.faster_rcnn:FasterRCNNDetector
+    status: pending
+asr:
+  whisper:
+    implementation: audio.asr.whisper:WhisperASR
+charging_sound:
+  mfcc_rf:
+    implementation: audio.charging_sound.predict:ChargingClassifier

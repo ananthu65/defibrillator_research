@@ -1,0 +1,38 @@
+schema_version: 1
+models: configs/models.yaml
+camera_angle: null
+feedback_templates: feedback/templates.yaml
+# Enable a branch only after its local checkpoint and input are configured.
+video:
+  enabled: false
+  model: yolo                  # yolo | rtdetr | faster_rcnn (pending)
+  options:
+    confidence: 0.25
+    device: cpu
+    stride: 1
+    imgsz: 640
+    min_duration_seconds: 0.0
+    max_gap_seconds: null
+asr:
+  enabled: false
+  model: whisper
+  options:
+    model_path: data/weights/audio/whisper-tiny
+    device: cpu
+    compute_type: int8
+    language: en
+charging_sound:
+  enabled: false
+  model: mfcc_rf
+  options:
+    model_path: data/weights/audio/charging_rf.joblib
+    threshold: 0.5
+    min_windows: 3
+offsets:
+  video: 0.0
+  audio: 0.0
+commands:
+  oxygen_away_command: [oxygen away, remove the oxygen]
+  stand_clear_command: [all stand clear, stand clear]
+  resume_compressions_command: [resume compressions, continue compressions]
+rules: configs/rules.yaml

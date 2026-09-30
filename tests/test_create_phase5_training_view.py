@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.create_phase5_training_view import build_smoke_rows, evenly_spaced
+from video.create_training_view import build_smoke_rows, evenly_spaced
 
 
 def row(task: str, frame: int, classes: str) -> dict[str, str]:

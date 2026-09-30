@@ -1,0 +1,6 @@
+unable_to_assess: "{rule_id}: {reason}."
+manual_review: "{rule_id}: review required. {reason}"
+pass_direct: "{rule_id}: observed evidence meets the rule. {reason}"
+pass_inferred: "{rule_id}: supporting evidence meets the inference rule. {reason}"
+fail: "{rule_id}: criterion not met. {reason}"
+critical_error: "{rule_id}: critical error flagged. {reason}"

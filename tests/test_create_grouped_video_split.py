@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.create_grouped_video_split import (
+from annotation.create_grouped_video_split import (
     ParticipantRecord,
     allocate_proportional_quotas,
     derive_source_quotas,

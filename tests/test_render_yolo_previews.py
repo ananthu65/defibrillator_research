@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.render_yolo_previews import select_rows
+from annotation.render_yolo_previews import select_rows
 
 
 class PreviewSelectionTests(unittest.TestCase):

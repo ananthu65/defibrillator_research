@@ -1,0 +1,22 @@
+schema_version: 1
+status: pending_supervisor_review
+# Deliberately unset. Document the approved definition, units and source here
+# before implementing the corresponding rule. Legacy values are not defaults.
+timing_limits:
+  charge_to_shock_seconds: null
+  shock_to_compressions_seconds: null
+rules:
+  - {id: R1, status: pending, implementation: null, parameters: {}}
+  - {id: R2, status: pending, implementation: null, parameters: {}}
+  - {id: R3, status: pending, implementation: null, parameters: {}}
+  - {id: R4, status: pending, implementation: null, parameters: {}}
+  - {id: R5, status: pending, implementation: null, parameters: {}}
+  - {id: R6, status: pending, implementation: null, parameters: {}}
+  - {id: R7, status: pending, implementation: null, parameters: {}}
+  - {id: A1, status: pending, implementation: null, parameters: {}}
+  - {id: A2, status: pending, implementation: null, parameters: {}}
+  - {id: A3, status: pending, implementation: null, parameters: {}}
+  - {id: A4, status: pending, implementation: null, parameters: {}}
+  - {id: A5, status: pending, implementation: null, parameters: {}}
+  - {id: A6, status: pending, implementation: null, parameters: {}}
+  - {id: A7, status: pending, implementation: null, parameters: {}}

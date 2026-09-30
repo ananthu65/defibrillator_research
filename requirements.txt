@@ -1,0 +1,2 @@
+# Core schemas, config runner and unit tests (no model downloads).
+PyYAML>=6.0,<7

@@ -1,10 +1,13 @@
 extracted_audio/
 
 venv/
-__pycache__/
-*.wav
-*.mp4
-data/
+# Only frozen split text files may be committed from data/.
+/data/*
+!/data/splits/
+/data/splits/*
+!/data/splits/phase3/
+/data/splits/phase3/*
+!/data/splits/phase3/*.txt
 .venv/
 __pycache__/
 *.py[cod]
@@ -18,7 +21,6 @@ htmlcov/
 # Private source recordings and CVAT exports
 videos/
 cvat_backups/
-data/
 *.mp4
 *.mov
 *.avi
@@ -41,6 +43,11 @@ logs/
 wandb/
 mlruns/
 *.pt
+*.pth
+*.ckpt
+*.joblib
+*.pkl
+*.tmp
 *.onnx
 *.engine
 *.torchscript

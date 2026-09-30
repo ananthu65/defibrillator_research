@@ -1,0 +1,1 @@
+"""ARTS defibrillation research components."""

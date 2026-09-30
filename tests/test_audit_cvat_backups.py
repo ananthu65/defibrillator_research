@@ -4,7 +4,7 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from scripts.audit_cvat_backups import (
+from annotation.audit_cvat_backups import (
     audit_backups,
     canonicalize_task_id,
     write_reports,

@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.validate_yolo_dataset import (
+from annotation.validate_yolo_dataset import (
     parse_dataset_classes,
     parse_label_line,
     safe_dataset_path,
