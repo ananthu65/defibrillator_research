@@ -877,3 +877,293 @@ with 0, and its report carries the approved A8 record.
 Only the timing limits in `rules.yaml` got "not used by any rule yet" notes. The engineering
 settings in `engine.yaml` are also unused until the rules exist, but they already carry
 `placeholder` or `undecided` flags, so I left them as they are.
+
+---
+
+## Increment 3: Validation and preparation (2026-10-10)
+
+### What was done
+There is now a single preparation step, `prepare_timeline(events, config)`, that every timeline
+will pass through before any rule runs. It does four things:
+1. **Rejects malformed input** with a `TimelineError`, so no assessment is produced. Rejected
+   input is: not a list of `Event`s, a missing or duplicate `event_id`, more than one camera
+   angle, or more than one recording.
+2. **Maps names** to canonical names through the vocabulary (Increment 1).
+3. **Sets aside events below the confidence threshold** for their source. They are never used
+   as evidence, and each one is recorded with its confidence and the threshold it missed.
+4. **Flags data anomalies:** more than one confident shock, and the same event coming from
+   both human annotation and a model.
+
+The result is a `PreparedTimeline` that later steps (procedure context, rules, report) read.
+It is not called by the engine yet (Increment 7), so the pipeline output is unchanged.
+
+### How it was done
+- **`rules/errors.py`:** new `TimelineError(ValueError)`. It is separate from `ConfigError`, so
+  the report and tests can tell "your config is wrong" from "this recording's data is wrong".
+- **`rules/prepare.py`** (new):
+  - `ExcludedEvent`: an event set aside, with `event_id`, name, source, confidence, threshold
+    and reason.
+  - `Anomaly`: `code`, a plain-language `message`, and the `event_ids` involved.
+  - `PreparedTimeline`: `events` (usable, canonical, in time order), `excluded`,
+    `unknown_labels`, `unused_labels`, `unresolved_labels`, `anomalies`, and `sources` (which
+    sources appeared at all). It has two helpers, `named(event_name)` and `has_anomaly(code)`.
+
+The core of `prepare_timeline`:
+
+```python
+events = _validated(events)                                   # 1. stop on malformed input
+mapping = config.vocabulary.map_events(events)                # 2. canonical names
+thresholds = {source: setting.value for source, setting in config.engine.confidence_thresholds.items()}
+kept, excluded = [], []
+for event in mapping.events:                                  # 3. confidence filter
+    threshold = thresholds[event.source]
+    if event.confidence >= threshold:
+        kept.append(event)
+    else:
+        excluded.append(ExcludedEvent(event.event_id, event.event_name, event.source, event.confidence, threshold))
+kept.sort(key=lambda e: (e.start, e.end, e.event_id))
+return PreparedTimeline(tuple(kept), tuple(excluded), ..., tuple(_anomalies(kept, config)), ...)  # 4. anomalies
+```
+
+How it works:
+- **Thresholds come from config:** the threshold for each source comes from
+  `engine.yaml: confidence_thresholds` (placeholders: annotation 1.0, video 0.5, audio 0.5).
+  `>=` means an event exactly at the threshold is kept.
+- **Anomalies use only kept events.** A shock the model was unsure about is not evidence, so it
+  cannot create a "two shocks" anomaly either.
+- **Sorting makes the order deterministic:** by start, then end, then ID, so the same input
+  always gives the same output. The pipeline merger already sorts; this also covers timelines
+  that do not come through the pipeline.
+- **Everything is a tuple** (an immutable list), so a rule cannot accidentally change the
+  evidence that other rules see.
+
+`_validated` checks, in order:
+1. The input is iterable.
+2. Every item is a `schemas.event.Event`, not a raw dict. The core never sees source formats;
+   adapters convert first.
+3. Every event has an `event_id`, and the IDs are unique. Rule results cite evidence by ID, and
+   the engine refuses citations of unknown IDs.
+4. At most one non-null `camera_angle`, and at most one `metadata.task_id`. The contract says
+   one recording and one camera per assessment.
+
+Value checks (times, confidence range, source) are already done by `Event.__post_init__` in the
+shared schema, so they are not repeated.
+
+### Methods and design choices
+- **Fail fast for malformed input; record everything else.** The brief says "Invalid config or
+  malformed input → clear error; no assessment produced", but also "Event below the confidence
+  threshold → not used as evidence; logged". So structural problems raise, while data problems
+  become `excluded` or `anomalies` entries that the report will show.
+- **"Logged" means recorded in the result**, not just printed or written to a log file. The
+  record reaches the JSON report (Increment 9), so an evaluator can see exactly which evidence
+  was ignored and why. The alternative, Python `logging`, would be lost unless someone captured
+  the console.
+- **Zero shocks is not an anomaly.** The brief lists "no shock" as a missing reference (rules
+  report "not evaluable because of R5") and "more than one shock" as a data anomaly. Treating
+  zero as an anomaly would report the same problem twice.
+- **`mixed_evidence_sources`:** an assessment should use either human annotation or model
+  output, not both for the same event. Mixing would let a human tag "fill in" a model miss
+  without anyone noticing. It is flagged, not rejected, because the brief does not define this
+  case.
+- **Contradictory evidence is left to the rules and the context.** What counts as a
+  contradiction is rule-specific (for example R8's "visible paddle placed before the first
+  placement"). I did not invent generic contradiction rules here. `Anomaly` is the mechanism
+  later steps use to flag them.
+
+### Assumptions
+- **The confidence thresholds are placeholders.** The shared contract says the ASR confidence
+  is an `exp(log-probability)` proxy, not a calibrated probability, so the audio 0.5 especially
+  needs pilot validation.
+- **One camera angle and one task ID per timeline is a hard rule.** If calibrated multi-camera
+  fusion is added later (the contract calls it a later extension), this check would move into
+  config.
+- **A shock is counted per event.** Two shock events are an anomaly even if they are a few
+  frames apart. Merging detections into one event is upstream's job (video postprocessing
+  persistence and smoothing). If upstream cannot guarantee that, the rule could treat shocks
+  within `simultaneous_window_seconds` as one. I did not add that silently.
+
+### How it stays adaptable
+- **New source:** add its threshold to `engine.yaml`. The validator already requires one per
+  source.
+- **New anomaly type:** add a check in `_anomalies`, or flag it later in the procedure context
+  or a rule using the same `Anomaly` type. The report will show it without other changes.
+- **Changed input format:** handled in the adapters (Increment 10). `prepare_timeline` only
+  accepts the shared `Event` schema.
+
+### Tests
+`tests/test_rule_engine_prepare.py`, 22 tests:
+- **Mapping (4):**
+  - Canonical name plus original label.
+  - Unknown, unused and unresolved labels are reported and not dropped.
+  - Time order.
+  - The input is not modified.
+- **Confidence threshold (4)** (brief section 8: "below the confidence threshold"):
+  - An event below the threshold is excluded and recorded with its threshold.
+  - An event exactly at the threshold is kept.
+  - Thresholds are per source.
+  - Excluded events do not create anomalies.
+- **Anomalies (6)** (brief section 8: "more than one shock"):
+  - One shock: no anomaly.
+  - Two shocks: flagged with both IDs.
+  - No shock: not an anomaly.
+  - Human plus model evidence for one event: flagged.
+  - An empty timeline is valid.
+  - Sources present are recorded.
+- **Malformed input (7)** (brief section 8: "malformed input → clear error"):
+  - Not a list.
+  - A raw dict.
+  - A missing ID.
+  - A duplicate ID.
+  - Two camera angles.
+  - Two recordings.
+  - Invalid times rejected by the shared schema.
+- **Pipeline (1):** the sample fixture, after `merge_timeline`, prepares with no unknown labels
+  and no anomalies.
+
+Full suite: **144 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output is unchanged. `rules/` imports nothing from `video/`, `audio/`,
+`legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.config import load_rules_config; from rules.prepare import prepare_timeline; from schemas.event import Event as E; p = prepare_timeline([E('Gel applied', 2, 2, 'annotation', 1.0, event_id='g1'), E('stand_clear_command', 4, 4.5, 'audio', 0.3, event_id='a1'), E('shock_delivered_on_screen', 9, 9, 'annotation', 1.0, event_id='s1'), E('shock_delivered_on_screen', 40, 40, 'annotation', 1.0, event_id='s2')], load_rules_config()); print([e.event_name for e in p.events]); print(p.excluded); print(p.anomalies)"
+```
+Expected output:
+- The gel event and both shocks are kept.
+- The stand-clear command is excluded (0.3 < 0.5).
+- A `multiple_shocks` anomaly cites `s1` and `s2`.
+
+### Open questions
+1. Should shock events within `simultaneous_window_seconds` count as one shock (a defence
+   against duplicated detections), or is that strictly upstream's job? Currently each event
+   counts.
+2. Should `mixed_evidence_sources` reject the timeline instead of flagging it?
+3. Is "one camera angle, one task ID" right as a hard error for now?
+
+### Next increment
+**Increment 4: coverage model and policy** (`rules/coverage.py`):
+- Coverage statuses (`covered`, `not_covered`, `unknown`) for each modality (video, audio) and
+  region (`apical_zone`, `sternal_zone`).
+- An event → region mapping in config.
+- Lookup order: explicit timeline coverage, then region, then source, then modality.
+- The single function that turns "missing + coverage status" into Fail or Unable to Verify,
+  tested under every policy setting.
+
+---
+
+## Increment 3 review: changes before Increment 4 (2026-10-10)
+
+Arnikan reviewed Increment 3. Each item below is what was asked and what was done.
+
+### Earlier items (confirmed)
+1. **A8 update:** already done in commit `ddfa846` and pushed.
+   - `approved_by: Dr. Senani Samarasinghe`.
+   - `approved_on: null`, because Arnikan said the date is not known.
+   - Provenance fields kept, and the pending note removed.
+   - The new limit names are kept.
+   - `charge_to_shock_seconds` and the other unused limits stay null, each with a "not used by
+     any rule yet" note.
+
+   No change was needed.
+2. **Duplicate shocks are not merged.** `multiple_shocks` now records whether consecutive shocks
+   fall within `simultaneous_window_seconds`. The message then adds "(possibly the same shock
+   detected twice)". `details` holds `within_simultaneous_window`, `smallest_gap_seconds` and
+   the window used.
+3. **`mixed_evidence_sources` stays a flag.** No change.
+4. **One camera angle and one task ID** stays a hard error. Events with no angle were already
+   ignored by the check. A new test proves that video events from one angle plus audio events
+   with no angle are accepted.
+5. **Ownership:**
+   - `upstream_requirements.md` has a new section, "Upstream owns detection quality": merging
+     duplicate detections and choosing confidence thresholds belong upstream.
+   - The engine's confidence step stays as a configurable safety check. A threshold of 0
+     disables it cleanly: confidence is always ≥ 0, so every event is kept and `excluded` is
+     empty (new test).
+   - New open question 12 (plan) and open item 6 (upstream): which side applies the thresholds?
+6. **Source with no threshold** now raises `TimelineError` `no_confidence_threshold`, with a
+   clear message (new test). **An empty timeline is not rejected** (existing test).
+
+### New items
+7. **Low confidence is not absence.**
+   - Recorded in the plan ("Evidence rules", Increments 4 and 6): when a rule finds an event
+     missing but an excluded low-confidence event of the same canonical name exists, the outcome
+     is Unable to Verify, flagged `low_confidence_evidence`, never Fail.
+   - `PreparedTimeline.excluded_named(name)` returns those events in time order.
+   - `ExcludedEvent` now also stores `start` and `end`, so a rule can check whether the
+     low-confidence event falls in the relevant period.
+8. **Unknown labels warn.** Any unknown label raises an `unknown_labels_present` anomaly, with
+   the event IDs and `details.labels` (`source:label`). This shows a possible naming mismatch
+   instead of silently treating the event as missing (new tests: present and absent).
+9. **Event time rule:** order and timing comparisons use each event's `start` time.
+   - Documented in the `prepare.py` docstring, the plan ("Evidence rules") and the
+     introduction of `anomalies.md`.
+   - `prepare_timeline` already sorts by start time.
+   - The `multiple_shocks` gap is a difference of start times.
+   - A new test checks that a long event starting earlier comes first.
+10. **Repeated events are kept.** A new test has three `gel_applied`, two `first_paddle_taken`
+    and a command said twice. All are kept, in time order, with none merged or dropped. No code
+    change: the step never merged anything.
+11. **Timeline header request:**
+    - `upstream_requirements.md` requests `recording_id`, `camera_angle`, `duration_seconds` and
+      `analyses_run` with each timeline.
+    - Why: without it, "no audio events" cannot be told apart from "audio analysis didn't run",
+      so the engine would have to treat a likely learner mistake as unknown.
+    - Its use is added to Increment 4 in the plan: an analysis that did not run gives
+      `not_covered`, and a missing header gives `unknown`.
+    - Listed as open question 13, and upstream open item 7.
+12. **Supervisor questions on repeated actions:** added as open question 14.
+    - 14a: gel applied more than twice — Fail, or "at least twice"?
+    - 14b: paddles lifted and placed again before the shock.
+    - 14c: discharge buttons pressed more than once.
+13. **Anomaly list:** new `docs/rule_engine/anomalies.md`. It lists every rejection code (7) and
+    anomaly code (3), which step raises it and why, plus the flags planned for later
+    increments. It is to be extended in every increment.
+
+### How the code changed
+- **`rules/errors.py`:** `TimelineError(code, message)` now carries a stable `.code`. The code
+  is also appended to the message (`... [duplicate_event_id]`), so it shows in tracebacks.
+- **`rules/prepare.py`:**
+  - Every rejection has a code.
+  - A dict or string is rejected as `not_a_list`. (A dict is iterable, so before this change it
+    would have been read as a list of its keys.)
+  - There is a check for a missing threshold.
+  - `ExcludedEvent` gains `start` and `end`, and the excluded list is sorted by time.
+  - `Anomaly` gains `details` (a dict).
+  - New `PreparedTimeline` helpers: `excluded_named(name)` and `anomaly(code)`.
+  - The `multiple_shocks` window check, and the `unknown_labels_present` anomaly.
+
+The shock check (start times; consecutive gaps):
+
+```python
+window = config.engine.value("simultaneous_window_seconds")
+gaps = [later.start - earlier.start for earlier, later in zip(shocks, shocks[1:])]
+duplicate = min(gaps) <= window
+```
+
+`shocks` is already in time order, so `zip(shocks, shocks[1:])` pairs each shock with the next
+one. The smallest gap decides whether any two may be the same shock.
+
+### Tests
+`tests/test_rule_engine_prepare.py`: 22 → **31 tests**.
+- **New:**
+  - Repeated events are kept.
+  - Start-time order.
+  - A threshold of 0 disables the check.
+  - A missing threshold gives `TimelineError`.
+  - `excluded_named` lookup.
+  - Close shocks are kept but marked.
+  - Unknown labels warn, and known labels don't.
+  - Audio without an angle is not a second angle.
+- **Changed:** every rejection test now also checks `.code`, and a dict input is rejected.
+
+Full suite: **153 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline/`.
+
+### Open questions added (plan section E)
+- 12: Which side applies the confidence thresholds?
+- 13: The timeline header.
+- 14a–c: The supervisor questions on repeated actions.
+- 15: The Increment 3 decisions, recorded as decided.
+
+### Next increment
+**Increment 4: coverage model and policy.**

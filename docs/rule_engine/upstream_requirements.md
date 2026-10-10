@@ -27,7 +27,43 @@ agree it with Arnikan and add one line to `vocabulary.yaml`.
 | `metadata` | Provenance (model, frame, etc.) |
 
 - **Repeated events:** report every occurrence. The rule engine decides which one counts.
-- **One recording:** all events must come from one recording, with one camera angle.
+- **One recording:** all events must come from one recording, with one camera angle. Events with
+  no camera angle (for example audio) are fine.
+- **Event time:** the rule engine orders and times events by their **`start`** time.
+
+## Upstream owns detection quality
+
+These belong to video postprocessing and audio command detection, not the rule engine:
+
+- **Merging duplicate detections:** one real action or command should be one event. For
+  example, the same shock detected over several frames, or a command split across two
+  transcript segments, should arrive as one event. The rule engine does **not** merge events. If
+  it sees two shocks, it flags `multiple_shocks` and says whether they fall within
+  `simultaneous_window_seconds` ("possibly the same shock detected twice").
+- **Choosing confidence thresholds:** each model's owner selects and validates its threshold in
+  pilot validation, and emits only events it considers confident.
+- **Rule-engine safety check:** the rule engine keeps its own configurable confidence check
+  (`configs/rule_engine/engine.yaml: confidence_thresholds`). A threshold of `0` disables it.
+  To avoid applying two different thresholds to the same events, we need to agree which side
+  applies them (open item 6).
+
+## Timeline header (requested)
+
+Please send a header with each timeline, alongside the events:
+
+| Field | Meaning |
+|---|---|
+| `recording_id` | The recording / task ID (for example `P03_LL`) |
+| `camera_angle` | The single camera angle the video events come from |
+| `duration_seconds` | Length of the recording |
+| `analyses_run` | Which analyses actually ran, for example `{video: true, audio: true}` |
+
+**Why:** without `analyses_run`, a timeline with no audio events could mean "nobody gave a
+command" (a learner mistake) or "audio analysis did not run" (no evidence). The rule engine
+must not blame the learner for missing data, so today it has to treat both cases as unknown.
+`duration_seconds` lets it tell "the event never happened" from "the recording was cut short".
+The rule engine will use the header for coverage (Increment 4). The format is a proposal to
+agree; it can be a small wrapper around the event list, so the `Event` schema does not change.
 
 ## From video postprocessing (Ananth)
 
@@ -101,3 +137,7 @@ provisional** until the medical-faculty supervisor confirms them.
 4. **Command names:** the audio stop/shock commands and the final names after supervisor
    confirmation.
 5. **Audio coverage:** the signal format.
+6. **Confidence thresholds:** which side applies them (upstream, the rule engine, or both with
+   the same values), so they are not applied twice with different values.
+7. **Timeline header:** whether upstream can provide `recording_id`, `camera_angle`,
+   `duration_seconds` and `analyses_run`, and in what format.

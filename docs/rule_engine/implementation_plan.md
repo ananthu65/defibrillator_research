@@ -120,6 +120,22 @@ Config validation rejects only **circular** rule-result dependencies (the error 
 and dependencies on unknown rule IDs. Ties are broken by display order, so evaluation is
 deterministic.
 
+### Evidence rules (decided 2026-10-10)
+
+- **Event time:** all order and timing comparisons use each event's `start` time (a point event
+  has `start == end`). Also stated in `anomalies.md`.
+- **Repeated events are kept:** every occurrence stays in the timeline, in time order, and none
+  is merged or dropped. Each rule decides which occurrence counts.
+- **Low confidence is not absence:** when a rule finds an event missing, but an excluded
+  low-confidence event of the same canonical name exists
+  (`PreparedTimeline.excluded_named(name)`), the outcome is Unable to Verify, flagged
+  `low_confidence_evidence`, **never Fail**.
+- **Detection quality is upstream's job:** merging duplicate detections and choosing confidence
+  thresholds belong upstream (`upstream_requirements.md`). The engine's confidence step is a
+  configurable safety check, and a threshold of 0 disables it.
+- **Codes are documented:** every anomaly and rejection code is listed in
+  `docs/rule_engine/anomalies.md`, which is extended in every increment.
+
 ### Coverage
 
 Rules never decide what missing evidence means. A rule that finds a required event missing
@@ -189,9 +205,9 @@ fixtures go in `tests/fixtures/rule_engine/`.
 | 1 | Event vocabulary: YAML mapping + `map_events()`; unknown labels kept and flagged; placeholders for missing tags/commands | `vocabulary.yaml`, `rules/vocabulary.py` | mapping, original label kept, unknown label, IDs preserved | Real apical/sternal/first-placed tag names; command names |
 | 2 | Config format + validation: `rules.yaml` in display order, add R8/A8, `same_as: R7` on A6, approval records `{value, approved_by, approved_on, source}` (plain `null` still accepted), `engine.yaml` placeholders; loader errors on bad config; **test 14 → 16** | `rules.yaml`, `engine.yaml`, `rules/config.py`, `test_pipeline_contracts.py` | each invalid config → clear error; circular rule-result dependency → error naming the cycle; unknown dependency ID → error; null limit allowed | — (A8 record: provided by Arnikan 2026-10-10, team discussion; approved by Dr. Senani Samarasinghe) |
 | 3 | Validation + preparation: confidence threshold per source (below → excluded, logged), anomalies (shock count ≠ 1, contradictory events), malformed input errors | `rules/prepare.py` | below-threshold logged; >1 shock flagged; malformed → error, no report | — |
-| 4 | Coverage model + policy: coverage records from timeline/adapter for modalities (video, audio) **and regions** (`apical_zone`, `sternal_zone`); event → region mapping in config; policy lookup (explicit timeline coverage > region > source > modality); `undecided` handling | `rules/coverage.py`, `engine.yaml` | every policy value × every coverage status; region visible / not visible / unknown | Unknown-coverage policy |
+| 4 | Coverage model + policy: coverage records from timeline/adapter for modalities (video, audio) **and regions** (`apical_zone`, `sternal_zone`); event → region mapping in config; policy lookup (explicit timeline coverage > region > source > modality); `undecided` handling; **timeline header** (`recording_id`, `camera_angle`, `duration_seconds`, `analyses_run`) used when present: an analysis that did not run means its modality is `not_covered`, and a missing header means `unknown`; **low confidence is not absence**: a missing event with an excluded event of the same name gives Unable to Verify (`low_confidence_evidence`), never Fail | `rules/coverage.py`, `engine.yaml` | every policy value × every coverage status; region visible / not visible / unknown; header present / absent / analysis not run; low-confidence event present | Unknown-coverage policy; header format |
 | 5 | Procedure context: shock time (R5, R6 fallback, anomaly), phases, **first placement time** (`first_paddle_placed`), **per-paddle placement times** (apical, sternal), **zone visibility** (apical, sternal), stop/start times, `resume_compressions_command` resolved into `continue_compressions_command` (before shock) or `start_compressions_command` (after shock), coverage | `rules/context.py` | one/zero/two shocks, fallback, classification | — |
-| 6 | `RuleOutcome` + shared checks | `rules/outcome.py`, `rules/checks.py` | each helper incl. simultaneous window, null limit → "timing not checked", repeated event satisfies | — |
+| 6 | `RuleOutcome` + shared checks; the presence check consults `excluded_named` so that "missing but low-confidence evidence exists" becomes Unable to Verify (`low_confidence_evidence`), never Fail; all comparisons use start time | `rules/outcome.py`, `rules/checks.py` | each helper incl. simultaneous window, null limit → "timing not checked", repeated event satisfies, low-confidence evidence → Unable to Verify | — |
 | 7 | Registry + base rule + engine wiring: discovery, evaluation order from rule-result dependencies (topological sort, display-order tie-break), results reported in display order, dependency → "not evaluable because of X", pending → not counted, `same_as` reporting, all rules always run; `evaluate()` unchanged for the pipeline | `rules/registry.py`, `rules/base.py`, `rules/engine.py` | dummy rules; existing contract tests still pass | — |
 | 8 | Overall result policy: any Fail → Fail; else any Unable → `engine.yaml: unable_to_verify_outcome` (`fail` / `faculty_review`, currently undecided); else Pass | `rules/policy.py` | all branches incl. pending not counted | Unable-to-Verify policy |
 | 9 | JSON report renderer + `python -m rules.run` CLI | `rules/render.py`, `rules/run.py` | report shape, round-trip | — |
@@ -267,6 +283,22 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 10. The pipeline report will not show the overall result or checklist unless `pipeline/run.py`
     calls `rules.engine.assess()`. This needs Ananth.
 11. Engineering placeholder values (section D).
+12. **Confidence thresholds:** which side applies them, upstream or the rule engine, so they
+    are not applied twice with different values? (The rule engine's check is a safety net, and
+    a threshold of 0 disables it.)
+13. **Timeline header:** can upstream provide `recording_id`, `camera_angle`,
+    `duration_seconds` and `analyses_run` with each timeline, and in what format? Without it,
+    "no audio events" cannot be told apart from "audio analysis didn't run".
+14. **Supervisor: repeated actions.**
+    - 14a. Gel applied **more than twice**: Fail, or "at least twice" passes?
+    - 14b. Paddles **lifted and placed again** before the shock: acceptable, or a mistake? Which
+      placement counts for R2, R3 and R8?
+    - 14c. Discharge buttons **pressed more than once**: acceptable, or a mistake? Which press
+      counts for R4?
+15. *(Decided, Increment 3)* Duplicate shocks are not merged; `multiple_shocks` records whether
+    they fall within `simultaneous_window_seconds`. `mixed_evidence_sources` stays a flag. One
+    camera angle and one task ID per timeline stays a hard error (events with no angle do not
+    count as a second angle).
 
 ---
 
