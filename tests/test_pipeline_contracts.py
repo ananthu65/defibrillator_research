@@ -50,9 +50,9 @@ class PipelineContracts(unittest.TestCase):
         events = [Event.from_dict(e) for e in json.loads((ROOT / "tests/fixtures/sample_timeline.json").read_text())]
         result = assess(load_yaml(ROOT / "configs/pipeline.yaml"), events=events)
         self.assertEqual([e["start"] for e in result["events"]], [1, 2, 4])
-        self.assertEqual(len(result["rules"]), 14)
+        self.assertEqual(len(result["rules"]), 16)  # update when rules are added or removed (rule engine owner)
         self.assertTrue(all(r["status"] == "unable_to_assess" for r in result["rules"]))
-        self.assertEqual(len(result["feedback"]), 14)
+        self.assertEqual(len(result["feedback"]), 16)
 
     def test_enabled_branch_requires_its_input(self):
         config = load_yaml(ROOT / "configs/pipeline.yaml")

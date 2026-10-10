@@ -1,0 +1,27 @@
+schema_version: 1
+# Rule engine engineering settings (owner: Arnikan). These are NOT clinical values.
+# Each setting is a scalar or {value, placeholder, undecided, note}:
+#   placeholder: true  -> engineering value not yet selected in pilot validation
+#   undecided: true    -> team policy not yet decided; the value is the interim behaviour
+# Every key below is required, so a missing setting is an error rather than a silent default.
+
+confidence_thresholds:   # events below the threshold are not used as evidence (logged)
+  annotation: {value: 1.0, placeholder: true, note: human annotation}
+  video:      {value: 0.5, placeholder: true}
+  audio:      {value: 0.5, placeholder: true}
+
+simultaneous_window_seconds:    {value: 0.5, placeholder: true}  # two events this close count as simultaneous
+gel_minimum_gap_seconds:        {value: 1.0, placeholder: true}  # R1: two gel events closer than this are one application
+placement_match_window_seconds: {value: 0.5, placeholder: true}  # R8: visible-zone placement "same time" as first_paddle_placed
+assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
+
+# Missing required event -> outcome, by coverage status. Per-modality, per-source and per-region
+# overrides arrive in Increment 4.
+coverage_policy:
+  outcomes:
+    covered:     fail                # approved 2026-10-10
+    not_covered: unable_to_verify    # approved 2026-10-10
+    unknown:     {value: unable_to_verify, undecided: true, note: flagged coverage_policy_undecided}
+
+inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagged inferred_fail_policy_undecided}
+unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}

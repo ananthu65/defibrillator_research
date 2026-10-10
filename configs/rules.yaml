@@ -1,22 +1,48 @@
 schema_version: 1
 status: pending_supervisor_review
-# Deliberately unset. Document the approved definition, units and source here
-# before implementing the corresponding rule. Legacy values are not defaults.
+# Rule engine catalogue (owner: Arnikan). Loaded and validated by rules/config.py.
+vocabulary: configs/rule_engine/vocabulary.yaml   # canonical event names
+engine: configs/rule_engine/engine.yaml           # engineering placeholders and policies
+
+# Clinical values. Never invented: anything not provided stays null, and a rule with a null
+# limit checks presence and order only and says that timing was not checked.
+# A value is a record: {value, approved_by, approved_on, provided_by, provided_on, source, note}.
+# A value counts as approved only when approved_by and approved_on are set. Quote dates
+# ("YYYY-MM-DD") so the configuration stays JSON-serialisable in pipeline reports.
 timing_limits:
-  charge_to_shock_seconds: null
-  shock_to_compressions_seconds: null
+  charge_to_shock_seconds: null          # pre-existing key; no current rule uses it
+  shock_to_compressions_seconds: null    # R7/A6: shock -> start/resume compressions command
+  gel_application_period_seconds: null   # R1: period for the two gel applications
+  stop_to_shock_seconds: null            # A4: stop-compressions command -> shock
+  shock_command_tolerance_seconds: null  # A5: verbal shock command may precede the shock by this
+  shock_to_removal_seconds: null         # R6: shock -> paddles removed
+  pre_shock_pause_seconds:               # A8: stop CPR -> start CPR
+    value: 5
+    approved_by: null
+    approved_on: null
+    provided_by: Arnikan
+    provided_on: "2026-10-10"
+    source: team discussion
+    note: supervisor approval pending
+
+# Rules in DISPLAY order (report and checklist). The engine derives the evaluation order from
+# rule-result dependencies (depends_on, same_as); event dependencies impose no order.
+# status: pending | approved. Only approved rules with an implementation are evaluated and
+# counted; pending rules are reported as pending.
 rules:
-  - {id: R1, status: pending, implementation: null, parameters: {}}
-  - {id: R2, status: pending, implementation: null, parameters: {}}
-  - {id: R3, status: pending, implementation: null, parameters: {}}
-  - {id: R4, status: pending, implementation: null, parameters: {}}
-  - {id: R5, status: pending, implementation: null, parameters: {}}
-  - {id: R6, status: pending, implementation: null, parameters: {}}
-  - {id: R7, status: pending, implementation: null, parameters: {}}
-  - {id: A1, status: pending, implementation: null, parameters: {}}
-  - {id: A2, status: pending, implementation: null, parameters: {}}
-  - {id: A3, status: pending, implementation: null, parameters: {}}
-  - {id: A4, status: pending, implementation: null, parameters: {}}
-  - {id: A5, status: pending, implementation: null, parameters: {}}
-  - {id: A6, status: pending, implementation: null, parameters: {}}
-  - {id: A7, status: pending, implementation: null, parameters: {}}
+  - {id: R1, title: Gel applied twice, status: pending, implementation: null, parameters: {}}
+  - {id: R2, title: Second paddle taken after the first is placed, status: pending, implementation: null, parameters: {}}
+  - {id: R8, title: Apical paddle placed before sternal, status: pending, implementation: null, parameters: {}}
+  - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {}}
+  - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {}}
+  - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {}}
+  - {id: R6, title: Paddles removed after shock, status: pending, implementation: null, parameters: {}}
+  - {id: A1, title: Oxygen away, status: pending, implementation: null, parameters: {}}
+  - {id: A2, title: Continue compressions, status: pending, implementation: null, parameters: {}}
+  - {id: A3, title: All stand clear, status: pending, implementation: null, parameters: {}}
+  - {id: A4, title: Stop compressions, status: pending, implementation: null, parameters: {}}
+  - {id: A5, title: Shock command, status: pending, implementation: null, parameters: {}}
+  - {id: R7, title: Compressions restarted promptly after shock, status: pending, implementation: null, parameters: {}}
+  - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: pending}
+  - {id: A7, title: Correct sequence of audio commands, status: pending, implementation: null, depends_on: [A1, A2, A3, A4, A5], parameters: {}}
+  - {id: A8, title: Pre-shock pause, status: pending, implementation: null, parameters: {}}

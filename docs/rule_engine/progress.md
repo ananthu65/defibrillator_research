@@ -622,3 +622,212 @@ imports nothing from `video/`, `audio/` or `legacy/`.
 
 ### Next increment
 **Increment 2: config format and validation.**
+
+---
+
+## History rewrite: Claude trailer removed (2026-10-10)
+
+Arnikan approved removing the `Co-Authored-By: Claude` trailer from the three earlier commits.
+`feature/rule-engine` was not pushed.
+
+- **Backup:** first created `backup/rule-engine-before-reword` at `b172f68`.
+- **Rewrite:** ran
+  `git filter-branch -f --msg-filter "sed '/^Co-Authored-By: Claude/d'" main..feature/rule-engine`.
+- **Old → new hashes:** `4f1c944` → `fdbdba3`, `bbebf1b` → `7ad706e`, `5868e79` → `a58ac2b`,
+  `b172f68` → `977ab11`.
+- **Checks:**
+  - No Claude or Co-Authored-By line remains.
+  - Each message differs from the backup only by the removed trailer line.
+  - The final tree is identical to the backup, and authors and dates are unchanged.
+  - 78 tests pass (1 skipped) and the pipeline command exits with 0.
+- **Kept:** `filter-branch` also keeps `refs/original/refs/heads/feature/rule-engine`. The backup
+  branch was not deleted; Arnikan deletes it after checking.
+
+---
+
+## Increment 2: Config format and validation (2026-10-10)
+
+### What was done
+All rule-engine configuration now has one loader, `rules/config.py`, that checks every file
+before any assessment runs. Each problem gives a clear `ConfigError` naming the file and entry.
+- **`configs/rules.yaml`:**
+  - Lists all 16 rule IDs (R8 and A8 added) in display order, with titles.
+  - Records clinical values with their provenance, including the A8 5-second limit.
+  - Links to the vocabulary and to a new `configs/rule_engine/engine.yaml`, which holds every
+    engineering placeholder and undecided policy.
+- **Evaluation order:** worked out from rule-result dependencies, and circular dependencies are
+  rejected with the cycle named.
+- **Engine unchanged:** `rules/engine.py` is not touched, so the pipeline still sees every rule
+  as pending. The new loader is wired into the engine in Increment 7.
+
+### How it was done
+- **`configs/rules.yaml`** (changed; `schema_version` stays 1, and the existing keys keep their
+  meaning):
+  - New `vocabulary:` and `engine:` paths, both relative to the repo root.
+  - `timing_limits`:
+    - The two existing keys stay.
+    - New keys, all `null`: `gel_application_period_seconds` (R1), `stop_to_shock_seconds`
+      (A4), `shock_command_tolerance_seconds` (A5), `shock_to_removal_seconds` (R6).
+      `shock_to_compressions_seconds` (R7/A6) was already there.
+    - `pre_shock_pause_seconds` (A8) is the record:
+      `{value: 5, approved_by: null, approved_on: null, provided_by: Arnikan,
+      provided_on: "2026-10-10", source: team discussion, note: supervisor approval pending}`.
+  - `rules`: 16 entries in brief order, each with a `title`. A6 is `same_as: R7`; A7 is
+    `depends_on: [A1, A2, A3, A4, A5]`. All rules are `status: pending`.
+- **`configs/rule_engine/engine.yaml`** (new):
+  - Confidence thresholds per source.
+  - `simultaneous_window_seconds`, `gel_minimum_gap_seconds`,
+    `placement_match_window_seconds`, and `assume_first_taken_is_apical` (false). All are marked
+    `placeholder: true`.
+  - `coverage_policy.outcomes`: `covered → fail`, `not_covered → unable_to_verify`, and
+    `unknown → unable_to_verify` marked `undecided: true`.
+  - `inferred_fail_outcome` (interim `unable_to_verify`, undecided).
+  - `unable_to_verify_outcome` (`null`, undecided).
+  - **Every key is required**, so a missing setting is an error, not a silent default.
+- **`rules/config.py`** (new):
+  - Dataclasses: `ClinicalValue` (value plus provenance, and `.approved`), `Setting` (value,
+    `placeholder`, `undecided`), `RuleDefinition`, `EngineSettings`, and `RuleEngineConfig`
+    (which holds rules, limits, engine settings and the vocabulary).
+  - `load_rules_config(path)` is the entry point.
+
+  The evaluation order (a *topological sort*: order items so that each comes after the items
+  it depends on):
+
+```python
+def _topological(order, dependencies, where="rules"):
+    remaining, done, result = list(order), set(), []
+    while remaining:
+        ready = next((r for r in remaining if set(dependencies[r]) <= done), None)
+        if ready is None:
+            raise ConfigError(f"{where}: circular rule-result dependency: {_cycle(remaining, dependencies)}")
+        remaining.remove(ready)
+        done.add(ready)
+        result.append(ready)
+    return result
+```
+
+  How it works:
+  - `order` is the display order. On each pass the loop takes the **first** rule in display
+    order whose dependencies are all done (`<=` means "is a subset of"). So rules only move as
+    far as their dependencies require, and the result is the same every run.
+  - If no rule is ready, the remaining rules depend on each other. `_cycle` then walks the
+    dependencies until a rule repeats and reports the loop, for example
+    `A1 -> A2 -> A3 -> A1`.
+  - `RuleDefinition.result_dependencies` is `depends_on` plus `same_as`, because A6 needs R7's
+    result. Event dependencies (shock time and so on) are not listed and impose no order.
+- **Clinical value rules:**
+  - A value is either `null` or a record; a plain number is rejected because it has no
+    provenance.
+  - A non-null value needs a `source`.
+  - `approved_by` and `approved_on` must be given together, and an approval needs a value.
+  - Dates must be quoted `"YYYY-MM-DD"`. `pipeline/run.py:44` copies the raw `rules.yaml` into
+    the JSON report, and an unquoted YAML date would become a Python `date` and crash
+    `json.dumps`.
+- **`tests/test_pipeline_contracts.py`** (shared): 14 → 16 in both assertions, with a comment to
+  update it when rules change. **This is the only shared-file change. Ananth and Sanjeevan:
+  please note.**
+
+### Methods and design choices
+- **Frozen dataclasses:** used rather than passing raw dicts around. Rules will receive typed,
+  already-validated values, and a typo becomes an attribute error, not a silent `None`.
+- **Two kinds of "unset":** `ClinicalValue` (clinical, needs provenance and approval) and
+  `Setting` (engineering or policy, flagged `placeholder` or `undecided`) are kept separate. The
+  brief treats them differently: clinical values are never invented, while engineering values
+  get placeholder defaults.
+- **Validate everything at load time:** a bad config stops the run with a clear error before
+  any assessment (brief section 8, last row).
+- **`yaml` read directly:** not via `pipeline.config`, so `rules/` does not depend on the
+  pipeline package, which itself imports `rules`.
+
+### Assumptions
+- **The A8 value is used, flagged as not approved.** A provided but not-yet-approved value (A8)
+  will be used by the rule, with its result saying "limit not yet approved by the supervisor".
+  It is recorded, not invented. The A8 rule itself stays `pending`, so it is not counted. If
+  you want unapproved values ignored instead, the rule would check `limit.approved`, a
+  one-line change in A8.
+- **New key names are mine:** `gel_application_period_seconds`, `stop_to_shock_seconds`,
+  `shock_command_tolerance_seconds`, `shock_to_removal_seconds` and `pre_shock_pause_seconds`.
+- **Only A7 has rule-result dependencies** (plus A6's `same_as`). Others will be added when the
+  rules are implemented, if any need another rule's result.
+
+### How it stays adaptable
+- **Supervisor approves a value:** fill `approved_by` and `approved_on` in `rules.yaml`.
+- **Rule approved:** change `status` to `approved` and set `implementation`.
+- **New rule:** add one line in `rules`; its position is its display position.
+- **New dependency:** `depends_on`; the evaluation order follows automatically.
+- **Policy decided:** change the value in `engine.yaml` and drop `undecided`.
+- **Pilot thresholds chosen:** change the value in `engine.yaml` and drop `placeholder`.
+
+### Tests
+`tests/test_rule_engine_config.py`, 43 tests:
+- **Repository config (8):**
+  - Display order.
+  - All rules pending.
+  - A6 `same_as` R7, and A7's dependencies.
+  - The A8 record: provided, not approved.
+  - The other limits are null.
+  - Placeholders and undecided settings are listed.
+  - The linked vocabulary loads.
+  - The raw config is JSON-serialisable.
+- **Evaluation order (2):**
+  - A shuffled list moves only the rules with dependencies, and keeps the display order.
+  - Event dependencies impose no order.
+- **Invalid `rules.yaml` (23):**
+  - Wrong schema version.
+  - No rules.
+  - A duplicate ID.
+  - An unknown rule key.
+  - A bad status.
+  - A bad implementation path.
+  - `same_as` together with an implementation.
+  - A `same_as` chain.
+  - An unknown dependency.
+  - A self dependency.
+  - A three-rule cycle, named exactly.
+  - A cycle through `same_as`.
+  - A plain-number limit.
+  - An unknown limit key.
+  - A value without a source.
+  - A negative value.
+  - An unquoted date.
+  - An approval without a date.
+  - An approval without a value.
+  - A missing linked file.
+  - Invalid YAML.
+  - Allowed cases: a null limit for an approved rule, and an approved limit.
+- **Invalid `engine.yaml` (10):**
+  - A missing setting.
+  - An unknown setting.
+  - Confidence out of range.
+  - A missing source threshold.
+  - A negative window.
+  - A non-boolean fallback.
+  - A bad coverage outcome.
+  - A bad overall outcome.
+  - Null while not undecided.
+  - Allowed: every permitted value of both policy settings is accepted.
+
+Full suite: **121 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. Its report lists 16 rules, all `unable_to_assess`, and includes the A8 record. `rules/`
+imports nothing from `video/`, `audio/` or `legacy/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.config import load_rules_config; c = load_rules_config(); print(c.evaluation_order()); print(c.limit('pre_shock_pause_seconds')); print(c.engine.undecided)"
+```
+To see an error, change `status: pending` to `status: draft` on any rule and run the command
+again. You get `ConfigError: ...rules.yaml rules.R1: status must be one of ('pending',
+'approved')`.
+
+### Open questions
+1. Should a provided but unapproved clinical value (A8's 5 s) be used, with a flag, or ignored
+   until approved? I assumed used with a flag.
+2. Are the five new `timing_limits` key names OK?
+3. `charge_to_shock_seconds` is a pre-existing key that no rule uses. Keep it or remove it?
+
+### Next increment
+**Increment 3: validation and preparation** (`rules/prepare.py`):
+- Map names through the vocabulary.
+- Drop events below the per-source confidence threshold, and log them.
+- Flag anomalies: shock count ≠ 1, unknown labels, contradictory events.
+- Reject malformed timelines with a clear error.
