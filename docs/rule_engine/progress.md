@@ -304,3 +304,124 @@ pipeline command exits with 0 and its output is unchanged. `rules/` imports noth
 - **Shared test:** `tests/test_pipeline_contracts.py` changes from 14 to 16 rules (logged).
 - **Needed from you:** the approver name and date for the A8 5-second limit. Until then I will
   record `approved_by: null` and `source: agent_brief.md`.
+
+---
+
+## Increment 1 fix: Review changes to the vocabulary (2026-10-10)
+
+### What was done
+I applied Arnikan's review of Increment 1, before starting Increment 2:
+1. **Real CVAT label:** CVAT `first_paddle_firmly_on_the_chest` (type "any") now maps to
+   `first_paddle_placed`. This replaces the placeholder. `apical_paddle_placed` and
+   `sternal_paddle_placed` stay placeholders, because CVAT has no separate tags for them.
+2. **8 CVAT tag labels:** the current CVAT project has 8 tag labels, while the list in
+   `annotation/audit_cvat_backups.py` still has 7. I did not change `annotation/` (Arnikan
+   updates it). The vocabulary test checks the 7 listed labels plus
+   `first_paddle_firmly_on_the_chest`, and it keeps passing once the audit list gains the
+   eighth.
+3. **Action-specific command names:** `compressions_command` is gone. The six canonical
+   command names follow the A1–A6 wording in the supervisor's proposal:
+   - `oxygen_away_command`
+   - `continue_compressions_command`
+   - `stand_clear_command`
+   - `stop_compressions_command`
+   - `shock_command`
+   - `start_compressions_command`
+
+   The pipeline's `resume_compressions_command` is ambiguous, so it stays a source label. It is
+   marked `resolve_by_shock: {before: continue_compressions_command, after:
+   start_compressions_command}`, and the procedure context (Increment 5) renames it.
+4. **Provisional:** all six command names are marked `provisional: true`. Command names and
+   phrases are provisional until the medical-faculty supervisor confirms them. This is now
+   open question 4a in the plan.
+5. **A8 approval record:** the 5-second limit is recorded as provided by Arnikan on
+   2026-10-10, source: team discussion, supervisor approval pending. A8 itself enters
+   `configs/rules.yaml` in Increment 2, together with the 14 → 16 shared-test change, so the
+   record is written there in that increment. For now it is in the plan (section E, item 8,
+   and the Increment 2 row).
+
+### How it was done
+- **`configs/rule_engine/vocabulary.yaml`:**
+  - New label `first_paddle_firmly_on_the_chest` → `first_paddle_placed`.
+  - The six command events, each with `provisional: true`.
+  - A `resolve_by_shock` entry for `resume_compressions_command`.
+  - Placeholder audio labels for continue and start, alongside the existing stop and shock
+    placeholders, in case the audio model emits action-specific names.
+- **`rules/vocabulary.py`:**
+  - `CanonicalEvent.provisional` field, and a `Vocabulary.provisional_events` property.
+  - Event entries are now strict: only `modality`, `description` and `provisional` are
+    allowed.
+  - A label entry needs exactly one of `event` or `resolve_by_shock`.
+  - `resolve_by_shock` needs `before` and `after`, both declared events with the same
+    modality.
+  - `Vocabulary.resolution(source, label)` returns `(before, after)`.
+  - `map_events()` keeps an ambiguous event's name, adds `source_label`, and lists the event
+    in the new `MappingResult.unresolved`. It is not reported as unknown.
+
+```python
+if self.resolution(event.source, event.event_name) is not None:
+    metadata = {**event.metadata, SOURCE_LABEL_KEY: event.event_name}
+    mapped.append(replace(event, metadata=metadata))
+    unresolved.append(LabelIssue(event.event_id, event.source, event.event_name))
+    continue
+```
+
+  The vocabulary does not know the shock time, so it cannot choose. It records that a choice
+  is needed and leaves the decision to the one place that does know the shock time.
+
+### Methods and design choices
+- **Resolution declared in config** (`resolve_by_shock`), not hard-coded in the context. If
+  Sanjeevan later emits separate continue and start labels, they map directly and
+  `resolve_by_shock` is simply not used. If another ambiguous label appears, it is one line.
+- **Unresolved is a separate list from unknown.** An unknown label is a vocabulary gap. An
+  unresolved one is expected and is handled in Increment 5.
+
+### Assumptions
+- `first_paddle_firmly_on_the_chest` is emitted with source `annotation` and that exact
+  spelling. Annotation events are one point per tag (from `annotation.to_timeline.convert`),
+  even though the CVAT label type is "any".
+
+### How it stays adaptable
+- **When the supervisor confirms command names:** drop `provisional: true`, or rename, in the
+  vocabulary only.
+- **When the audit list gains its eighth label:** the test still passes; the extra name in the
+  test becomes a harmless duplicate.
+
+### Tests
+`tests/test_rule_engine_vocabulary.py`: 21 → **30 tests**.
+- **Changed:**
+  - The CVAT sync test checks 8 labels, including that
+    `first_paddle_firmly_on_the_chest` maps to `first_paddle_placed`.
+  - The audio sync test accepts resolvable labels.
+  - The placeholder set is checked exactly.
+- **Added:**
+  - `resume_compressions_command` resolves to continue/start.
+  - The six command names match the proposal and are all provisional.
+  - An ambiguous label is kept, gets `source_label`, is listed as unresolved, and mapping it
+    twice changes nothing.
+  - Rejected configs:
+    - An unknown event key.
+    - Both `event` and `resolve_by_shock`.
+    - Neither of them.
+    - `resolve_by_shock` missing `after`.
+    - `resolve_by_shock` pointing to an undeclared event.
+    - `resolve_by_shock` targets with different modalities.
+
+Full suite: **78 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. `rules/` imports nothing from `video/`, `audio/` or `legacy/`. No stale
+`compressions_command` remains.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.vocabulary import load_vocabulary; v = load_vocabulary(); print(v.canonical('annotation', 'first_paddle_firmly_on_the_chest')); print(v.resolution('audio', 'resume_compressions_command')); print(v.provisional_events)"
+```
+
+### Open questions (new or changed)
+- **R8:** what evidence will R8 use to tell which paddle was placed first? (Plan item 3.)
+- **Commands:** all command names and phrases are provisional until the medical-faculty
+  supervisor confirms them. (Plan item 4a.)
+- **A8:** supervisor approval of the 5-second limit is still pending. (Plan item 8.)
+
+### Next increment
+**Increment 2: config format and validation**, as planned. It includes writing the A8 record
+above into `configs/rules.yaml`.

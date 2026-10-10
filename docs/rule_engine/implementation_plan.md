@@ -25,18 +25,25 @@ mistakes).
 
 ### Event names found
 
-- CVAT tags (`annotation/audit_cvat_backups.py:24`): `Gel applied`, `first_paddle_taken`,
+- CVAT tags: the current CVAT project has **8** tag labels: the 7 in
+  `annotation/audit_cvat_backups.py:24` (`Gel applied`, `first_paddle_taken`,
   `second_paddle_taken`, `paddles_firmly_on_chest`, `both_paddle_buttons_pressed`,
-  `shock_delivered_on_screen`, `paddles_removed_after_shock`.
+  `shock_delivered_on_screen`, `paddles_removed_after_shock`) plus
+  `first_paddle_firmly_on_the_chest` (type "any"), which maps to `first_paddle_placed`. Arnikan
+  updates the audit list; the rule engine does not change `annotation/`.
 - CVAT tracks/boxes: `paddle_sternal`, `paddle_apical`, `defibrillator_screen`, `learner_hand`,
   `sternal_placement_zone`, `apical_placement_zone`, `shock_symbol`.
-- **No separate apical / sternal placement tags and no "first paddle placed" tag exist.**
-  Placeholders: `apical_paddle_placed`, `sternal_paddle_placed`, `first_paddle_placed`
-  (Arnikan is checking the current CVAT labels).
+- **No separate apical / sternal placement tags exist.** Placeholders: `apical_paddle_placed`,
+  `sternal_paddle_placed`.
 - Audio command events (`configs/pipeline.yaml:34`): only `oxygen_away_command`,
   `stand_clear_command` and `resume_compressions_command` (which also matches "continue
-  compressions"). **Missing:** continue, stop, shock and a distinct start command, so these are
-  placeholders. `configs/pipeline.yaml` is not changed by the rule engine.
+  compressions"). The canonical command names follow the A1–A6 wording in the supervisor's
+  proposal: `oxygen_away_command`, `continue_compressions_command`, `stand_clear_command`,
+  `stop_compressions_command`, `shock_command`, `start_compressions_command`. All of them are
+  **provisional** until the medical-faculty supervisor confirms them. `resume_compressions_command`
+  is ambiguous, so it stays a source label that the procedure context (Increment 5) resolves
+  into `continue_compressions_command` before the shock or `start_compressions_command` after
+  it. `configs/pipeline.yaml` is not changed by the rule engine.
 - Video model events are `object_visible:<class>`; rules cannot use them until semantic
   postprocessing exists.
 
@@ -133,10 +140,10 @@ fixtures go in `tests/fixtures/rule_engine/`.
 |---|---|---|---|---|
 | 0 | Environment + branch: create `.venv` (Python 3.11), install `requirements.txt`, confirm the existing tests and the pipeline pass, create `feature/rule-engine`, commit brief/plan/progress | docs only | baseline run | — |
 | 1 | Event vocabulary: YAML mapping + `map_events()`; unknown labels kept and flagged; placeholders for missing tags/commands | `vocabulary.yaml`, `rules/vocabulary.py` | mapping, original label kept, unknown label, IDs preserved | Real apical/sternal/first-placed tag names; command names |
-| 2 | Config format + validation: `rules.yaml` in display order, add R8/A8, `same_as: R7` on A6, approval records `{value, approved_by, approved_on, source}` (plain `null` still accepted), `engine.yaml` placeholders; loader errors on bad config; **test 14 → 16** | `rules.yaml`, `engine.yaml`, `rules/config.py`, `test_pipeline_contracts.py` | each invalid config → clear error; circular rule-result dependency → error naming the cycle; unknown dependency ID → error; null limit allowed | A8 approver name/date |
+| 2 | Config format + validation: `rules.yaml` in display order, add R8/A8, `same_as: R7` on A6, approval records `{value, approved_by, approved_on, source}` (plain `null` still accepted), `engine.yaml` placeholders; loader errors on bad config; **test 14 → 16** | `rules.yaml`, `engine.yaml`, `rules/config.py`, `test_pipeline_contracts.py` | each invalid config → clear error; circular rule-result dependency → error naming the cycle; unknown dependency ID → error; null limit allowed | — (A8 record: provided by Arnikan 2026-10-10, team discussion, supervisor approval pending) |
 | 3 | Validation + preparation: confidence threshold per source (below → excluded, logged), anomalies (shock count ≠ 1, contradictory events), malformed input errors | `rules/prepare.py` | below-threshold logged; >1 shock flagged; malformed → error, no report | — |
 | 4 | Coverage model + policy: coverage records from timeline/adapter, policy lookup (override > source > modality), `undecided` handling | `rules/coverage.py`, `engine.yaml` | every policy value × every coverage status | Unknown-coverage policy |
-| 5 | Procedure context: shock time (R5, R6 fallback, anomaly), phases, first paddle placement, stop/start times, "continue CPR" classified by position vs shock, coverage | `rules/context.py` | one/zero/two shocks, fallback, classification | — |
+| 5 | Procedure context: shock time (R5, R6 fallback, anomaly), phases, first paddle placement, stop/start times, `resume_compressions_command` resolved into `continue_compressions_command` (before shock) or `start_compressions_command` (after shock), coverage | `rules/context.py` | one/zero/two shocks, fallback, classification | — |
 | 6 | `RuleOutcome` + shared checks | `rules/outcome.py`, `rules/checks.py` | each helper incl. simultaneous window, null limit → "timing not checked", repeated event satisfies | — |
 | 7 | Registry + base rule + engine wiring: discovery, evaluation order from rule-result dependencies (topological sort, display-order tie-break), results reported in display order, dependency → "not evaluable because of X", pending → not counted, `same_as` reporting, all rules always run; `evaluate()` unchanged for the pipeline | `rules/registry.py`, `rules/base.py`, `rules/engine.py` | dummy rules; existing contract tests still pass | — |
 | 8 | Overall result policy: any Fail → Fail; else any Unable → `engine.yaml: unable_to_verify_outcome` (`fail` / `faculty_review`, currently undecided); else Pass | `rules/policy.py` | all branches incl. pending not counted | Unable-to-Verify policy |
@@ -178,15 +185,21 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 1. Final coverage policy for `unknown` (interim: Unable to Verify, flagged
    `coverage_policy_undecided`, kept as a config value).
 2. Unable to Verify overall: Fail or faculty review.
-3. Names of the apical/sternal placement tags and of the "first paddle placed" event. Arnikan is
-   checking the current CVAT labels; placeholders stay until then.
+3. *(Partly resolved)* "First paddle placed" is CVAT `first_paddle_firmly_on_the_chest`. CVAT
+   has no separate apical or sternal placement tags, so `apical_paddle_placed` and
+   `sternal_paddle_placed` stay placeholders. **What evidence will R8 use to tell which paddle
+   was placed first?**
 4. Missing audio command events (continue, stop, shock, start). `pipeline.yaml` maps "continue
    compressions" to `resume_compressions_command`. We do not change `configs/pipeline.yaml`;
    Arnikan raises this with Sanjeevan.
+4a. All command names and phrases are provisional until the medical-faculty supervisor
+   confirms them (marked `provisional: true` in `vocabulary.yaml`).
 5. *(Resolved)* A7 checks order only; A4 owns stop-before-continue.
 6. R3 `not_in_zone`: no event currently signals wrong placement. Which evidence should be used?
 7. R5 "after the preceding steps": which steps (placement only, or placement + buttons)?
-8. A8 5 s limit: approver name and date for the config record. Final IDs for R8 and A8.
+8. A8 5 s limit: recorded as provided by Arnikan on 2026-10-10, source: team discussion,
+   supervisor approval pending (written into `rules.yaml` in Increment 2). Still open:
+   supervisor approval, and final IDs for R8 and A8.
 9. Clinical limits still null: R1 period, R7/A6, A4, A5 tolerance, R6 removal limit.
 10. The pipeline report will not show the overall result or checklist unless `pipeline/run.py`
     calls `rules.engine.assess()`. This needs Ananth.

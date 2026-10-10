@@ -9,10 +9,20 @@ from rules.errors import ConfigError
 from rules.vocabulary import DEFAULT_PATH, SOURCE_LABEL_KEY, Vocabulary, load_vocabulary
 from schemas.event import Event
 
+# The current CVAT project has 8 tag labels; the audit list still has 7 (Arnikan updates it).
+CVAT_TAG_LABELS = set(EVENT_LABELS) | {"first_paddle_firmly_on_the_chest"}
+COMMANDS = ["oxygen_away_command", "continue_compressions_command", "stand_clear_command",
+            "stop_compressions_command", "shock_command", "start_compressions_command"]
+
 MINIMAL = {"schema_version": 1,
-           "events": {"gel_applied": {"modality": "video"}, "stand_clear_command": {"modality": "audio"}},
+           "events": {"gel_applied": {"modality": "video"}, "stand_clear_command": {"modality": "audio"},
+                      "continue_compressions_command": {"modality": "audio", "provisional": True},
+                      "start_compressions_command": {"modality": "audio", "provisional": True}},
            "labels": {"annotation": [{"label": "Gel applied", "event": "gel_applied"}],
-                      "audio": [{"label": "stand_clear_command", "event": "stand_clear_command"}]},
+                      "audio": [{"label": "stand_clear_command", "event": "stand_clear_command"},
+                                {"label": "resume_compressions_command", "resolve_by_shock": {
+                                    "before": "continue_compressions_command",
+                                    "after": "start_compressions_command"}}]},
            "unused": {"video": [{"prefix": "object_visible:"}], "audio": ["charging_sound"]}}
 
 
@@ -29,24 +39,37 @@ class RepositoryVocabulary(unittest.TestCase):
         self.vocabulary = load_vocabulary(DEFAULT_PATH)
 
     def test_every_cvat_event_tag_is_mapped(self):
-        missing = [label for label in EVENT_LABELS if self.vocabulary.canonical("annotation", label) is None]
+        missing = [label for label in sorted(CVAT_TAG_LABELS) if self.vocabulary.canonical("annotation", label) is None]
         self.assertEqual(missing, [])
         self.assertEqual(self.vocabulary.canonical("annotation", "Gel applied"), "gel_applied")
+        self.assertEqual(self.vocabulary.canonical("annotation", "first_paddle_firmly_on_the_chest"),
+                         "first_paddle_placed")
 
     def test_every_configured_audio_command_is_mapped(self):
         commands = load_yaml(ROOT / "configs/pipeline.yaml")["commands"]
-        missing = [name for name in commands if self.vocabulary.canonical("audio", name) is None]
+        missing = [name for name in commands if self.vocabulary.canonical("audio", name) is None
+                   and self.vocabulary.resolution("audio", name) is None]
         self.assertEqual(missing, [])
 
+    def test_resume_command_is_resolved_by_shock_position(self):
+        self.assertIsNone(self.vocabulary.canonical("audio", "resume_compressions_command"))
+        self.assertEqual(self.vocabulary.resolution("audio", "resume_compressions_command"),
+                         ("continue_compressions_command", "start_compressions_command"))
+
+    def test_command_names_follow_the_proposal_and_are_provisional(self):
+        commands = sorted(n for n, e in self.vocabulary.events.items() if e.modality == "audio")
+        self.assertEqual(commands, sorted(COMMANDS))
+        self.assertEqual(self.vocabulary.provisional_events, sorted(COMMANDS))
+
     def test_placeholders_are_listed_until_real_names_arrive(self):
-        self.assertTrue({("annotation", "first_paddle_placed"), ("annotation", "apical_paddle_placed"),
-                         ("annotation", "sternal_paddle_placed"), ("audio", "stop_compressions_command"),
-                         ("audio", "shock_command")} <= self.vocabulary.placeholder_labels)
-        self.assertNotIn(("annotation", "Gel applied"), self.vocabulary.placeholder_labels)
+        self.assertEqual(self.vocabulary.placeholder_labels, {
+            ("annotation", "apical_paddle_placed"), ("annotation", "sternal_paddle_placed"),
+            ("audio", "continue_compressions_command"), ("audio", "stop_compressions_command"),
+            ("audio", "shock_command"), ("audio", "start_compressions_command")})
 
     def test_modality_belongs_to_the_event_not_the_source(self):
         self.assertEqual(self.vocabulary.modality("gel_applied"), "video")
-        self.assertEqual(self.vocabulary.modality("compressions_command"), "audio")
+        self.assertEqual(self.vocabulary.modality("start_compressions_command"), "audio")
 
     def test_fixture_timeline_has_no_unknown_labels(self):
         events = [Event.from_dict(e) for e in json.loads(
@@ -88,6 +111,16 @@ class Mapping(unittest.TestCase):
         self.assertEqual(result.unknown, [])
         self.assertEqual([i.event_id for i in result.unused], ["a", "b"])
         self.assertEqual(len(result.events), 2)
+
+    def test_ambiguous_label_is_kept_and_listed_as_unresolved(self):
+        event = Event("resume_compressions_command", 9, 10, "audio", 0.8, event_id="c1")
+        once = self.vocabulary.map_events([event])
+        self.assertEqual(once.events[0].event_name, "resume_compressions_command")
+        self.assertEqual(once.events[0].metadata, {SOURCE_LABEL_KEY: "resume_compressions_command"})
+        self.assertEqual([i.event_id for i in once.unresolved], ["c1"])
+        self.assertEqual(once.unknown, [])
+        twice = self.vocabulary.map_events(once.events)
+        self.assertEqual((twice.events, twice.unresolved), (once.events, once.unresolved))
 
     def test_mapping_twice_changes_nothing(self):
         once = self.vocabulary.map_events([Event("Gel applied", 2, 2, "annotation", 1, event_id="e1")])
@@ -138,6 +171,30 @@ class InvalidVocabulary(unittest.TestCase):
 
     def test_label_both_mapped_and_unused(self):
         self.assertRejected(config(unused={"annotation": ["Gel applied"]}), "both mapped and unused")
+
+    def test_unknown_event_key(self):
+        self.assertRejected(config(events={"gel_applied": {"modality": "video", "provisonal": True}}),
+                            "expected only modality")
+
+    def test_label_with_both_event_and_resolution(self):
+        entry = {"label": "x", "event": "gel_applied",
+                 "resolve_by_shock": {"before": "gel_applied", "after": "gel_applied"}}
+        self.assertRejected(config(labels={"annotation": [entry]}), "exactly one of event or resolve_by_shock")
+
+    def test_label_with_neither_event_nor_resolution(self):
+        self.assertRejected(config(labels={"annotation": [{"label": "x"}]}), "exactly one of")
+
+    def test_resolution_needs_before_and_after(self):
+        entry = {"label": "x", "resolve_by_shock": {"before": "continue_compressions_command"}}
+        self.assertRejected(config(labels={"audio": [entry]}), "exactly before and after")
+
+    def test_resolution_to_undeclared_event(self):
+        entry = {"label": "x", "resolve_by_shock": {"before": "continue_compressions_command", "after": "restart"}}
+        self.assertRejected(config(labels={"audio": [entry]}), r"resolve_by_shock\.after: unknown canonical event")
+
+    def test_resolution_targets_share_modality(self):
+        entry = {"label": "x", "resolve_by_shock": {"before": "gel_applied", "after": "start_compressions_command"}}
+        self.assertRejected(config(labels={"audio": [entry]}), "one modality")
 
     def test_bad_unused_entry(self):
         self.assertRejected(config(unused={"video": [{"startswith": "x"}]}), r"unused\.video\[0\]")
