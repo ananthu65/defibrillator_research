@@ -425,3 +425,200 @@ with 0. `rules/` imports nothing from `video/`, `audio/` or `legacy/`. No stale
 ### Next increment
 **Increment 2: config format and validation**, as planned. It includes writing the A8 record
 above into `configs/rules.yaml`.
+
+---
+
+## Plan update: R8 inference, upstream names, commit workflow (2026-10-10)
+
+Documentation only; no code changed.
+
+### Decisions recorded (Arnikan)
+1. **Commits:** from now on the agent does not commit. Each increment ends with the
+   `git add` commands and commit message for Arnikan to run.
+2. **Canonical names:** these are mostly assigned upstream. Video postprocessing and audio
+   command detection will emit the agreed names directly. `vocabulary.yaml` stays as a thin
+   safety layer, mostly mapping names to themselves, and is the team's reference list of
+   agreed names. No code change.
+3. **R8 one-visible-zone inference:**
+   - **Both zones visible:** compare placement times directly (Pass – Direct or Fail).
+   - **Only one zone visible:** compare that zone's placement time with `first_paddle_placed`.
+     - Within `placement_match_window_seconds` (placeholder): that paddle was first.
+     - Clearly after: the other paddle was first.
+     - Either way the result is recorded as inferred.
+   - **Not determinable:** Unable to Verify.
+   - **Fallback:** "first paddle taken is apical" is a configurable last resort, off by
+     default. When used, R8 is not counted and says "assumed apical first, to be checked by the
+     evaluator".
+   - **Inferred Fail:** whether it counts as Fail is a config setting, currently undecided.
+   - **Where it lives:** the inference is in the rule engine; upstream only reports what is
+     visible.
+
+### Files changed
+- **`docs/rule_engine/agent_brief.md`:**
+  - R8 row: now describes the direct and one-zone cases, and depends on per-paddle placement,
+    first placement time and zone visibility.
+  - The note "Inference never establishes order, so R8 has no inferred pass" is replaced:
+    shock-based inference (R5/R6) still never establishes order, but R8 has its own one-zone
+    inference.
+- **`docs/rule_engine/implementation_plan.md`:**
+  - New section "Where canonical names come from".
+  - New section "Annotation data findings" (see below).
+  - New section "R8 logic", with a table of every case, the inferred-Fail setting, and the
+    status mapping.
+  - Increments preamble: no agent commits; git commands are handed over instead.
+  - Increment 4: coverage supports regions (`apical_zone`, `sternal_zone`), not only modality
+    and source.
+  - Increment 5: the context computes the first placement time, per-paddle placement times and
+    zone visibility.
+  - Increment 10: the annotation adapter derives zone visibility from the zone annotations;
+    with no zone information, coverage is `unknown`.
+  - Increment 12: the full R8 logic.
+  - Section D: new placeholders `placement_match_window_seconds` (0.5 s),
+    `assume_first_taken_is_apical` (off) and `inferred_fail_outcome` (undecided).
+  - Section E: question 3 updated, and new questions 3a–3d.
+- **`docs/rule_engine/upstream_requirements.md`** (new): the reference for Ananth and
+  Sanjeevan.
+  - From video: the action events, including per-paddle placement and first placement time;
+    zone visibility as proposed interval events `apical_zone_visible` / `sternal_zone_visible`
+    (no schema change); and per-paddle taken events if feasible.
+  - From audio: the six command names, and how ambiguous phrases are handled.
+- **Memory:** saved the "no commits" instruction so it holds in later sessions.
+
+### Findings while doing this (affect Increment 10)
+- **`EVENT_LABELS` is defined in three `annotation/` scripts**, not one:
+  `audit_cvat_backups.py:24`, `build_yolo_video_dataset.py:39` and
+  `create_grouped_video_split.py:26`. `events.jsonl` keeps only tags in
+  `build_yolo_video_dataset.py`'s list, so `first_paddle_firmly_on_the_chest` will be dropped
+  from timelines unless that list is updated too. (Plan item 3d.)
+- **`events.jsonl` has no zone tracks**, only tag events. The annotation adapter therefore
+  cannot derive zone visibility until zone information is added to the records, or supplied
+  separately. (Plan item 3c.)
+
+### Choices I made that you should check
+- **Contradictory case:** the visible zone's paddle placed clearly *before*
+  `first_paddle_placed` is treated as Unable to Verify, flagged contradictory.
+- **Interim inferred Fail:** Unable to Verify, flagged `inferred_fail_policy_undecided`. This
+  matches the coverage interim.
+- **Fallback status:** when the apical fallback is used, R8 is `unable_to_assess` with
+  `kind = assumed` and `counted = false`.
+- **Brief sections 6.7 and 7:** these still say "one small commit per increment" and "4.
+  Commit." I did not edit them, because you asked only for the R8 changes in the brief. The
+  plan records the new workflow.
+
+### Tests
+None added (docs only). Full suite: 78 tests run, all pass, 1 skipped (charging sound). The
+pipeline command exits with 0.
+
+### Open questions (new)
+- 3a: Does an inferred Fail count as Fail?
+- 3b: The placement-match window value, and whether the apical fallback should ever be on.
+- 3c: Where zone visibility comes from for annotation timelines.
+- 3d: The `EVENT_LABELS` lists in `build_yolo_video_dataset.py` and
+  `create_grouped_video_split.py`.
+
+### Next increment
+**Increment 2: config format and validation** (unchanged). The new R8 settings go into
+`engine.yaml` there, as placeholders.
+
+---
+
+## Increment 1 (consolidated): Event vocabulary, review fix, R8 and upstream docs (2026-10-10)
+
+This entry summarises all Increment 1 work in one place. The three entries above ("Increment
+1", "Increment 1 fix", "Plan update") keep the step-by-step detail.
+
+### What was done
+1. **Original work** (commit `bbebf1b`):
+   - `configs/rule_engine/vocabulary.yaml` maps every source label to one canonical event name.
+   - `rules/vocabulary.py` validates the YAML and renames timeline events. It keeps event IDs
+     and the original label (`metadata.source_label`), and never drops an event. Unknown and
+     unused labels are listed separately.
+   - `rules/errors.py` adds `ConfigError`.
+2. **Review fix** (commit `5868e79`):
+   - The real CVAT label `first_paddle_firmly_on_the_chest` now maps to `first_paddle_placed`.
+   - Action-specific command names follow the A1–A6 wording in the supervisor's proposal:
+     `oxygen_away_command`, `continue_compressions_command`, `stand_clear_command`,
+     `stop_compressions_command`, `shock_command`, `start_compressions_command`. All are marked
+     `provisional: true`.
+   - The ambiguous pipeline label `resume_compressions_command` is declared with
+     `resolve_by_shock` and listed as unresolved. The procedure context will resolve it in
+     Increment 5.
+   - `apical_paddle_placed` and `sternal_paddle_placed` stay placeholders.
+3. **R8 and upstream documentation:**
+   - **R8 one-visible-zone inference:** added to the brief (R8 row and the inference note) and
+     to the plan (section "R8 logic", and Increments 4, 5, 10 and 12).
+   - **Canonical names:** these are emitted upstream, and `vocabulary.yaml` is the team's
+     reference list of agreed names.
+   - **`upstream_requirements.md` (new):** written for Ananth and Sanjeevan.
+   - **Workflow:** the commit workflow changes are recorded.
+4. **This entry, plus workflow updates:**
+   - This consolidated entry.
+   - A row in `ai_usage_log.md`.
+   - Claude commit attribution switched off in Claude Code user settings
+     (`attribution.commit = ""`, `attribution.pr = ""`, `sessionUrl = false`).
+
+### Tests
+`tests/test_rule_engine_vocabulary.py`, 30 tests. Full suite: **78 tests run, all pass, 1
+skipped** (the charging-sound test, which CI runs). The pipeline command exits with 0. `rules/`
+imports nothing from `video/`, `audio/` or `legacy/`.
+
+### Decisions by Arnikan during Increment 1
+- **Command names:** replace `compressions_command` with action-specific names from the
+  proposal, all provisional until the medical-faculty supervisor confirms them.
+- **Shared test:** the 8th CVAT tag label is mapped, but `annotation/` is not changed.
+- **A8 record:** 5 s, provided by Arnikan on 2026-10-10, source: team discussion, supervisor
+  approval pending. It is written into `rules.yaml` in Increment 2.
+- **R8:** use the one-visible-zone inference. The inferred-Fail policy is undecided. The
+  apical fallback is off by default and not counted when used.
+- **Accepted interims:** contradictory placement gives Unable to Verify, and an inferred Fail
+  gives Unable to Verify until the policy is decided.
+- **Commits:** the agent may commit again, but with no Co-Authored-By line or other Claude
+  attribution, and must show the message first. AI use is disclosed in `ai_usage_log.md`.
+
+### Current open questions (plan section E, as of this entry)
+1. Final coverage policy for `unknown` (interim: Unable to Verify, flagged
+   `coverage_policy_undecided`, kept as a config value).
+2. Unable to Verify overall: Fail or faculty review.
+3. *(Partly resolved)* "First paddle placed" is CVAT `first_paddle_firmly_on_the_chest`. CVAT
+   has no separate apical or sternal placement tags, so `apical_paddle_placed` and
+   `sternal_paddle_placed` stay placeholders. R8 uses direct comparison or the one-visible-zone
+   inference. Still open: which source emits per-paddle placement events.
+   - 3a. Does an inferred Fail count as Fail? One setting, `inferred_fail_outcome`, currently
+     undecided (interim: Unable to Verify, flagged `inferred_fail_policy_undecided`).
+   - 3b. The R8 placement-match window value (placeholder 0.5 s), and whether the "first
+     paddle taken is apical" fallback should ever be switched on.
+   - 3c. Where per-recording zone visibility comes from for annotation timelines.
+   - 3d. The `EVENT_LABELS` lists in `build_yolo_video_dataset.py` and
+     `create_grouped_video_split.py` must include `first_paddle_firmly_on_the_chest`.
+4. Missing audio command events (continue, stop, shock, start). `pipeline.yaml` maps
+   "continue compressions" to `resume_compressions_command`. We do not change
+   `configs/pipeline.yaml`; Arnikan raises this with Sanjeevan.
+   - 4a. All command names and phrases are provisional until the medical-faculty supervisor
+     confirms them.
+5. *(Resolved)* A7 checks order only; A4 owns stop-before-continue.
+6. R3 `not_in_zone`: no event currently signals wrong placement. Which evidence should be
+   used?
+7. R5 "after the preceding steps": which steps (placement only, or placement + buttons)?
+8. A8 5 s limit: recorded as provided by Arnikan, supervisor approval pending. Still open:
+   supervisor approval, and final IDs for R8 and A8.
+9. Clinical limits still null: R1 period, R7/A6, A4, A5 tolerance, R6 removal limit.
+10. The pipeline report will not show the overall result or checklist unless
+    `pipeline/run.py` calls `rules.engine.assess()`. This needs Ananth.
+11. Engineering placeholder values (plan section D).
+
+### Annotation findings (affect Increment 10)
+1. **Tag lists that would drop `first_paddle_firmly_on_the_chest`:**
+   - `EVENT_LABELS` is defined separately in `annotation/audit_cvat_backups.py:24`,
+     `annotation/build_yolo_video_dataset.py:39` and
+     `annotation/create_grouped_video_split.py:26`.
+   - `events.jsonl` keeps only the tags in `build_yolo_video_dataset.py`'s list (line 811), so
+     `first_paddle_firmly_on_the_chest` is dropped from annotation timelines until that list
+     is updated, not only the audit list.
+2. **No zone tracks in `events.jsonl`:**
+   - The records contain only tag events (label, frame, timestamp). There is no information on
+     whether `apical_placement_zone` or `sternal_placement_zone` was annotated.
+   - The annotation adapter therefore cannot derive zone visibility until that information is
+     added to the records or supplied separately. Until then, zone coverage is `unknown`.
+
+### Next increment
+**Increment 2: config format and validation.**

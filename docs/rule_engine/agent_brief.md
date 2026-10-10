@@ -81,7 +81,7 @@ once, report under both IDs.
 |---|---|---|---|---|
 | 1 | R1 Gel applied twice | Two separate gel applications within the approved time period. Order relative to paddle placement is NOT checked. | Approved time period (null for now) | `missing`, `applied_once`, `outside_time_period` |
 | 2 | R2 Second paddle after first is placed | First paddle taken → first paddle placed firmly → second paddle taken. "Taken" = first frame where it is clearly visible. | First paddle placement | `simultaneous`, `taken_before_first_placed`, `first_missing` |
-| 3 | R8 Apical before sternal | Apical paddle placed before sternal paddle | Separate apical and sternal placement events | `wrong_order`, `simultaneous` |
+| 3 | R8 Apical before sternal | Apical paddle placed before sternal paddle. Both zones visible: compare the two placement times (Pass – Direct or Fail). Only one zone visible: inferred from that zone's placement time vs `first_paddle_placed` (see `implementation_plan.md`, Increment 12) | Per-paddle placement events, first placement time, zone visibility | `wrong_order`, `simultaneous` |
 | 4 | R3 Paddles firmly on chest | Both paddles stable in approved zones before shock; else Pass – Inferred if `shock_delivered_on_screen` OR `paddles_removed_after_shock` is confidently confirmed | Shock time | `not_in_zone`, `placed_after_shock` |
 | 5 | R4 Both discharge buttons pressed | After placement, before shock; else Pass – Inferred as for R3 | Placement, shock time | `before_placement`, `not_pressed` |
 | 6 | R5 Shock confirmed on screen | One new shock indication after the preceding steps | Preceding steps | `missing`, `wrong_order` |
@@ -96,7 +96,9 @@ once, report under both IDs.
 | 15 | A8 Pre-shock pause | "Stop CPR" to "Start CPR" within **5 seconds** (approved) | Stop and start commands | `pre_shock_pause`, mistake label "Pre-Shock Pause" |
 
 Notes:
-- Inference never establishes order, so R8 has no inferred pass.
+- Shock-based inference (R5/R6 as used for R3/R4) never establishes order. R8 has its own
+  one-visible-zone inference instead (updated 2026-10-10; see `implementation_plan.md`,
+  Increment 12). The inference lives in the rule engine; upstream only reports what is visible.
 - "Continue CPR" before the shock means continue compressions; after the shock it means
   restart. Classify by position relative to the shock.
 - Every recording has exactly one shock. More than one is a data anomaly.

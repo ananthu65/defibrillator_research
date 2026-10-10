@@ -1,0 +1,83 @@
+# AI Usage Log: Rule Engine (Arnikan)
+
+This log records how AI was used in my part of the ARTS project, what the AI produced, what I
+decided, and how I evaluated and changed the AI's outputs. The project allows AI use up to
+**Level 3 (AI Collaboration)** of the AI Assessment Scale (AIAS 2.1,
+https://aiassessmentscale.com/): AI may help with idea generation, drafting, feedback and
+refinement, and assessment covers both the work and how AI outputs are evaluated, modified and
+integrated.
+
+**Declared level for this work: Level 3 (AI Collaboration).**
+*To confirm with the supervisor: that AI-drafted code, reviewed, directed and corrected by me,
+falls within Level 3 for this project.*
+
+## Tools used
+
+| Tool | Where | Used for |
+|---|---|---|
+| Claude (Anthropic), claude.ai chat | Browser, with read access to the team Google Drive | Understanding the project, research, design discussion, drafting documents, reviewing the coding agent's plans and reports |
+| Claude Code (Anthropic), coding agent | Local clone of the project repo | Repo inspection, implementation plan, environment setup, writing code, tests and docs for the rule engine |
+
+## Data and privacy
+
+- No video or audio recordings, frames or transcripts were shared with any AI tool. The
+  recordings are medical data and are not uploaded to any cloud service.
+- I chose not to use Google Colab for the Whisper work for the same reason; the department
+  servers are the planned alternative.
+- The AI read project documents in the team Google Drive (work allocation, annotation tracker,
+  rule proposal, notes) and inspected the public GitHub repo. It first checked the repo history
+  for recordings without downloading file contents; none were found.
+
+## What AI did, and what I did
+
+### Project understanding and research (chat)
+
+| AI | Me |
+|---|---|
+| Summarised the project from the Drive documents: architecture, rules, team roles, my week 1 tasks | Directed which documents to read; corrected that I am responsible only for work under my name |
+| Explained Whisper models, sizes and hardware requirements | Provided my laptop specs; raised the medical-data restriction that ruled out cloud GPUs |
+| Researched the department GPU servers (CE FAQ pages) | Identified that I have Tesla access; decided to use department servers |
+| Drafted Whisper transcription and comparison scripts | Not used yet; Whisper work paused until server access is confirmed. The repo already has a Whisper benchmark, which the team will align with |
+
+### Repo inspection and design (chat)
+
+| AI | Me |
+|---|---|
+| Inspected the repo: found the July rule engine in `legacy/`, the new `rules/` module assigned to me, and gaps against the rule proposal | Decided to continue in the restructured repo |
+| Polished the wording of four additional rules | Supplied the rules; later refined gel (twice within an appropriate time period, order versus paddle placement not checked) and confirmed that any verbal command failure fails the procedure |
+| Drafted the rule engine design plan (Claude Doc and Google Doc "ARTS Rule Engine: Design Plan") | Set the core principles: any mistake fails overall with no severity levels; every rule is always checked for feedback; rules are written by developers in Python; input, output and rule set must stay adaptable; Unable to Verify and unknown coverage stay undecided and configurable |
+| Proposed severity levels and "Critical Error" in an early plan | Rejected: life-critical procedure, any mistake is a fail |
+| Asked about multiple shocks, overall policy, per-paddle tags | Answered: always one shock; any Fail fails overall; explained the CVAT label set |
+| Initially suggested assuming annotation timelines are fully covered | Rejected: coverage handling is not decided yet, so the design must not assume it |
+| Discussed how to determine which paddle was placed first | **Originated the one-visible-zone inference for R8** (compare the visible zone's placement with the first placement), raised that placement order must come from video postprocessing, and asked who should own the inference (decided: rule engine, with observations from Ananth) |
+| Drafted the coding agent brief (`agent_brief.md`) | Set the working method: small increments, a full explanation after each, no breaking of existing code, adaptability for input, output and rules |
+| Drafted a message to Ananth and created the team message log (Google Sheet) | Added the request for placement order; decided to keep a message log |
+
+### Coding agent: Step 0, Increment 0 and Increment 1
+
+| AI (coding agent) | Me |
+|---|---|
+| Step 0: read the repo and wrote `implementation_plan.md` (27 increments) | Reviewed the plan with help from the chat; required separating display order from evaluation order (the plan would have rejected valid configs), approved the A7/A4 overlap handling, kept `configs/pipeline.yaml` untouched |
+| Asked whether to generalise the shared 14-rule contract test | Decided against the AI's recommendation: update the count (14 → 16) whenever rules change, and log it |
+| Increment 0: created `.venv`, installed requirements, created branch `feature/rule-engine` | Chose a virtual environment over installing into system Python; declined installing unrelated charging-sound packages |
+| Increment 1: wrote `vocabulary.yaml`, `rules/vocabulary.py`, `rules/errors.py` and 30 tests | Rejected the name `compressions_command` (doesn't say which action); required action-specific command names following the proposal document, all provisional until the medical-faculty supervisor confirms them; supplied the real CVAT label `first_paddle_firmly_on_the_chest` |
+| Updated the plan and brief for the R8 inference and wrote `upstream_requirements.md` | Approved: contradictory placement → Unable to Verify; inferred Fail → Unable to Verify until the policy is decided |
+| Committed early increments itself | Changed the workflow: the agent no longer commits; I review and commit |
+| Wrote the consolidated Increment 1 entry in `progress.md`, switched off Claude commit attribution in its user settings, and reported that `feature/rule-engine` is unpushed, with 3 commits carrying a Co-Authored-By line | Allowed the agent to commit again, with no Claude attribution and only after showing me the message; decided to disclose AI use in this log instead of in commits |
+
+## How I evaluated the AI's work
+
+- Every plan and increment report was read before approval; the agent stops after each
+  increment and explains what it did, how, the methods used, assumptions and open questions.
+- File edits are approved manually rather than in automatic mode.
+- I checked AI proposals against the project's rules and the team's decisions, and changed or
+  rejected them where they didn't fit (examples in the tables above).
+- The test suite and the pipeline command are run after every increment: baseline 48 tests,
+  78 after Increment 1, all passing (1 test in another team member's area skipped locally).
+
+## Limitations
+
+- The rule engine code so far was written by the coding agent under my direction; my
+  contribution is the clinical rules, the design decisions, the review and the corrections.
+- Clinical values, command names and phrases are not decided by AI; they wait for the
+  medical-faculty supervisor.
