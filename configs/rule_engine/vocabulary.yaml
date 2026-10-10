@@ -1,0 +1,52 @@
+schema_version: 1
+# Rule engine event vocabulary (owner: Arnikan).
+#
+# events: the canonical names that rules use. `modality` (video | audio) says which
+#         coverage policy applies to the event, whatever source produced it.
+# labels: per source (annotation | video | audio), every source label -> one canonical
+#         event. Matching is exact. A new label is one line here.
+#         `placeholder: true` marks a source label that does not exist yet; replace it
+#         with the real name when it is agreed (see implementation_plan.md, section E).
+# unused: labels that are known but deliberately not used by any rule, so they are not
+#         flagged as unknown. A `prefix` entry matches every label starting with it.
+events:
+  gel_applied:                 {modality: video, description: Gel applied}
+  first_paddle_taken:          {modality: video, description: First frame where the first paddle is clearly visible}
+  first_paddle_placed:         {modality: video, description: First paddle placed firmly on the chest}
+  second_paddle_taken:         {modality: video, description: First frame where the second paddle is clearly visible}
+  apical_paddle_placed:        {modality: video, description: Apical paddle placed on the chest}
+  sternal_paddle_placed:       {modality: video, description: Sternal paddle placed on the chest}
+  paddles_firmly_on_chest:     {modality: video, description: Both paddles stable in the approved chest zones}
+  both_paddle_buttons_pressed: {modality: video, description: Both paddle discharge buttons pressed}
+  shock_delivered_on_screen:   {modality: video, description: New shock indication on the approved screen}
+  paddles_removed_after_shock: {modality: video, description: Paddles removed from the chest}
+  oxygen_away_command:         {modality: audio, description: Command to move free-flow oxygen away}
+  compressions_command:        {modality: audio, description: "Start, continue or resume compressions; meaning is set by position relative to the shock"}
+  stand_clear_command:         {modality: audio, description: All stand clear}
+  stop_compressions_command:   {modality: audio, description: Stop compressions / hands off}
+  shock_command:               {modality: audio, description: Verbal shock or discharge command}
+labels:
+  annotation:
+    - {label: Gel applied,                 event: gel_applied}
+    - {label: first_paddle_taken,          event: first_paddle_taken}
+    - {label: second_paddle_taken,         event: second_paddle_taken}
+    - {label: paddles_firmly_on_chest,     event: paddles_firmly_on_chest}
+    - {label: both_paddle_buttons_pressed, event: both_paddle_buttons_pressed}
+    - {label: shock_delivered_on_screen,   event: shock_delivered_on_screen}
+    - {label: paddles_removed_after_shock, event: paddles_removed_after_shock}
+    - {label: first_paddle_placed,         event: first_paddle_placed,   placeholder: true}
+    - {label: apical_paddle_placed,        event: apical_paddle_placed,  placeholder: true}
+    - {label: sternal_paddle_placed,       event: sternal_paddle_placed, placeholder: true}
+  audio:
+    # Names emitted by audio/commands/detect.py from configs/pipeline.yaml `commands`.
+    - {label: oxygen_away_command,         event: oxygen_away_command}
+    - {label: stand_clear_command,         event: stand_clear_command}
+    - {label: resume_compressions_command, event: compressions_command}
+    - {label: stop_compressions_command,   event: stop_compressions_command, placeholder: true}
+    - {label: shock_command,               event: shock_command,             placeholder: true}
+  video: []  # Semantic video events are not defined yet; raw object presence is not evidence.
+unused:
+  video:
+    - {prefix: "object_visible:"}
+  audio:
+    - charging_sound

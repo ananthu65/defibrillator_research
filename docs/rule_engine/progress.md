@@ -144,6 +144,7 @@ only 32 ran, because `test_pipeline_contracts` could not import without PyYAML.
 - Should I install `requirements/charging-sound.txt` into `.venv` so the local run has zero
   skips and matches CI? This adds numpy, scipy, scikit-learn and joblib (Sanjeevan's
   dependencies, already used by CI). Not needed for rule engine work.
+  **Answered (Arnikan):** no; CI covers that test.
 
 ### Next increment
 **Increment 1: event vocabulary.** Add `configs/rule_engine/vocabulary.yaml`, which maps every
@@ -152,3 +153,154 @@ placeholders for the missing placement tags and audio commands. Add `rules/vocab
 `map_events()`: it renames events to canonical names, keeps the original label in metadata,
 keeps event IDs, and flags unknown labels instead of dropping them. Tests go in
 `tests/test_rule_engine_vocabulary.py`.
+
+---
+
+## Increment 1: Event vocabulary (2026-10-10)
+
+### What was done
+There is now one config file that says which canonical event name every source label means,
+plus a module that renames timeline events to those names. Rules will only ever see canonical
+names, so a new or renamed CVAT label or model output means editing one line of YAML, not a
+rule. The engine does not call the vocabulary yet (that wiring is Increment 7), so the
+pipeline output is unchanged.
+
+### How it was done
+- **`configs/rule_engine/vocabulary.yaml`** (new) has three sections:
+  - `events`: the 15 canonical names rules use, each with a `modality` (video or audio). The
+    modality belongs to the *event*, not the source, so a CVAT annotation of a video action
+    is still `video` for the coverage policy in Increment 4.
+  - `labels`: per source (`annotation`, `video`, `audio`), a list of
+    `{label, event, placeholder?}`. Matching is exact; `gel applied` is not `Gel applied`.
+  - `unused`: labels we know about but no rule uses (`object_visible:*` from the detector and
+    `charging_sound`). They stay in the timeline but are not reported as unknown.
+- **`rules/errors.py`** (new): `ConfigError(ValueError)`, the single error type for invalid
+  rule-engine config. It subclasses `ValueError`, so existing code that catches `ValueError`
+  still works.
+- **`rules/vocabulary.py`** (new):
+  - `Vocabulary.from_dict()` validates the YAML. Every error names the exact entry, for
+    example `labels.annotation[0]: unknown canonical event 'gel_aplied'`.
+  - `map_events()` does the renaming:
+
+```python
+def map_events(self, events):
+    mapped, unknown, unused = [], [], []
+    for event in events:
+        if SOURCE_LABEL_KEY in event.metadata and event.event_name in self.events:
+            mapped.append(event)  # already mapped, so mapping twice changes nothing
+            continue
+        name = self.canonical(event.source, event.event_name)
+        if name is not None:
+            metadata = {**event.metadata, SOURCE_LABEL_KEY: event.event_name}
+            mapped.append(replace(event, event_name=name, metadata=metadata))
+            continue
+        issue = LabelIssue(event.event_id, event.source, event.event_name)
+        (unused if self.is_unused(event.source, event.event_name) else unknown).append(issue)
+        mapped.append(event)
+    return MappingResult(mapped, unknown, unused)
+```
+
+  How it works:
+  - The lookup key is `(source, label)`, so the same text from two sources can mean different
+    things.
+  - `Event` is a frozen (read-only) dataclass, so `dataclasses.replace` builds a new event
+    with the new name. `{**event.metadata, ...}` copies the metadata and adds
+    `source_label: "Gel applied"`, so the original CVAT name stays visible. The input events
+    are never modified, and the ID, times, confidence and camera are all kept.
+  - The first `if` makes the function *idempotent* (running it twice gives the same result
+    as running it once), in case the engine receives events that were already mapped.
+  - Unknown and unused events are **kept**, never dropped, and listed in `MappingResult`, so
+    later increments can report them (the brief says to flag anomalies, not hide them).
+
+### Methods and design choices
+- **Config, not code, for names.** The alternative was a Python dict in `rules/`. YAML keeps
+  name changes separate from rule logic, as the brief asks ("a new label means one line
+  here").
+- **Per-source lookup**, not one flat table: annotation labels and model labels are defined by
+  different people and may collide.
+- **One canonical `compressions_command`** for start / continue / resume compressions, not
+  separate continue and restart names. The brief says the meaning depends on position relative
+  to the shock, and `configs/pipeline.yaml` already sends both "continue compressions" and
+  "resume compressions" as `resume_compressions_command`. The split into continue (before the
+  shock) and restart (after it) happens once, in the procedure context (Increment 5).
+- **`placeholder` is marked on the source label**, not the canonical event. We choose the
+  canonical names; what is unknown is what CVAT or the audio model will call them.
+- **Strict validation** rejects unknown keys, duplicates, and a label that is both mapped and
+  unused. A YAML typo then fails loudly instead of silently making a rule Unable to Verify.
+
+### Assumptions
+- **CVAT event tags are exactly the seven in `annotation/audit_cvat_backups.py:24`.** A test
+  enforces this; if CVAT gains a tag, the test fails until a line is added.
+- **Canonical names reuse the CVAT tag names**, except `Gel applied` → `gel_applied` (the
+  brief's example). If you prefer other names, only this YAML and the later rules change.
+- **Placeholder names**, until the real names are known:
+  - Annotation: `first_paddle_placed`, `apical_paddle_placed`, `sternal_paddle_placed`.
+  - Audio: `stop_compressions_command`, `shock_command`.
+- **Raw detector output `object_visible:*` is never rule evidence** (as `README.md` says). If
+  semantic video events appear later, they get lines under `labels.video`.
+
+### How it stays adaptable
+- **New, renamed or real placeholder label:** edit one line in `labels`.
+- **New source (for example the video model):** fill in `labels.video`.
+- **New canonical event for a new rule:** add one line in `events`.
+- **File location:** `load_vocabulary(path)` takes any path; Increment 2 makes `rules.yaml`
+  point to it.
+
+### Tests
+`tests/test_rule_engine_vocabulary.py`, 21 tests:
+- **Repository sync (5):**
+  - Every CVAT event tag is mapped.
+  - Every audio command in `configs/pipeline.yaml` is mapped.
+  - The placeholders are listed.
+  - Modality is looked up per event.
+  - The sample timeline has no unknown labels.
+- **Mapping (6):**
+  - The rename keeps the ID, times, camera and existing metadata, adds `source_label`, and
+    leaves the input unmodified.
+  - Mapping is per source.
+  - Unknown labels are kept and flagged, including the case variant `gel applied`.
+  - Unused labels are kept and not flagged.
+  - Mapping twice gives the same result as mapping once.
+  - Order and missing (`None`) IDs from `annotation.to_timeline.convert` are preserved.
+- **Invalid config (10), each a clear `ConfigError`:**
+  - Wrong schema version.
+  - No events.
+  - Bad modality.
+  - A label pointing to an undeclared event.
+  - A duplicate label.
+  - An unknown source.
+  - A typo in an entry key.
+  - An empty label.
+  - A label both mapped and unused.
+  - A malformed unused entry.
+
+Full suite: **69 tests run, all pass, 1 skipped** (the charging-sound test, as before). The
+pipeline command exits with 0 and its output is unchanged. `rules/` imports nothing from
+`video/`, `audio/` or `legacy/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.vocabulary import load_vocabulary; from schemas.event import Event; r = load_vocabulary().map_events([Event('Gel applied', 2, 2, 'annotation', 1.0, event_id='e1'), Event('gel applied', 3, 3, 'annotation', 1.0, event_id='e2')]); print(r.events[0]); print('unknown:', r.unknown)"
+```
+
+### Open questions
+1. Real names for the three annotation placeholders (you are checking CVAT).
+2. Audio command names for stop and shock, and whether the audio model will emit separate
+   continue and restart names. They would all map to `compressions_command` anyway.
+3. Are the canonical names OK, particularly `compressions_command` for all
+   start/continue/resume commands?
+
+### Next increment
+**Increment 2: config format and validation.**
+- **`configs/rules.yaml`:**
+  - Rules in display order.
+  - Add R8 and A8, and `same_as: R7` on A6.
+  - Approval records `{value, approved_by, approved_on, source}`; a plain `null` is still
+    accepted.
+  - Links to `vocabulary.yaml` and to a new `engine.yaml` that holds the engineering
+    placeholders.
+- **`rules/config.py`:** loads and validates all of it, including rejecting circular
+  rule-result dependencies.
+- **Shared test:** `tests/test_pipeline_contracts.py` changes from 14 to 16 rules (logged).
+- **Needed from you:** the approver name and date for the A8 5-second limit. Until then I will
+  record `approved_by: null` and `source: agent_brief.md`.
