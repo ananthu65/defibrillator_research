@@ -831,3 +831,49 @@ again. You get `ConfigError: ...rules.yaml rules.R1: status must be one of ('pen
 - Drop events below the per-source confidence threshold, and log them.
 - Flag anomalies: shock count ≠ 1, unknown labels, contradictory events.
 - Reject malformed timelines with a clear error.
+
+---
+
+## Increment 2 decisions: A8 approved, limit names, unused parameters (2026-10-10)
+
+### Decisions (Arnikan)
+1. **A8 approved:** the supervisor, Dr. Senani Samarasinghe, approved the 5-second limit between
+   "Stop CPR" and "Start CPR". The approval date is not known and is left unrecorded.
+2. **Limit names kept:** `gel_application_period_seconds`, `stop_to_shock_seconds`,
+   `shock_command_tolerance_seconds`, `shock_to_removal_seconds` and `pre_shock_pause_seconds`.
+   They may be used in future rules.
+3. **Unused parameters kept:** `charge_to_shock_seconds` and every other unused parameter stay
+   `null`, each with a short note saying it is not used by any rule yet. None are removed.
+
+### What changed
+- **`configs/rules.yaml`, A8 record:**
+  - `approved_by: Dr. Senani Samarasinghe`.
+  - `approved_on: null`, with the comment "approval date not recorded".
+  - `provided_by`, `provided_on` and `source` are unchanged.
+  - The "supervisor approval pending" note is removed.
+- **`configs/rules.yaml`, unused limits:** the six null limits are now
+  `{value: null, note: "...; not used by any rule yet"}`. The note names the planned rule where
+  there is one. The header comment says unused keys are kept on purpose.
+- **`rules/config.py`:** one validation rule relaxed, because the approval date is unknown.
+  - **Before:** `approved_by` and `approved_on` had to be given together.
+  - **Now:** an approver may be recorded without a date, but `approved_on` without
+    `approved_by` is still rejected.
+  - `ClinicalValue.approved` is true when there is a value and `approved_by` is set, so A8 now
+    counts as approved, and its result will not call the limit unapproved.
+- **`tests/test_rule_engine_config.py`:**
+  - The A8 test now checks the approver, the null date, that no note remains, and
+    `approved is True`.
+  - The unused-limits test checks the notes.
+  - The "approval without date" rejection test is replaced by two tests: a date without an
+    approver is rejected, and an approver without a date is allowed.
+- **`implementation_plan.md`:** open question 8 is marked resolved (only the final R8/A8 IDs
+  remain open), and the Increment 2 row is updated.
+
+### Tests
+Full suite: **122 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its report carries the approved A8 record.
+
+### Note
+Only the timing limits in `rules.yaml` got "not used by any rule yet" notes. The engineering
+settings in `engine.yaml` are also unused until the rules exist, but they already carry
+`placeholder` or `undecided` flags, so I left them as they are.

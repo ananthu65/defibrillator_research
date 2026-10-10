@@ -232,8 +232,8 @@ def _clinical_value(name, value, where):
     for key in ("approved_on", "provided_on"):
         if value.get(key) is not None and not (isinstance(value[key], str) and DATE.match(value[key])):
             raise ConfigError(f'{where}: {key} must be a quoted date "YYYY-MM-DD"')
-    if (value.get("approved_by") is None) != (value.get("approved_on") is None):
-        raise ConfigError(f"{where}: approved_by and approved_on must be given together")
+    if value.get("approved_on") is not None and value.get("approved_by") is None:
+        raise ConfigError(f"{where}: approved_on needs approved_by")  # an approver may be known without a date
     if value.get("approved_by") is not None and number is None:
         raise ConfigError(f"{where}: an approval needs a value")
     if number is not None and not value.get("source"):

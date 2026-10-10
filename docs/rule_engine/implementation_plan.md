@@ -187,7 +187,7 @@ fixtures go in `tests/fixtures/rule_engine/`.
 |---|---|---|---|---|
 | 0 | Environment + branch: create `.venv` (Python 3.11), install `requirements.txt`, confirm the existing tests and the pipeline pass, create `feature/rule-engine`, commit brief/plan/progress | docs only | baseline run | — |
 | 1 | Event vocabulary: YAML mapping + `map_events()`; unknown labels kept and flagged; placeholders for missing tags/commands | `vocabulary.yaml`, `rules/vocabulary.py` | mapping, original label kept, unknown label, IDs preserved | Real apical/sternal/first-placed tag names; command names |
-| 2 | Config format + validation: `rules.yaml` in display order, add R8/A8, `same_as: R7` on A6, approval records `{value, approved_by, approved_on, source}` (plain `null` still accepted), `engine.yaml` placeholders; loader errors on bad config; **test 14 → 16** | `rules.yaml`, `engine.yaml`, `rules/config.py`, `test_pipeline_contracts.py` | each invalid config → clear error; circular rule-result dependency → error naming the cycle; unknown dependency ID → error; null limit allowed | — (A8 record: provided by Arnikan 2026-10-10, team discussion, supervisor approval pending) |
+| 2 | Config format + validation: `rules.yaml` in display order, add R8/A8, `same_as: R7` on A6, approval records `{value, approved_by, approved_on, source}` (plain `null` still accepted), `engine.yaml` placeholders; loader errors on bad config; **test 14 → 16** | `rules.yaml`, `engine.yaml`, `rules/config.py`, `test_pipeline_contracts.py` | each invalid config → clear error; circular rule-result dependency → error naming the cycle; unknown dependency ID → error; null limit allowed | — (A8 record: provided by Arnikan 2026-10-10, team discussion; approved by Dr. Senani Samarasinghe) |
 | 3 | Validation + preparation: confidence threshold per source (below → excluded, logged), anomalies (shock count ≠ 1, contradictory events), malformed input errors | `rules/prepare.py` | below-threshold logged; >1 shock flagged; malformed → error, no report | — |
 | 4 | Coverage model + policy: coverage records from timeline/adapter for modalities (video, audio) **and regions** (`apical_zone`, `sternal_zone`); event → region mapping in config; policy lookup (explicit timeline coverage > region > source > modality); `undecided` handling | `rules/coverage.py`, `engine.yaml` | every policy value × every coverage status; region visible / not visible / unknown | Unknown-coverage policy |
 | 5 | Procedure context: shock time (R5, R6 fallback, anomaly), phases, **first placement time** (`first_paddle_placed`), **per-paddle placement times** (apical, sternal), **zone visibility** (apical, sternal), stop/start times, `resume_compressions_command` resolved into `continue_compressions_command` (before shock) or `start_compressions_command` (after shock), coverage | `rules/context.py` | one/zero/two shocks, fallback, classification | — |
@@ -259,9 +259,10 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 5. *(Resolved)* A7 checks order only; A4 owns stop-before-continue.
 6. R3 `not_in_zone`: no event currently signals wrong placement. Which evidence should be used?
 7. R5 "after the preceding steps": which steps (placement only, or placement + buttons)?
-8. A8 5 s limit: recorded as provided by Arnikan on 2026-10-10, source: team discussion,
-   supervisor approval pending (written into `rules.yaml` in Increment 2). Still open:
-   supervisor approval, and final IDs for R8 and A8.
+8. *(Resolved 2026-10-10)* A8 5 s limit ("Stop CPR" → "Start CPR") is **approved** by the
+   supervisor, Dr. Senani Samarasinghe (approval date not recorded); provided by Arnikan on
+   2026-10-10, source: team discussion. A8's result will not call the limit unapproved.
+   Still open: final IDs for R8 and A8.
 9. Clinical limits still null: R1 period, R7/A6, A4, A5 tolerance, R6 removal limit.
 10. The pipeline report will not show the overall result or checklist unless `pipeline/run.py`
     calls `rules.engine.assess()`. This needs Ananth.

@@ -66,6 +66,7 @@ falls within Level 3 for this project.*
 | Wrote the consolidated Increment 1 entry in `progress.md`, switched off Claude commit attribution in its user settings, and reported that `feature/rule-engine` is unpushed, with 3 commits carrying a Co-Authored-By line | Allowed the agent to commit again, with no Claude attribution and only after showing me the message; decided to disclose AI use in this log instead of in commits |
 | Removed the Co-Authored-By trailer from the three earlier commits with `git filter-branch`, and verified that only the trailer changed | Decided to reword the unpushed commits; required a backup branch first and kept it for my own check |
 | Increment 2: wrote `rules/config.py`, `engine.yaml`, the extended `rules.yaml` (R8, A8, A6 `same_as` R7, A7 dependencies, provenance records) and 43 tests; changed the shared contract test from 14 to 16 | Supplied the A8 record (5 s, provided by me, supervisor approval pending); the 14 → 16 change was my earlier decision; the agent's open questions are awaiting my review |
+| Recorded the A8 approval, added "not used by any rule yet" notes to the unused limits, relaxed validation so an approver can be recorded without a date, and updated the tests | Reported the supervisor's (Dr. Senani Samarasinghe) approval of the A8 5 s limit, with the date unknown; kept the new limit names; decided to keep every unused parameter as null with a note rather than remove it |
 
 ## How I evaluated the AI's work
 

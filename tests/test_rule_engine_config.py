@@ -40,17 +40,23 @@ class RepositoryConfig(unittest.TestCase):
         self.assertIsNone(self.config.rule("A6").implementation)
         self.assertEqual(self.config.rule("A7").depends_on, ("A1", "A2", "A3", "A4", "A5"))
 
-    def test_a8_limit_is_provided_but_not_approved(self):
+    def test_a8_limit_is_approved_by_the_supervisor(self):
         limit = self.config.limit("pre_shock_pause_seconds")
         self.assertEqual((limit.value, limit.provided_by, limit.provided_on, limit.source),
                          (5, "Arnikan", "2026-10-10", "team discussion"))
-        self.assertFalse(limit.approved)
+        self.assertEqual(limit.approved_by, "Dr. Senani Samarasinghe")
+        self.assertIsNone(limit.approved_on)  # date not recorded
+        self.assertIsNone(limit.note)  # "supervisor approval pending" removed
+        self.assertTrue(limit.approved)
 
-    def test_other_clinical_limits_are_not_provided(self):
+    def test_unused_clinical_limits_are_kept_null_with_a_note(self):
         for name in ("shock_to_compressions_seconds", "gel_application_period_seconds", "stop_to_shock_seconds",
                      "shock_command_tolerance_seconds", "shock_to_removal_seconds", "charge_to_shock_seconds"):
             with self.subTest(name=name):
-                self.assertIsNone(self.config.limit(name).value)
+                limit = self.config.limit(name)
+                self.assertIsNone(limit.value)
+                self.assertFalse(limit.approved)
+                self.assertIn("not used by any rule yet", limit.note)
         self.assertIsNone(self.config.limit("not_in_config").value)
 
     def test_engine_placeholders_and_undecided_policies_are_marked(self):
@@ -143,8 +149,15 @@ class InvalidRulesConfig(unittest.TestCase):
         self.assertRejected("quoted date", timing_limits={"x": {"value": 5, "source": "s",
                                                                 "provided_on": datetime.date(2026, 10, 10)}})
 
-    def test_approval_without_date(self):
-        self.assertRejected("given together", timing_limits={"x": {"value": 5, "source": "s", "approved_by": "Dr X"}})
+    def test_approval_date_without_approver(self):
+        self.assertRejected("approved_on needs approved_by",
+                            timing_limits={"x": {"value": 5, "source": "s", "approved_on": "2026-10-10"}})
+
+    def test_approver_without_date_is_allowed(self):
+        config = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {
+            "value": 5, "source": "s", "approved_by": "Dr X"}}))
+        self.assertTrue(config.limit("x").approved)
+        self.assertIsNone(config.limit("x").approved_on)
 
     def test_approval_without_value(self):
         self.assertRejected("needs a value", timing_limits={"x": {"approved_by": "Dr X", "approved_on": "2026-10-10"}})
