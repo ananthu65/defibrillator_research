@@ -25,6 +25,7 @@ MODALITIES = ("video", "audio")
 SOURCES = ("annotation", "video", "audio")
 LOW_CONFIDENCE_FLAG = "low_confidence_evidence"
 UNDECIDED_FLAG = "coverage_policy_undecided"
+FLAGS = (LOW_CONFIDENCE_FLAG, UNDECIDED_FLAG)
 HEADER_KEYS = {"recording_id", "camera_angle", "duration_seconds", "analyses_run", "coverage"}
 
 

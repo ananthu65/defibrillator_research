@@ -19,17 +19,21 @@ NO_SHOCK = "no_shock"
 MULTIPLE_SHOCKS = "multiple_shocks"
 MULTIPLE_CANDIDATES = "multiple_candidates"
 COMMAND_NEAR_SHOCK = "command_near_shock"
+COMMAND_BEFORE_REMOVAL = "command_before_removal"
 NO_SHOCK_TIME = "no_shock_time"
 UNRESOLVED_COMMANDS = "unresolved_commands"
+START_BEFORE_SHOCK = "start_command_before_shock"
+FLAGS = (SHOCK_FROM_REMOVAL, NO_SHOCK, MULTIPLE_SHOCKS, MULTIPLE_CANDIDATES, COMMAND_NEAR_SHOCK,
+         COMMAND_BEFORE_REMOVAL, NO_SHOCK_TIME, UNRESOLVED_COMMANDS, START_BEFORE_SHOCK)
 
+START_EVENT = "start_compressions_command"
 ANCHOR_EVENTS = {  # anchor -> canonical event (earliest occurrence is used)
     "first_placement": "first_paddle_placed",
     "apical_placement": "apical_paddle_placed",
     "sternal_placement": "sternal_paddle_placed",
     "continue_compressions": "continue_compressions_command",
     "stop_compressions": "stop_compressions_command",
-    "start_compressions": "start_compressions_command",
-}
+}  # start_compressions: earliest start command AFTER the shock (D-025), see _start_anchor
 
 
 @dataclass(frozen=True)
@@ -42,6 +46,7 @@ class Anchor:
     candidates: tuple[str, ...] = ()   # every event ID that could have been the anchor
     flags: tuple[str, ...] = ()
     reason: str = ""
+    ineligible: tuple[str, ...] = ()   # events of the anchor's kind that do not count (e.g. start before shock)
 
     @property
     def present(self):
@@ -144,6 +149,7 @@ def build_context(prepared, config, header=None):
     anchors = {"shock": shock}
     for name, event_name in ANCHOR_EVENTS.items():
         anchors[name] = _earliest(name, event_name, events, prepared)
+    anchors["start_compressions"] = _start_anchor(events, shock, prepared)
     for name in ("continue_compressions", "start_compressions"):
         if unresolved:  # an unresolved command might have been this one: do not pretend the anchor is complete
             anchors[name] = replace(anchors[name], flags=anchors[name].flags + (UNRESOLVED_COMMANDS,))
@@ -174,10 +180,32 @@ def _resolve(resolution, time, shock, window):
     if not shock.present:
         return None, (NO_SHOCK_TIME,)
     carried = (SHOCK_FROM_REMOVAL,) if SHOCK_FROM_REMOVAL in shock.flags else ()
+    if carried and time < shock.time:  # D-024: the real shock was earlier, so "before removal" proves nothing
+        return None, (COMMAND_BEFORE_REMOVAL,) + carried
     if abs(time - shock.time) <= window:
         return None, (COMMAND_NEAR_SHOCK,) + carried
     before, after = resolution
     return (before if time < shock.time else after), carried
+
+
+def _start_anchor(events, shock, prepared):
+    """D-025: the restart is the earliest start command after the shock; earlier ones do not count."""
+    starts = [e for e in events if e.event_name == START_EVENT]
+    if not shock.present:
+        return Anchor("start_compressions", None, flags=(NO_SHOCK_TIME,) + shock.flags,
+                      reason="no shock time, so the restart command cannot be identified",
+                      ineligible=tuple(e.event_id for e in starts))
+    carried = (SHOCK_FROM_REMOVAL,) if SHOCK_FROM_REMOVAL in shock.flags else ()
+    after = [e for e in starts if e.start > shock.time]
+    before = tuple(e.event_id for e in starts if e.start <= shock.time)
+    flags = carried + ((START_BEFORE_SHOCK,) if before else ())
+    if not after:
+        low = (LOW_CONFIDENCE_FLAG,) if prepared.excluded_named(START_EVENT) else ()
+        return Anchor("start_compressions", None, flags=flags + low,
+                      reason=f"no confident {START_EVENT} event after the shock", ineligible=before)
+    many = (MULTIPLE_CANDIDATES,) if len(after) > 1 else ()
+    return Anchor("start_compressions", after[0].start, after[0].event_id, START_EVENT,
+                  tuple(e.event_id for e in after), flags + many, ineligible=before)
 
 
 def _earliest(anchor, event_name, events, prepared):

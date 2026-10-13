@@ -44,7 +44,9 @@ class ShockTime(unittest.TestCase):
         self.assertEqual(to_start.seconds, 2)
         self.assertIn("shock_time_from_removal", to_start.flags)
         self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "shock").flags)
-        self.assertNotIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
+        # D-025: which start command counts depends on the shock time, so stop -> start (A8) is flagged too
+        self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
+        self.assertNotIn("shock_time_from_removal", ctx.elapsed("first_placement", "stop_compressions").flags)
 
     def test_multiple_removals_without_shock_use_the_earliest(self):
         shock = context([ev("paddles_removed_after_shock", 40, event_id="r2"), REMOVAL]).shock
@@ -126,6 +128,24 @@ class CommandResolution(unittest.TestCase):
         self.assertEqual(self.resolution(ctx, "r").resolved_to, "start_compressions_command")
         self.assertEqual(self.resolution(ctx, "r").flags, ("shock_time_from_removal",))
 
+    def test_under_the_removal_fallback_commands_before_removal_stay_unresolved(self):
+        # D-024 (OQ-029): the real shock was before the removal, so "before removal" is not "before the shock"
+        for t in (10, 25, 32.9):
+            with self.subTest(t=t):
+                ctx = context([REMOVAL, cmd("resume_compressions_command", t, "r")])
+                resolution = self.resolution(ctx, "r")
+                self.assertIsNone(resolution.resolved_to)
+                self.assertEqual(resolution.flags, ("command_before_removal", "shock_time_from_removal"))
+                self.assertEqual(ctx.named("continue_compressions_command"), [])
+
+    def test_under_the_removal_fallback_commands_just_after_removal_are_near_the_shock(self):
+        ctx = context([REMOVAL, cmd("resume_compressions_command", 33.3, "r")])
+        self.assertEqual(self.resolution(ctx, "r").flags, ("command_near_shock", "shock_time_from_removal"))
+
+    def test_with_a_real_shock_commands_before_it_are_still_continue(self):
+        ctx = context([SHOCK, REMOVAL, cmd("resume_compressions_command", 25, "r")])
+        self.assertEqual(self.resolution(ctx, "r").resolved_to, "continue_compressions_command")
+
     def test_explicit_command_names_are_not_reclassified(self):
         ctx = context([SHOCK, cmd("start_compressions_command", 10, "s")])  # said before the shock: a rule's problem
         self.assertEqual(ctx.named("start_compressions_command")[0].event_id, "s")
@@ -161,6 +181,52 @@ class Anchors(unittest.TestCase):
     def test_stop_to_start_elapsed(self):
         ctx = context([SHOCK, cmd("stop_compressions_command", 27), cmd("start_compressions_command", 31)])
         self.assertEqual(ctx.elapsed("stop_compressions", "start_compressions").seconds, 4)
+
+
+class StartAnchor(unittest.TestCase):
+    """D-025 (OQ-030): the restart is the earliest start command after the shock."""
+
+    def test_earliest_start_after_the_shock(self):
+        anchor = context([SHOCK, cmd("start_compressions_command", 36, "late"),
+                          cmd("start_compressions_command", 33, "early")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.candidates), ("early", ("early", "late")))
+        self.assertIn("multiple_candidates", anchor.flags)
+
+    def test_start_before_the_shock_does_not_count(self):
+        anchor = context([SHOCK, cmd("start_compressions_command", 10, "pre"),
+                          cmd("start_compressions_command", 35, "post")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.ineligible), ("post", ("pre",)))
+        self.assertEqual(anchor.flags, ("start_command_before_shock",))  # for A7 to report as a sequence problem
+
+    def test_start_only_before_the_shock_leaves_the_anchor_absent(self):
+        ctx = context([SHOCK, cmd("start_compressions_command", 10, "pre")])
+        anchor = ctx.anchor("start_compressions")
+        self.assertFalse(anchor.present)
+        self.assertEqual((anchor.ineligible, anchor.flags), (("pre",), ("start_command_before_shock",)))
+        self.assertEqual([e.event_id for e in ctx.named("start_compressions_command")], ["pre"])  # still visible
+
+    def test_start_exactly_at_the_shock_does_not_count(self):
+        anchor = context([SHOCK, cmd("start_compressions_command", 30, "at")]).anchor("start_compressions")
+        self.assertEqual((anchor.present, anchor.ineligible), (False, ("at",)))
+
+    def test_no_shock_time_means_no_start_anchor(self):
+        for timeline, shock_flag in (([cmd("start_compressions_command", 35, "s")], "no_shock"),
+                                     ([ev("shock_delivered_on_screen", 30, event_id="s1"),
+                                       ev("shock_delivered_on_screen", 60, event_id="s2"),
+                                       cmd("start_compressions_command", 35, "s")], "multiple_shocks")):
+            with self.subTest(shock_flag=shock_flag):
+                anchor = context(timeline).anchor("start_compressions")
+                self.assertFalse(anchor.present)
+                self.assertEqual(anchor.flags, ("no_shock_time", shock_flag))
+                self.assertEqual(anchor.ineligible, ("s",))
+
+    def test_under_the_fallback_the_start_anchor_carries_the_flag(self):
+        anchor = context([REMOVAL, cmd("start_compressions_command", 36, "s")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.flags), ("s", ("shock_time_from_removal",)))
+
+    def test_weak_start_after_the_shock_is_flagged_low_confidence(self):
+        anchor = context([SHOCK, cmd("start_compressions_command", 35, confidence=0.1)]).anchor("start_compressions")
+        self.assertEqual((anchor.present, anchor.flags), (False, ("low_confidence_evidence",)))
 
 
 class ZoneVisibility(unittest.TestCase):
