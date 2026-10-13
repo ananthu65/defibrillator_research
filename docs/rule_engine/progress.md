@@ -1478,3 +1478,182 @@ Arnikan reviewed Increment 4 before it was committed. This supersedes the note-t
 
 Full suite: **198 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
 with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline/`.
+
+---
+
+## Increment 5: Procedure context (2026-10-13)
+
+### What was done
+`build_context(prepared, config, header=None)` computes, once per timeline, the facts every rule
+needs:
+- **The shock time:** from `shock_delivered_on_screen`, with `paddles_removed_after_shock` as
+  the fallback.
+- **The phase of any time:** before, at, or after the shock.
+- **Anchors:** the first placement, the apical and sternal placements, and the continue, stop
+  and start commands.
+- **Zone visibility** for the apical and sternal zones (from Increment 4 coverage).
+- **Resolved commands:** each ambiguous `resume_compressions_command` is classified as continue
+  (before the shock) or start (after it).
+
+The context never judges and never guesses. When a fact cannot be established, it is absent
+and flagged, and each rule decides what that means for its result. It is not yet used by rules
+or the engine (Increments 6–7), so the pipeline output is unchanged.
+
+Arnikan's four edge cases:
+1. **Shock time from removal:** recorded on the shock anchor, which names the event and gives
+   the reason. It is flagged `shock_time_from_removal`, and that flag appears on every elapsed
+   time using the shock, and on every command resolved against it. Removal happens after the
+   shock, so delays measured from it look shorter.
+2. **Ambiguous command near the shock:** a `resume_compressions_command` within
+   `simultaneous_window_seconds` (0.5 s) of the shock time stays unresolved, flagged
+   `command_near_shock`. With no shock time at all it also stays unresolved, flagged
+   `no_shock_time`.
+3. **Multiple candidates:** an anchor with several events (for example two
+   `first_paddle_placed`) uses the earliest, flags `multiple_candidates`, and records every
+   candidate ID in `Anchor.candidates`.
+4. **Multiple shocks:** no shock time is chosen, not even from a removal. The shock anchor is
+   absent and flagged `multiple_shocks`, with both shock IDs as candidates. Phases, elapsed times
+   from the shock, and command resolution are absent or unresolved, and flagged.
+
+### How it was done
+- **`rules/context.py`** (new):
+  - **`Anchor`:** `name`, `time` (None when absent), `event_id`, `event_name`, `candidates`,
+    `flags`, `reason`, and a `present` property.
+  - **`CommandResolution`:** `event_id`, `label`, `time`, `resolved_to` (None when unresolved),
+    `flags`.
+  - **`Elapsed`:** the two anchors, `seconds` (None if either anchor is absent), and the union
+    of both anchors' flags.
+  - **`ProcedureContext`:**
+    - `events`: prepared events with commands resolved, in time order.
+    - `anchors`, `resolutions`, `zone_visibility`, `coverage`.
+    - Methods `named()`, `anchor()`, `phase_of()`, `elapsed()` and `missing()`.
+
+Command resolution, the core decision:
+
+```python
+def _resolve(resolution, time, shock, window):
+    if not shock.present:
+        return None, (NO_SHOCK_TIME,)
+    carried = (SHOCK_FROM_REMOVAL,) if SHOCK_FROM_REMOVAL in shock.flags else ()
+    if abs(time - shock.time) <= window:
+        return None, (COMMAND_NEAR_SHOCK,) + carried
+    before, after = resolution          # from vocabulary.yaml: resolve_by_shock
+    return (before if time < shock.time else after), carried
+```
+
+How it works:
+- **Which names to use** comes from `vocabulary.yaml` (`resolve_by_shock`), not from code, so
+  another ambiguous command is one line of config.
+- **A resolved event** is a copy with the canonical name. Its metadata keeps
+  `source_label: resume_compressions_command` and records `resolved_by` and `shock_time`, so
+  the report can explain the classification.
+- **An unresolved event** keeps its ambiguous name, so no rule can count it as a continue or a
+  start command. The continue and start anchors are then flagged `unresolved_commands`, because
+  the command they missed might have been theirs.
+
+**Shock time:** the multiple-shocks check comes **first**, so a removal event can never be used
+to guess a shock time when the recording has two shocks.
+
+**`ProcedureContext.missing(name)`** closes a gap found while building this. Low-confidence
+`resume_compressions_command` events keep their ambiguous name, so `Coverage.missing
+("start_compressions_command")` could not see them. A weak "resume compressions" after the shock
+would then have made R7 a Fail. The context's `missing()` also treats a low-confidence ambiguous
+command as evidence for `name` when it would resolve to `name`, or cannot be resolved at all. The
+outcome is then Unable to Verify (`low_confidence_evidence`). A test shows `Coverage.missing`
+alone would return `fail` in that case.
+
+### Methods and design choices
+- **Absent, not guessed.** An `Anchor` with `time=None` plus a `reason` and flags is used rather
+  than a default value or an exception. Every rule must handle "no shock time" explicitly, and
+  the report can say why. A default (for example the removal time when there are two shocks)
+  would hide a data problem. An exception would stop the other rules, and the brief says every
+  rule is always evaluated.
+- **Flags travel with values.** `elapsed()` merges the flags of both anchors, so a timing result
+  cannot use the removal-based shock time without carrying `shock_time_from_removal`.
+  Increment 6's shared checks will copy these flags onto rule results.
+- **Earliest candidate.** The earliest is used for every anchor, and all candidates are kept.
+  Which occurrence a specific rule should use (for example the first start command *after* the
+  shock for R7) stays with the rule (open question 19).
+- **Rules use `ctx.named()`, not `prepared.named()`**, so they see resolved commands. Explicit
+  names are never reclassified: a `start_compressions_command` said before the shock stays a
+  start command, and R7 reports it as `before_shock`.
+
+### Assumptions
+- **Window** for "near the shock" is `simultaneous_window_seconds` (placeholder 0.5 s), measured
+  from command start to shock start, inclusive.
+- **Zone visibility** for a region is the coverage status of the region's first event, the
+  per-paddle placement event.
+- **Fallback misclassification:** under the removal fallback, a command between the real shock
+  and the removal is classified as *continue*. It is flagged, but not left unresolved (open
+  question 18).
+
+### How it stays adaptable
+- **New anchor:** one line in `ANCHOR_EVENTS`.
+- **New ambiguous label:** one line in `vocabulary.yaml` (`resolve_by_shock`).
+- **Window value:** change `simultaneous_window_seconds` in `engine.yaml`.
+- **Time-windowed coverage:** `ctx.missing(name, window)` already passes the window through.
+
+### Tests
+`tests/test_rule_engine_context.py`, 29 tests:
+- **Shock time (8):**
+  - Shock on screen.
+  - Removal fallback, recorded and flagged.
+  - Every elapsed time using the fallback is flagged, and one not using it is not.
+  - Several removals: the earliest is used, and all are recorded.
+  - No shock.
+  - Multiple shocks: no shock time, not guessed even with a removal, and elapsed times flagged.
+  - A low-confidence shock is not used.
+  - Phases.
+- **Command resolution (8):**
+  - Before → continue, after → start, with the original label and shock time recorded.
+  - Within the window (29.5 s, 30.0 s and 30.4 s against a 30 s shock) → unresolved,
+    `command_near_shock`.
+  - At 30.6 s → resolved.
+  - No shock → `no_shock_time`.
+  - Multiple shocks → `no_shock_time`.
+  - Unresolved commands flag the continue and start anchors, but not the stop anchor.
+  - Resolution against a removal time carries `shock_time_from_removal`.
+  - Explicit names are not reclassified.
+- **Anchors (6):**
+  - Multiple candidates: the earliest is used, all are recorded, and it is flagged.
+  - A single candidate has no flag.
+  - Per-paddle placement anchors.
+  - An absent anchor gives its reason.
+  - An absent anchor with low-confidence evidence is flagged.
+  - Stop → start elapsed time.
+- **Zone visibility (2):** no header → unknown; header region coverage.
+- **Low-confidence resume commands (4):**
+  - A weak resume after the shock makes a missing start command Unable to Verify (Coverage
+    alone would say Fail).
+  - A weak resume before the shock does not count for start, but does for continue.
+  - A weak resume near the shock could be either.
+  - Unrelated events are unaffected.
+- **Order (1):** every event kept, in time order, after resolution.
+
+Full suite: **227 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output is unchanged. `rules/` imports nothing from `video/`, `audio/`,
+`legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.config import load_rules_config as L; from rules.prepare import prepare_timeline as P; from rules.context import build_context as B; from schemas.event import Event as E; c = L(); x = B(P([E('first_paddle_firmly_on_the_chest', 14, 14, 'annotation', 1.0, event_id='p2'), E('first_paddle_firmly_on_the_chest', 12, 12, 'annotation', 1.0, event_id='p1'), E('paddles_removed_after_shock', 33, 33, 'annotation', 1.0, event_id='rm'), E('resume_compressions_command', 33.2, 34, 'audio', 0.9, event_id='r1'), E('resume_compressions_command', 36, 37, 'audio', 0.9, event_id='r2')], c), c); print(x.shock); print(x.anchor('first_placement')); [print(r) for r in x.resolutions]; print(x.elapsed('shock', 'start_compressions'))"
+```
+Expected output:
+- **Shock:** 33 s from the removal, flagged `shock_time_from_removal`.
+- **First placement:** 12 s (`p1`), with candidates `p1` and `p2`, flagged
+  `multiple_candidates`.
+- **`r1` at 33.2 s:** unresolved, flagged `command_near_shock` and `shock_time_from_removal`.
+- **`r2` at 36 s:** resolved to start.
+- **Elapsed shock → start:** 3 s, flagged `shock_time_from_removal` and `unresolved_commands`.
+
+### Open questions
+- 18: Under the removal fallback, should a command between the real shock and the removal stay
+  unresolved instead of being classified as continue?
+- 19: Which start command counts for R7/A8 (for example, the first after the shock)? To be
+  confirmed when those rules are built.
+
+### Next increment
+**Increment 6: `RuleOutcome` and shared checks** (`rules/outcome.py`, `rules/checks.py`):
+presence, count, order, time limit, simultaneity, inference and dependency helpers. These use
+`ctx.missing()`, copy anchor and `Elapsed` flags onto results, and report "timing not checked"
+for null limits.

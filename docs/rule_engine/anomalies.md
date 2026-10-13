@@ -59,6 +59,28 @@ result (from Increment 6 on).
 | `low_confidence_evidence` | A required event is missing, but an excluded low-confidence event of the same canonical name exists | The outcome is Unable to Verify, **never Fail**, under every policy setting. Not configurable. The excluded event IDs are listed |
 | `coverage_policy_undecided` | The policy setting that decided the outcome is marked `undecided` (today: `coverage_policy.outcomes.unknown`) | The outcome follows the interim value (Unable to Verify) until the team decides |
 
+## Context flags (`rules/context.py`, Increment 5)
+
+Flags on **anchors** (key times such as the shock time), on **command resolutions**, and on
+**elapsed times** between anchors. `elapsed()` carries the flags of both anchors, so every
+timing result built on a flagged anchor is flagged too. Rules copy them onto their results
+(from Increment 6 on).
+
+| Code | On | When | Meaning |
+|---|---|---|---|
+| `shock_time_from_removal` | Shock anchor, every elapsed time using it, and commands resolved against it | No confident shock on screen, so the shock time is the first `paddles_removed_after_shock` | Removal happens **after** the shock, so a delay measured from it looks **shorter** than it really was. A command between the real shock and the removal may be classified as "before the shock" |
+| `no_shock` | Shock anchor | Neither a shock on screen nor a paddle removal | No shock time. Shock-dependent rules report "not evaluable because of R5" |
+| `multiple_shocks` | Shock anchor, and every elapsed time using it | The `multiple_shocks` anomaly is present | No shock time is chosen (**not guessed**, even if a removal exists). Candidates are listed |
+| `multiple_candidates` | Any anchor | More than one event could be the anchor (for example two `first_paddle_placed`) | The **earliest** is used, and all candidate IDs are recorded in `Anchor.candidates` |
+| `command_near_shock` | Command resolution | A `resume_compressions_command` starts within `simultaneous_window_seconds` of the shock time | Left **unresolved**: it cannot be classified as continue (before) or start (after) |
+| `no_shock_time` | Command resolution | A `resume_compressions_command` while there is no shock time (no shock, or multiple shocks) | Left **unresolved** |
+| `unresolved_commands` | Continue and start anchors | At least one ambiguous command is unresolved | An unresolved command might have been the continue or start command, so these anchors may be incomplete |
+| `low_confidence_evidence` | Absent anchor | No confident event, but an excluded low-confidence event of the same name exists | The anchor is absent because of weak evidence, not because nothing happened |
+
+`ProcedureContext.missing(name)` extends `Coverage.missing`. A low-confidence ambiguous command
+that could have been `name` (resolved to it, or unresolvable) also gives Unable to Verify,
+flagged `low_confidence_evidence`.
+
 ## Planned flags (later increments)
 
 | Code | Step | Meaning |
