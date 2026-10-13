@@ -1,9 +1,12 @@
 # Rule engine: open questions register
 
-The **single register** of questions about the rule engine. Questions are grouped by who
-must answer them, with **For the supervisor** first, so that section can be printed for
-supervisor meetings.
+The **single register** of questions about the rule engine. **For the supervisor** comes
+first, so that section can be printed for supervisor meetings.
 
+- **Owner:** who must give the answer. **Also involves:** others who must contribute (for
+  example, detection work for a clinically decided rule).
+- **Grouping:** a question with a **clinical part** appears in the supervisor section, even
+  when someone else owns its technical part. Every other question is grouped by owner.
 - **Status:** `open`, `answered` (an answer exists and has become a decision), or `closed` (no
   longer relevant).
 - **Answered questions stay here**, marked answered, so the history is kept.
@@ -17,54 +20,57 @@ supervisor meetings.
 
 ## Summary
 
-| ID | Old no. | Owner | Status | Question (short) |
-|---|---|---|---|---|
-| OQ-002 | E-2 | supervisor | open | Overall result when some rules are Unable to Verify |
-| OQ-005 | E-3a | supervisor | open | Does an inferred Fail count as Fail? |
-| OQ-010 | E-4a | supervisor | open | Confirm the command names and accepted phrases |
-| OQ-013 | E-7 | supervisor | open | Which steps must precede the shock indication (R5)? |
-| OQ-016 | E-9 | supervisor | open | Missing clinical time limits |
-| OQ-021 | E-14a | supervisor | open | Gel applied more than twice |
-| OQ-022 | E-14b | supervisor | open | Paddles lifted and placed again before the shock |
-| OQ-023 | E-14c | supervisor | open | Discharge buttons pressed more than once |
-| OQ-014 | E-8 | supervisor | answered | Approval of the A8 5-second limit |
-| OQ-004 | E-3 | Ananth | open | Who produces per-paddle placement events? |
-| OQ-012 | E-6 | Ananth | open | What evidence shows a paddle outside its zone (R3)? |
-| OQ-017 | E-10 | Ananth | open | Pipeline to call the full rule-engine assessment |
-| OQ-020 | E-13 | Ananth | open | Timeline header: can it be provided, in what format? |
-| OQ-009 | E-4 | Sanjeevan | open | Missing audio command events |
-| OQ-001 | E-1 | team | open | Final policy when coverage is unknown |
-| OQ-006 | E-3b | team | open | R8 placement-match window; ever use the apical fallback? |
-| OQ-015 | E-8 | team | open | Final IDs for R8 and A8 |
-| OQ-018 | E-11 | team | open | Engineering placeholder values |
-| OQ-019 | E-12 | team | open | Which side applies confidence thresholds? |
-| OQ-036 | Brief §9 | team | open | Checklist format and its mapping to rules |
-| OQ-037 | Brief §9 | team | open | Model output formats and the meaning of confidence |
-| OQ-038 | Brief §9 | team | open | Final camera angle |
-| OQ-007 | E-3c | Arnikan | open | Zone visibility for annotation timelines |
-| OQ-008 | E-3d | Arnikan | open | Annotation label lists that drop the first-placement tag |
-| OQ-039 | new (2026-10-13) | Arnikan | open | Start command before removal under the fallback |
-| OQ-003 | E-3 | Arnikan | answered | Real CVAT tag for "first paddle placed" |
-| OQ-011 | E-5 | Arnikan | answered | A7/A4 overlap |
-| OQ-024 | E-15 / Inc3-Q1 | Arnikan | answered | Merge duplicate shocks? |
-| OQ-025 | E-15 / Inc3-Q2 | Arnikan | answered | Reject mixed human/model evidence? |
-| OQ-026 | E-15 / Inc3-Q3 | Arnikan | answered | One camera and one recording as a hard error? |
-| OQ-027 | E-16 | Arnikan | answered | Time-windowed coverage |
-| OQ-028 | E-17 | Arnikan | answered | `analyses_run` for annotation timelines |
-| OQ-029 | E-18 | Arnikan | answered | Commands between the real shock and removal |
-| OQ-030 | E-19 | Arnikan | answered | Which start command counts as the restart |
-| OQ-031 | Inc0-Q1 | Arnikan | answered | Install charging-sound packages locally? |
-| OQ-032 | Inc1-Q3 | Arnikan | answered | Canonical names, one "compressions command" |
-| OQ-033 | Inc2-Q1 | Arnikan | answered | Use a provided but unapproved clinical value? |
-| OQ-034 | Inc2-Q2 | Arnikan | answered | New time-limit names |
-| OQ-035 | Inc2-Q3 | Arnikan | answered | Keep the unused `charge_to_shock_seconds`? |
+| ID | Old no. | Owner | Also involves | Status | Question (short) |
+|---|---|---|---|---|---|
+| OQ-002 | E-2 | supervisor | Arnikan | open | Overall result when some rules are Unable to Verify |
+| OQ-005 | E-3a | supervisor | Arnikan | open | Does an inferred Fail count as Fail? |
+| OQ-010 | E-4a | supervisor | Sanjeevan, Arnikan | open | Confirm the command names, accepted phrases and order |
+| OQ-012 | E-6 | supervisor | Ananth | open | Approve the chest regions; evidence of a paddle outside its zone (R3) |
+| OQ-013 | E-7 | supervisor | Arnikan | open | Which steps must precede the shock indication (R5)? |
+| OQ-016 | E-9 | supervisor | Arnikan | open | Missing clinical time limits |
+| OQ-021 | E-14a | supervisor | Ananth, Arnikan | open | Gel applied more than twice |
+| OQ-022 | E-14b | supervisor | Ananth, Arnikan | open | Paddles lifted and placed again before the shock |
+| OQ-023 | E-14c | supervisor | Ananth, Arnikan | open | Discharge buttons pressed more than once |
+| OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
+| OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
+| OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
+| OQ-014 | E-8 | supervisor | Arnikan | answered | Approval of the A8 5-second limit |
+| OQ-004 | E-3 | Ananth | Arnikan | open | Who produces per-paddle placement events? |
+| OQ-017 | E-10 | Ananth | Arnikan | open | Pipeline to call the full rule-engine assessment |
+| OQ-020 | E-13 | Ananth | Sanjeevan, Arnikan | open | Timeline header: can it be provided, in what format? |
+| OQ-009 | E-4 | Sanjeevan | Arnikan | open | Missing audio command events |
+| OQ-015 | E-8 | team | supervisor | open | Final IDs for R8 and A8 |
+| OQ-018 | E-11 | team | Ananth, Sanjeevan, Arnikan | open | Engineering placeholder values |
+| OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
+| OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
+| OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
+| OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
+| OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
+| OQ-003 | E-3 | Arnikan | — | answered | Real CVAT tag for "first paddle placed" |
+| OQ-011 | E-5 | Arnikan | — | answered | A7/A4 overlap |
+| OQ-024 | E-15 / Inc3-Q1 | Arnikan | — | answered | Merge duplicate shocks? |
+| OQ-025 | E-15 / Inc3-Q2 | Arnikan | — | answered | Reject mixed human/model evidence? |
+| OQ-026 | E-15 / Inc3-Q3 | Arnikan | — | answered | One camera and one recording as a hard error? |
+| OQ-027 | E-16 | Arnikan | — | answered | Time-windowed coverage |
+| OQ-028 | E-17 | Arnikan | — | answered | `analyses_run` for annotation timelines |
+| OQ-029 | E-18 | Arnikan | — | answered | Commands between the real shock and removal |
+| OQ-030 | E-19 | Arnikan | — | answered | Which start command counts as the restart |
+| OQ-031 | Inc0-Q1 | Arnikan | — | answered | Install charging-sound packages locally? |
+| OQ-032 | Inc1-Q3 | Arnikan | — | answered | Canonical names, one "compressions command" |
+| OQ-033 | Inc2-Q1 | Arnikan | — | answered | Use a provided but unapproved clinical value? |
+| OQ-034 | Inc2-Q2 | Arnikan | — | answered | New time-limit names |
+| OQ-035 | Inc2-Q3 | Arnikan | — | answered | Keep the unused `charge_to_shock_seconds`? |
+| OQ-039 | new (2026-10-13) | Arnikan | — | answered | Start command before removal under the fallback |
 
 ---
 
 ## For the supervisor
 
+Questions the supervisor owns, then questions owned by others that have a clinical part.
+
 ### OQ-002 Overall result when some rules are "Unable to Verify"
-- **Old no.:** E-2 · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-2 · **Owner:** supervisor · **Also involves:** Arnikan (implements the policy)
+  · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** If no rule fails, but the system could not verify one or more steps, should
   the overall result be **Fail** or **"faculty review"** (a faculty member checks the
   recording)?
@@ -75,7 +81,8 @@ supervisor meetings.
   `unable_to_verify_outcome` is empty and marked undecided (D-042).
 
 ### OQ-005 Does an inferred Fail count as Fail?
-- **Old no.:** E-3a · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-3a · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-10-10 · **Status:** open
 - **Question:** When only one placement zone is visible, R8 infers which paddle was placed
   first. If that inference says sternal came first (a mistake), should it fail the learner, or
   be reported as "Unable to Verify"?
@@ -84,8 +91,9 @@ supervisor meetings.
 - **Interim behaviour:** Reported as Unable to Verify, flagged
   `inferred_fail_policy_undecided` (D-015).
 
-### OQ-010 Confirm the command names and accepted phrases
-- **Old no.:** E-4a · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+### OQ-010 Confirm the command names, accepted phrases and order
+- **Old no.:** E-4a · **Owner:** supervisor · **Also involves:** Sanjeevan (phrase matching),
+  Arnikan (vocabulary) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Please confirm the six commands (oxygen away, continue compressions, all stand
   clear, stop compressions, shock, start/resume compressions), their accepted wordings, and
   their required order.
@@ -95,8 +103,22 @@ supervisor meetings.
 - **Interim behaviour:** The names follow the proposal document and are marked provisional
   (D-017, A-003).
 
+### OQ-012 Approve the chest regions; evidence of a paddle outside its zone (R3)
+- **Old no.:** E-6 · **Owner:** supervisor (approving the chest regions) · **Also involves:**
+  Ananth (detecting placement relative to the regions) · **Raised:** 2026-10-10 · **Status:**
+  open
+- **Question:** R3 fails with `not_in_zone` when a paddle is placed outside its approved zone.
+  The supervisor approves the chest regions and what counts as a correct placement. Ananth then
+  defines which video event shows a paddle outside its zone.
+- **Affects:** R3; P-016.
+- **Why it matters:** Without approved regions, R3 cannot judge where a paddle was placed. It
+  can only judge whether it was placed.
+- **Interim behaviour:** R3 cannot produce `not_in_zone` until the regions are approved and an
+  event exists.
+
 ### OQ-013 Which steps must come before the shock indication (R5)?
-- **Old no.:** E-7 · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-7 · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-10-10 · **Status:** open
 - **Question:** R5 passes when a new shock indication appears "after the preceding steps".
   Which steps: paddle placement only, or placement and pressing both buttons?
 - **Affects:** R5.
@@ -104,7 +126,8 @@ supervisor meetings.
 - **Interim behaviour:** R5 is not built yet (Increment 13).
 
 ### OQ-016 Missing clinical time limits
-- **Old no.:** E-9 · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-9 · **Owner:** supervisor · **Also involves:** Arnikan (records them in config)
+  · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Please give the maximum times (in seconds) for:
   - **R1:** the period within which the two gel applications must happen;
   - **R7/A6:** shock → start/resume compressions command;
@@ -118,14 +141,16 @@ supervisor meetings.
   "timing not checked" (D-005).
 
 ### OQ-021 Gel applied more than twice
-- **Old no.:** E-14a · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-14a · **Owner:** supervisor · **Also involves:** Ananth (detects each
+  application), Arnikan · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** If gel is applied three or more times, is that a Fail, or does "at least twice"
   pass?
 - **Affects:** R1.
 - **Interim behaviour:** R1 is not built yet (Increment 17). Every application is kept (D-012).
 
 ### OQ-022 Paddles lifted and placed again before the shock
-- **Old no.:** E-14b · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-14b · **Owner:** supervisor · **Also involves:** Ananth (detects re-placement),
+  Arnikan · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** If a paddle is lifted and placed again before the shock, is that acceptable or a
   mistake? Which placement counts for R2, R3 and R8?
 - **Affects:** R2, R3, R8; P-012.
@@ -133,14 +158,43 @@ supervisor meetings.
   recorded and flagged `multiple_candidates` (D-040).
 
 ### OQ-023 Discharge buttons pressed more than once
-- **Old no.:** E-14c · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-14c · **Owner:** supervisor · **Also involves:** Ananth (detects each press),
+  Arnikan · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** If both buttons are pressed more than once, is that acceptable or a mistake?
   Which press counts for R4?
 - **Affects:** R4.
 - **Interim behaviour:** R4 is not built yet (Increment 16). Every press is kept (D-012).
 
+### OQ-001 Final policy when coverage is unknown
+- **Old no.:** E-1 · **Owner:** team · **Also involves:** supervisor (whether unverifiable
+  evidence may count against a learner is an assessment-policy question) · **Raised:**
+  2026-10-10 · **Status:** open
+- **Question:** When it is unknown whether an event could have been observed (for example, no
+  information on whether the audio was analysed), should a missing event be a Fail or Unable
+  to Verify?
+- **Affects:** all rules; P-008.
+- **Interim behaviour:** Unable to Verify, flagged `coverage_policy_undecided` (D-008).
+
+### OQ-006 R8 placement-match window; is the apical-first fallback clinically acceptable?
+- **Old no.:** E-3b · **Owner:** team (the window value, from pilot validation) · **Also
+  involves:** supervisor (whether "the first paddle taken is the apical one" is acceptable as a
+  last-resort assumption) · **Raised:** 2026-10-10 · **Status:** open
+- **Question:** How close (in seconds) must the visible paddle's placement be to the first
+  placement to count as "the same time"? And should the "first paddle taken is apical"
+  fallback ever be switched on?
+- **Affects:** R8; P-015.
+- **Interim behaviour:** 0.5 s (placeholder, A-002). The fallback is off (D-014).
+
+### OQ-036 Evaluator checklist format and its mapping to rules
+- **Old no.:** Brief §9 · **Owner:** team · **Also involves:** supervisor (the checklist mirrors
+  the faculty's evaluation rubric) · **Raised:** 2026-10-10 · **Status:** open
+- **Question:** What does the evaluator checklist look like, and which rules feed each item?
+- **Affects:** P-018; Increment 25.
+- **Interim behaviour:** A one-item-per-rule placeholder mapping (planned).
+
 ### OQ-014 Approval of the A8 5-second limit — *answered*
-- **Old no.:** E-8 · **Owner:** supervisor · **Raised:** 2026-10-10 · **Status:** answered
+- **Old no.:** E-8 · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-10-10 · **Status:** answered
 - **Question:** Is the 5-second limit from "Stop CPR" to "Start CPR" approved?
 - **Answer:** Yes, approved by Dr. Senani Samarasinghe. The approval date is to be confirmed.
 - **Answered:** 2026-10-10 → **D-016**.
@@ -150,21 +204,16 @@ supervisor meetings.
 ## For Ananth (video and pipeline)
 
 ### OQ-004 Who produces per-paddle placement events?
-- **Old no.:** E-3 · **Owner:** Ananth · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-3 · **Owner:** Ananth · **Also involves:** Arnikan (vocabulary names) ·
+  **Raised:** 2026-10-10 · **Status:** open
 - **Question:** How will video postprocessing produce `apical_paddle_placed` and
   `sternal_paddle_placed`? CVAT has no per-paddle placement tags.
 - **Affects:** R8, R3; P-003, P-015.
 - **Interim behaviour:** These names are placeholders. Without them, R8 is Unable to Verify.
 
-### OQ-012 What evidence shows a paddle outside its zone (R3)?
-- **Old no.:** E-6 · **Owner:** Ananth · **Raised:** 2026-10-10 · **Status:** open
-- **Question:** R3 fails with `not_in_zone` when a paddle is placed outside its approved zone.
-  Which event or signal will show this?
-- **Affects:** R3; P-016.
-- **Interim behaviour:** R3 cannot produce `not_in_zone` until an event exists.
-
 ### OQ-017 Pipeline to call the full rule-engine assessment
-- **Old no.:** E-10 · **Owner:** Ananth · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-10 · **Owner:** Ananth · **Also involves:** Arnikan (provides the function) ·
+  **Raised:** 2026-10-10 · **Status:** open
 - **Question:** The pipeline report shows the overall result and checklist only if
   `pipeline/run.py` calls the rule engine's full assessment function. Can this be added once
   that function exists (Increment 9)?
@@ -172,7 +221,8 @@ supervisor meetings.
 - **Interim behaviour:** The pipeline report lists the individual rule results only.
 
 ### OQ-020 Timeline header: can it be provided, and in what format?
-- **Old no.:** E-13 · **Owner:** Ananth · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-13 · **Owner:** Ananth · **Also involves:** Sanjeevan (whether audio analysis
+  ran), Arnikan · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Can the pipeline send, with each timeline, the recording ID, camera angle,
   duration and which analyses ran? See [upstream_requirements.md](upstream_requirements.md).
 - **Affects:** all rules; P-006, P-007, P-008.
@@ -186,7 +236,8 @@ supervisor meetings.
 ## For Sanjeevan (audio)
 
 ### OQ-009 Missing audio command events
-- **Old no.:** E-4 · **Owner:** Sanjeevan · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-4 · **Owner:** Sanjeevan · **Also involves:** Arnikan (vocabulary). The
+  clinical part, the accepted wording, is OQ-010. · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Audio command detection currently emits only oxygen away, stand clear and
   resume compressions. It needs continue, stop, shock and start too, and "continue
   compressions" is currently matched as "resume".
@@ -198,50 +249,34 @@ supervisor meetings.
 
 ## For the team
 
-### OQ-001 Final policy when coverage is unknown
-- **Old no.:** E-1 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
-- **Question:** When it is unknown whether an event could have been observed, should a missing
-  event be a Fail or Unable to Verify?
-- **Affects:** all rules; P-008.
-- **Interim behaviour:** Unable to Verify, flagged `coverage_policy_undecided` (D-008).
-
-### OQ-006 R8 placement-match window; ever use the apical fallback?
-- **Old no.:** E-3b · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
-- **Question:** How close (in seconds) must the visible paddle's placement be to the first
-  placement to count as "the same time"? And should the "first paddle taken is apical"
-  fallback ever be switched on?
-- **Affects:** R8; P-015.
-- **Interim behaviour:** 0.5 s (placeholder, A-002). The fallback is off (D-014).
-
 ### OQ-015 Final IDs for R8 and A8
-- **Old no.:** E-8 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-8 · **Owner:** team · **Also involves:** supervisor (naming in the faculty
+  rubric; not a clinical question) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** R8 and A8 are proposed IDs. What are the final ones?
 - **Affects:** R8, A8.
 - **Interim behaviour:** The proposed IDs are used.
 
 ### OQ-018 Engineering placeholder values
-- **Old no.:** E-11 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-11 · **Owner:** team · **Also involves:** Ananth (video thresholds), Sanjeevan
+  (audio thresholds), Arnikan (rule-engine windows and tolerances) · **Raised:** 2026-10-10 ·
+  **Status:** open
 - **Question:** Choose the confidence thresholds, simultaneous window, gel minimum gap, R8
   placement-match window and duration tolerance from pilot validation.
 - **Affects:** P-004, P-005, P-006, P-011, P-015; R1, R2, R8.
 - **Interim behaviour:** The placeholder values in A-002.
 
 ### OQ-019 Which side applies confidence thresholds?
-- **Old no.:** E-12 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-12 · **Owner:** team · **Also involves:** Ananth, Sanjeevan, Arnikan ·
+  **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Should thresholds be applied upstream, in the rule engine, or both with the same
   values, so they are not applied twice with different values?
 - **Affects:** P-004.
 - **Interim behaviour:** The rule engine applies its placeholder thresholds as a safety check;
   0 disables it (D-021).
 
-### OQ-036 Checklist format and its mapping to rules
-- **Old no.:** Brief §9 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
-- **Question:** What does the evaluator checklist look like, and which rules feed each item?
-- **Affects:** P-018; Increment 25.
-- **Interim behaviour:** A one-item-per-rule placeholder mapping (planned).
-
 ### OQ-037 Model output formats and the meaning of confidence
-- **Old no.:** Brief §9 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** Brief §9 · **Owner:** team · **Also involves:** Ananth (video), Sanjeevan
+  (audio) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** What exactly will the video and audio models send, what does their confidence
   mean, and what coverage signals will they provide?
 - **Affects:** P-001, P-004, P-007.
@@ -249,7 +284,8 @@ supervisor meetings.
   the formats are known.
 
 ### OQ-038 Final camera angle
-- **Old no.:** Brief §9 · **Owner:** team · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** Brief §9 · **Owner:** team · **Also involves:** Ananth (models are trained per
+  angle) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Which camera angle will the final system use?
 - **Affects:** R8 (zone visibility), all video rules.
 - **Interim behaviour:** Any single angle is accepted; mixing angles is rejected (D-032).
@@ -259,14 +295,16 @@ supervisor meetings.
 ## For Arnikan (rule engine and annotation)
 
 ### OQ-007 Zone visibility for annotation timelines
-- **Old no.:** E-3c · **Owner:** Arnikan · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-3c · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
+  **Status:** open
 - **Question:** `events.jsonl` has no zone tracks. Should zone flags be added to it (in
   `annotation/build_yolo_video_dataset.py`), or supplied as a separate per-task file?
 - **Affects:** R8; P-001, P-007.
 - **Interim behaviour:** Zone coverage is unknown.
 
 ### OQ-008 Annotation label lists that drop the first-placement tag
-- **Old no.:** E-3d · **Owner:** Arnikan · **Raised:** 2026-10-10 · **Status:** open
+- **Old no.:** E-3d · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
+  **Status:** open
 - **Question:** `first_paddle_firmly_on_the_chest` must be added to the label lists in
   `build_yolo_video_dataset.py` and `create_grouped_video_split.py`, not only the audit list.
   Otherwise `events.jsonl` drops it.
@@ -274,14 +312,16 @@ supervisor meetings.
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
 
-### OQ-039 Start command before the removal under the fallback
-- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:** open
-- **Question:** When the shock time comes from paddle removal, an explicit "start compressions"
-  said before the removal is treated as before the shock, so it does not count as the restart
-  (A-014). Is that right, given that it may have come after the real shock?
-- **Affects:** R7/A6, A7, A8; P-012.
-- **Interim behaviour:** It does not count, and is flagged `start_command_before_shock` and
-  `shock_time_from_removal`.
+### OQ-039 Start command before the removal under the fallback — *answered*
+- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**
+  answered
+- **Question:** When the shock time comes from paddle removal, should an explicit "start
+  compressions" said before the removal be treated as before the shock (a mistake)?
+- **Answer:** No. It is timing-ambiguous (the real shock was at an unknown earlier time). It is
+  not counted as the restart and not treated as a mistake, and is flagged
+  `command_before_removal`. R7/A6 and A8 give Unable to Verify, and A7 does not report it. The
+  agent's proposal (A-014, as first written) was rejected.
+- **Answered:** 2026-10-13 → **D-053**.
 
 ### OQ-003 Real CVAT tag for "first paddle placed" — *answered*
 - **Old no.:** E-3 · **Raised:** 2026-10-10 · **Status:** answered
@@ -328,7 +368,7 @@ supervisor meetings.
 ### OQ-030 Which start command counts as the restart — *answered*
 - **Old no.:** E-19 · **Raised:** 2026-10-13 · **Status:** answered
 - **Answer:** The earliest start command after the shock. Earlier ones don't count, and A7
-  reports them.
+  reports them, when the shock is confirmed on screen (refined by D-053).
 - **Answered:** 2026-10-13 → **D-025**.
 
 ### OQ-031 Install charging-sound packages locally? — *answered*

@@ -64,7 +64,9 @@ flowchart TD
     P2 -->|no| R1["Not evaluable<br/>because of that rule"]
     P2 -->|yes| P3{"Facts it needs present?<br/>e.g. shock time"}
     P3 -->|no| R2["Not evaluable<br/>because of the missing step"]
-    P3 -->|yes| P4{"Evidence present?"}
+    P3 -->|yes| PA{"Needs the restart, and a start<br/>command is timing-ambiguous?"}
+    PA -->|yes| RA["Unable to Verify<br/>never Fail (D-053)"]
+    PA -->|no| P4{"Evidence present?"}
     P4 -->|yes, correct| R3["Pass – Direct"]
     P4 -->|yes, shows the mistake| R4["Fail<br/>with failure code"]
     P4 -->|weak| P5{"Approved inference?<br/>P-015 / P-016"}
@@ -72,7 +74,7 @@ flowchart TD
     P5 -->|no| M["What missing means<br/>P-008"]
     P4 -->|missing| M
     classDef planned stroke-dasharray: 5 5
-    class S,P1,P2,P3,P4,P5,R0,R1,R2,R3,R4,R5 planned
+    class S,P1,P2,P3,PA,RA,P4,P5,R0,R1,R2,R3,R4,R5 planned
 ```
 
 ## (d) What a missing event means (P-007, P-008, P-013)
@@ -87,7 +89,7 @@ flowchart TD
     C -->|unknown, incl. no header| U3["Unable to Verify (interim)<br/>coverage_policy_undecided"]
 ```
 
-## (e) Shock time and phases (P-009, P-010, P-011)
+## (e) Shock time, phases and command resolution (P-009, P-010, P-011)
 
 ```mermaid
 flowchart TD
@@ -105,6 +107,19 @@ flowchart TD
     CR -->|after| ST["Start"]
     N1 --> UR3["Commands unresolved<br/>no_shock_time"]
     N2 --> UR3
+```
+
+### (e2) Which start command is the restart (P-012)
+
+```mermaid
+flowchart TD
+    K{"How was the shock time<br/>established? P-009"} -->|no shock time| A0["No restart time<br/>all start commands ambiguous<br/>no_shock_time"]
+    K -->|shock on screen| B{"Start command at or<br/>before the shock?"}
+    B -->|yes| B1["Not the restart: a mistake<br/>start_command_before_shock<br/>(A7 reports it)"]
+    B -->|no| RS["Restart = earliest start after the shock"]
+    K -->|from paddle removal| C{"Start command at or<br/>before the removal?"}
+    C -->|yes| C1["Timing-ambiguous, not a mistake<br/>command_before_removal<br/>R7/A6, A8 → Unable to Verify"]
+    C -->|no| RR["Restart = earliest start after removal<br/>shock_time_from_removal"]
 ```
 
 ## (f) R8: apical before sternal (P-015, planned)

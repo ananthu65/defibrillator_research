@@ -307,20 +307,23 @@ decision_points:
         flags: [low_confidence_evidence]
       - condition: No candidate at all
         outcome: Absent, with a reason
-      - condition: Start command at or before the shock (start anchor only)
-        outcome: Does not count as the restart; listed as ineligible for A7 to report
+      - condition: Start command at or before a confirmed on-screen shock (start anchor only)
+        outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
         flags: [start_command_before_shock]
+      - condition: Shock time from removal and a start command at or before the removal (start anchor only)
+        outcome: Timing-ambiguous (the real shock was at an unknown earlier time); not counted, not a mistake; listed as ambiguous; a later start is still used but the anchor stays flagged
+        flags: [command_before_removal, shock_time_from_removal]
       - condition: No shock time (start anchor only)
-        outcome: Start anchor absent
+        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake
         flags: [no_shock_time]
       - condition: An ambiguous command is unresolved (continue and start anchors)
         outcome: Anchor may be incomplete
         flags: [unresolved_commands]
     config: []
     code: rules/context.py (_earliest, _start_anchor)
-    decisions: [D-025, D-040, D-012]
+    decisions: [D-025, D-053, D-040, D-012]
     assumptions: [A-014]
-    open_questions: [OQ-022, OQ-039]
+    open_questions: [OQ-022]
 
   - id: P-013
     name: Low-confidence ambiguous command as evidence
@@ -354,6 +357,9 @@ decision_points:
         outcome: Not evaluable because of that rule (one mistake reported once)
       - condition: Required facts absent (e.g. no shock time)
         outcome: Not evaluable because of the step that provides them, with its flags
+      - condition: Restart needed (R7/A6, A8) but timing-ambiguous start commands exist (Anchor.ambiguous)
+        outcome: Unable to Verify, never Fail; A7 does not report ambiguous commands as sequence errors
+        flags: [command_before_removal]
       - condition: Direct evidence present, in order and in time
         outcome: Pass – Direct
       - condition: Direct evidence shows the mistake clearly
@@ -366,7 +372,7 @@ decision_points:
         next: P-008
     config: [configs/rules.yaml rules]
     code: rules/checks.py, rules/registry.py, rules/engine.py (Increments 6 and 7)
-    decisions: [D-001, D-002, D-003, D-043, D-045]
+    decisions: [D-001, D-002, D-003, D-043, D-045, D-053]
     assumptions: [A-016]
     open_questions: []
 

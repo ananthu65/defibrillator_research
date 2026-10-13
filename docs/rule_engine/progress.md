@@ -1737,3 +1737,80 @@ instead of repeating their content.
 ### Tests
 Full suite: **248 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
 with 0.
+
+---
+
+## Documentation review: D-053 and question ownership (2026-10-13)
+
+### 1. A start command before the removal is timing-ambiguous (D-053, closes OQ-039)
+- **Decision:** Arnikan rejected the agent's A-014 proposal and decided D-053.
+  - Under the removal fallback, an explicit start command at or before the removal is
+    timing-ambiguous, the same as D-024: not counted as the restart, and not a mistake, flagged
+    `command_before_removal`.
+  - R7/A6 and A8 give Unable to Verify, not Fail.
+  - A7 does not report it.
+- **Code** (`rules/context.py`, P-012):
+  - New field `Anchor.ambiguous`, kept separate from `Anchor.ineligible` (start commands before
+    a confirmed on-screen shock, which A7 reports).
+  - Under the fallback, earlier start commands go to `ambiguous`, flagged
+    `command_before_removal`. A later start is still used as the restart time, but the anchor
+    keeps the flag, so a delay measured to it is not trusted (W-14).
+- **Consistency fix (agent):** with no shock time at all, start commands were listed as
+  `ineligible`, which A7 would report. They are now `ambiguous` too: the timing is just as
+  unknown. This is included in D-053.
+- **Tests:** `tests/test_rule_engine_context.py` 39 → 42.
+  - A start before the removal is ambiguous and not a mistake (at 20 s, 32 s and 33 s against a
+    33 s removal).
+  - A later start is used, but the ambiguity flag is kept and reaches the stop → start elapsed
+    time.
+  - With a shock on screen, a start before it is still a mistake.
+  - The no-shock-time test now expects `ambiguous`.
+- **Registers:**
+  - D-053 is added; D-025 is marked "refined by D-053".
+  - A-014 is rewritten: the real shock time is unknown but before the removal.
+  - OQ-039 is answered → D-053.
+- **Flow, pathways, diagrams and anomalies:**
+  - `decision_flow.yaml`: P-012 has a new branch, and P-014 a planned branch ("restart
+    ambiguous → Unable to Verify").
+  - `pathways.md`: P-012 and P-014 rows, a new worked pathway W-14, and W-10 now says its shock
+    was confirmed on screen.
+  - `diagrams.md`: (c) has an ambiguity step, and there is a new diagram (e2), "Which start
+    command is the restart".
+  - `anomalies.md`: `command_before_removal` and `start_command_before_shock` rows.
+  - `rules_status.md`: R7/A6, A7 and A8.
+
+### 2. Question ownership
+- **"Also involves":** `open_questions.md` now has an "Also involves" column, and each entry has
+  an "Also involves" field.
+- **Grouping rule:** a question with a clinical part appears in the supervisor section, even
+  when someone else owns the technical part.
+- **Changes:**
+
+| Question | Change |
+|---|---|
+| OQ-012 | Owner **Ananth → supervisor** (approving the chest regions); also involves Ananth (detection). Moved to the supervisor section and retitled |
+| OQ-001 | Owner stays team; also involves supervisor (whether unverifiable evidence may count against a learner). **Moved** to the supervisor section |
+| OQ-006 | Owner stays team (the window value); also involves supervisor (is the apical-first fallback clinically acceptable?). **Moved** to the supervisor section |
+| OQ-036 | Owner stays team; also involves supervisor (the checklist mirrors the faculty rubric). **Moved** to the supervisor section |
+| OQ-021, OQ-022, OQ-023 | Also involves Ananth (detecting each repeated action), Arnikan |
+| OQ-010 | Also involves Sanjeevan (phrase matching), Arnikan |
+| OQ-009 | Also involves Arnikan; notes that its clinical part is OQ-010 |
+| OQ-020 | Also involves Sanjeevan (whether audio analysis ran), Arnikan |
+| OQ-015 | Also involves supervisor (rubric naming); stays in the team section, because it is not clinical |
+| OQ-018, OQ-019 | Also involves Ananth, Sanjeevan, Arnikan (by part) |
+| OQ-037 | Also involves Ananth, Sanjeevan |
+| OQ-038 | Also involves Ananth |
+| OQ-002, OQ-005, OQ-013, OQ-016, OQ-004, OQ-017, OQ-014 | "Also involves" filled in (Arnikan); no move |
+
+### Documents updated
+`rules/context.py`, `tests/test_rule_engine_context.py`, `decisions.md`, `assumptions.md`,
+`open_questions.md`, `decision_flow.yaml`, `pathways.md`, `diagrams.md`, `anomalies.md`,
+`rules_status.md`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions in this step
+- **Answered:** OQ-039 → D-053.
+- **New:** none.
+
+### Tests
+Full suite: **251 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.

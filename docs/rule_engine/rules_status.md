@@ -22,10 +22,10 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A3** All stand clear | Command given before the shock | stand-clear command, shock time | P-010, P-014, P-008 | `missing`, `after_shock` | 18 | pending | OQ-010 |
 | **A4** Stop compressions | Command before the shock, after "continue" | stop command, continue time, shock time | P-012, P-010, P-008 | `missing`, `after_shock`, `wrong_order` | 19 | pending | OQ-009, OQ-010, OQ-016 |
 | **A5** Shock command | Verbal shock command before or at the shock | shock command, shock time | P-010, P-014, P-008 | `missing` | 20 | pending | OQ-009, OQ-010, OQ-016 |
-| **R7** Compressions restarted promptly | The restart command (the earliest start after the shock, D-025) within the approved delay | restart time, shock time | P-012, P-011, P-009, P-008 | `missing`, `before_shock`, `too_late` | 21 | pending | OQ-016, OQ-009, OQ-039 |
+| **R7** Compressions restarted promptly | The restart command (the earliest start after the shock, D-025) within the approved delay. If a start command is timing-ambiguous (removal fallback, D-053), Unable to Verify, not Fail | restart time, shock time | P-012, P-011, P-009, P-008 | `missing`, `before_shock`, `too_late` | 21 | pending | OQ-016, OQ-009 |
 | **A6** Start or resume compressions promptly | The same check as R7, reported under A6 (D-044) | as R7 | as R7 | as R7 | 21 | pending | as R7 |
-| **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before the shock is a sequence problem (D-025) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
-| **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015, OQ-039 |
+| **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
+| **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
 ## What is built so far (Increments 0–5)
 

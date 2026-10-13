@@ -121,16 +121,17 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Assumption:** The pipeline merger or an input adapter gives every event a unique ID.
 - **Status:** active (otherwise the timeline is rejected as `missing_event_id`).
 
-### A-014 Under the removal fallback, a start command before the removal does not count
-- **Assumption:** When the shock time comes from removal, an explicit "start compressions"
-  before the removal time is treated as "before the shock". It does not count as the restart,
-  and is flagged `start_command_before_shock` and `shock_time_from_removal`.
-- **Why:** Applying D-025 consistently with D-024: the system cannot tell whether it came after
-  the real shock.
-- **Status:** active, to be confirmed.
-- **If wrong:** A correct restart said between the real shock and the removal may be reported
-  as missing or out of order. The flags make this visible.
-- **Related:** OQ-039.
+### A-014 Under the removal fallback, the real shock time is unknown but before the removal
+- **Assumption:** When no shock is confirmed on screen, the shock happened at some unknown time
+  **before** the first paddle removal, never after it.
+- **Why:** The paddles are removed after the shock is delivered.
+- **Status:** active. Updated 2026-10-13: the earlier version also assumed that a start command
+  before the removal counts as "before the shock". D-053 rejected that, so commands before the
+  removal are now timing-ambiguous (`command_before_removal`): they are not counted, and are not
+  a mistake.
+- **If wrong:** If paddles could be removed before the shock, the fallback itself (D-023) would
+  be invalid. Every result using it is flagged `shock_time_from_removal`.
+- **Related:** D-023, D-024, D-053, OQ-039.
 
 ### A-015 Annotation events are single moments
 - **Assumption:** CVAT tags become point events (start = end), even for labels whose CVAT type

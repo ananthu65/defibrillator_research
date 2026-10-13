@@ -46,7 +46,8 @@ class Anchor:
     candidates: tuple[str, ...] = ()   # every event ID that could have been the anchor
     flags: tuple[str, ...] = ()
     reason: str = ""
-    ineligible: tuple[str, ...] = ()   # events of the anchor's kind that do not count (e.g. start before shock)
+    ineligible: tuple[str, ...] = ()   # do not count, and are a mistake for a rule to report (start before shock)
+    ambiguous: tuple[str, ...] = ()    # do not count, but are NOT a mistake: their timing is unknown (D-053)
 
     @property
     def present(self):
@@ -189,23 +190,33 @@ def _resolve(resolution, time, shock, window):
 
 
 def _start_anchor(events, shock, prepared):
-    """D-025: the restart is the earliest start command after the shock; earlier ones do not count."""
+    """D-025: the restart is the earliest start command after the shock; earlier ones do not count.
+
+    D-053: when the real shock time is unknown (removal fallback, or no shock time at all), start
+    commands that may have been the restart are timing-ambiguous: not counted, not a mistake.
+    """
     starts = [e for e in events if e.event_name == START_EVENT]
     if not shock.present:
         return Anchor("start_compressions", None, flags=(NO_SHOCK_TIME,) + shock.flags,
                       reason="no shock time, so the restart command cannot be identified",
-                      ineligible=tuple(e.event_id for e in starts))
-    carried = (SHOCK_FROM_REMOVAL,) if SHOCK_FROM_REMOVAL in shock.flags else ()
+                      ambiguous=tuple(e.event_id for e in starts))
+    fallback = SHOCK_FROM_REMOVAL in shock.flags
     after = [e for e in starts if e.start > shock.time]
-    before = tuple(e.event_id for e in starts if e.start <= shock.time)
-    flags = carried + ((START_BEFORE_SHOCK,) if before else ())
+    earlier = tuple(e.event_id for e in starts if e.start <= shock.time)
+    if fallback:  # the real shock was at an unknown time before the removal
+        flags = (SHOCK_FROM_REMOVAL,) + ((COMMAND_BEFORE_REMOVAL,) if earlier else ())
+        before, ambiguous = (), earlier
+    else:
+        flags = (START_BEFORE_SHOCK,) if earlier else ()
+        before, ambiguous = earlier, ()
     if not after:
         low = (LOW_CONFIDENCE_FLAG,) if prepared.excluded_named(START_EVENT) else ()
         return Anchor("start_compressions", None, flags=flags + low,
-                      reason=f"no confident {START_EVENT} event after the shock", ineligible=before)
+                      reason=f"no confident {START_EVENT} event after the shock",
+                      ineligible=before, ambiguous=ambiguous)
     many = (MULTIPLE_CANDIDATES,) if len(after) > 1 else ()
     return Anchor("start_compressions", after[0].start, after[0].event_id, START_EVENT,
-                  tuple(e.event_id for e in after), flags + many, ineligible=before)
+                  tuple(e.event_id for e in after), flags + many, ineligible=before, ambiguous=ambiguous)
 
 
 def _earliest(anchor, event_name, events, prepared):

@@ -302,7 +302,25 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** For R7/A6 and A8, the "start compressions" anchor is the earliest start command
   after the shock. A start command at or before the shock does not count as the restart, and
   A7 reports it as a sequence problem (`start_command_before_shock`).
-- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Open question:** OQ-039.
+- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Refined by:** D-053, for the
+  case where the shock time is not known exactly.
+
+### D-053 A start command before the removal is timing-ambiguous, not a mistake
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** Under the removal fallback, an explicit "start compressions" said before the
+  removal is treated like a "resume compressions" there (D-024). The real shock happened at an
+  unknown time before the removal, so the command may be a genuine restart. Therefore:
+  - It does **not** count as the restart, and it is **not** treated as a mistake. It is flagged
+    `command_before_removal` and listed as ambiguous, not as a start before the shock.
+  - Rules that need the restart (R7/A6, A8) give **Unable to Verify, not Fail**, whenever the
+    restart is ambiguous, even if a later start command exists.
+  - A7 must **not** report it as a sequence error.
+  - The same applies when there is no shock time at all: start commands are then ambiguous,
+    not mistakes.
+- **Reason:** D-004 (never blame the learner for missing data) and consistency with D-024.
+- **Alternatives considered:** Treat it as a start before the shock, which does not count and
+  is reported by A7 (the agent's A-014 proposal), rejected.
+- **Affects:** R7/A6, A7, A8; P-012, P-014. **Resolved:** OQ-039.
 
 ---
 

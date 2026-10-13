@@ -218,11 +218,40 @@ class StartAnchor(unittest.TestCase):
                 anchor = context(timeline).anchor("start_compressions")
                 self.assertFalse(anchor.present)
                 self.assertEqual(anchor.flags, ("no_shock_time", shock_flag))
-                self.assertEqual(anchor.ineligible, ("s",))
+                # D-053: timing unknown, so ambiguous, not a sequence mistake for A7
+                self.assertEqual((anchor.ambiguous, anchor.ineligible), (("s",), ()))
 
     def test_under_the_fallback_the_start_anchor_carries_the_flag(self):
         anchor = context([REMOVAL, cmd("start_compressions_command", 36, "s")]).anchor("start_compressions")
         self.assertEqual((anchor.event_id, anchor.flags), ("s", ("shock_time_from_removal",)))
+        self.assertEqual((anchor.ambiguous, anchor.ineligible), ((), ()))
+
+    def test_under_the_fallback_a_start_before_removal_is_ambiguous_not_a_mistake(self):
+        # D-053 (OQ-039): the real shock was at an unknown time before the removal (33 s)
+        for t in (20, 32, 33):
+            with self.subTest(t=t):
+                anchor = context([REMOVAL, cmd("start_compressions_command", t, "early")]).anchor("start_compressions")
+                self.assertFalse(anchor.present)  # not counted as the restart
+                self.assertEqual(anchor.ambiguous, ("early",))
+                self.assertEqual(anchor.ineligible, ())  # not a sequence mistake for A7
+                self.assertEqual(anchor.flags, ("shock_time_from_removal", "command_before_removal"))
+                self.assertNotIn("start_command_before_shock", anchor.flags)
+
+    def test_under_the_fallback_a_later_start_is_used_but_the_ambiguity_is_flagged(self):
+        anchor = context([REMOVAL, cmd("start_compressions_command", 31, "early"),
+                          cmd("start_compressions_command", 40, "late")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.ambiguous), ("late", ("early",)))
+        # the early one may have been the real restart, so a delay measured to "late" is uncertain
+        self.assertIn("command_before_removal", anchor.flags)
+        self.assertIn("command_before_removal", context([REMOVAL, cmd("stop_compressions_command", 25),
+                                                         cmd("start_compressions_command", 31, "early"),
+                                                         cmd("start_compressions_command", 40, "late")])
+                      .elapsed("stop_compressions", "start_compressions").flags)
+
+    def test_with_a_shock_on_screen_a_start_before_it_is_still_a_mistake(self):
+        anchor = context([SHOCK, REMOVAL, cmd("start_compressions_command", 25, "pre")]).anchor("start_compressions")
+        self.assertEqual((anchor.ineligible, anchor.ambiguous), (("pre",), ()))
+        self.assertEqual(anchor.flags, ("start_command_before_shock",))
 
     def test_weak_start_after_the_shock_is_flagged_low_confidence(self):
         anchor = context([SHOCK, cmd("start_compressions_command", 35, confidence=0.1)]).anchor("start_compressions")

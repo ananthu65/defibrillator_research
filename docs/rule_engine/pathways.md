@@ -121,8 +121,9 @@ low-confidence rule.
 | Several candidates | The earliest; all recorded | `multiple_candidates` |
 | Only a low-confidence candidate | Absent | `low_confidence_evidence` |
 | No candidate | Absent, with a reason | — |
-| A start command at or before the shock | Not the restart (D-025); kept for A7 | `start_command_before_shock` |
-| No shock time (start only) | No restart time | `no_shock_time` |
+| A start command at or before a confirmed on-screen shock | Not the restart (D-025); a mistake A7 reports | `start_command_before_shock` |
+| Shock time from removal, and a start command at or before the removal | Timing-ambiguous: not the restart, **not a mistake** (D-053); a later start is still used, but stays flagged | `command_before_removal`, `shock_time_from_removal` |
+| No shock time (start only) | No restart time; start commands are ambiguous, not mistakes | `no_shock_time` |
 | A "resume" command is unresolved | Continue and start times may be incomplete | `unresolved_commands` |
 
 #### P-013 Low-confidence ambiguous command (built)
@@ -139,6 +140,7 @@ low-confidence rule.
 | Rule not yet approved | Reported as pending; not counted |
 | A rule it depends on failed or was not evaluable | "Not evaluable because of …" |
 | Required facts missing (e.g. no shock time) | "Not evaluable because of …", with the facts' flags |
+| The restart is needed (R7/A6, A8), but a start command is timing-ambiguous | **Unable to Verify, never Fail**; A7 does not report it (D-053) |
 | Evidence present, in order and in time | Pass – Direct |
 | Evidence clearly shows the mistake | Fail, with the rule's failure code |
 | Evidence weak, but an approved inference applies | → P-015 or P-016 |
@@ -240,7 +242,7 @@ today.
    command exists, the restart is absent, and the missing outcome comes from P-008.
 
 ### W-10 "Start compressions" said before and after the shock
-1. Shock at 30 s. Start commands at 20 s and 35 s.
+1. Shock **confirmed on screen** at 30 s. Start commands at 20 s and 35 s.
 2. P-012: the restart is the earliest start **after** the shock → **35 s**. The 20 s command
    is ineligible, flagged `start_command_before_shock` (D-025).
 3. R7/A6 and A8 use 35 s. A7 (Increment 22) reports the 20 s command as a sequence problem.
@@ -260,3 +262,16 @@ today.
 ### W-13 A timeline mixing two camera angles → no assessment
 1. Video events from camera "T" and camera "LS".
 2. P-002: rejected, `multiple_camera_angles`; no assessment is produced (D-032).
+
+### W-14 Under the removal fallback, "start compressions" before the removal → Unable to Verify
+1. P-009: no shock on screen; paddles removed at 52 s → shock time **52 s** (from removal),
+   flagged `shock_time_from_removal`. The real shock was at an unknown time before 52 s.
+2. Explicit "start compressions" at 50 s, and again at 58 s.
+3. P-012: the 50 s command is **timing-ambiguous**. It may have been the genuine restart after
+   the real shock, so it is not counted and is **not a mistake**. It is listed as ambiguous and
+   flagged `command_before_removal` (D-053). The 58 s command is used as the restart time, but
+   the anchor stays flagged.
+4. R7/A6 (Increment 21) and A8 (Increment 23): the restart is ambiguous → **Unable to Verify**,
+   not Fail, not even `too_late` or `pre_shock_pause` measured to 58 s.
+5. A7 (Increment 22) does **not** report the 50 s command as a sequence error. Compare W-10,
+   where the shock was confirmed on screen and an early start command is a sequence problem.
