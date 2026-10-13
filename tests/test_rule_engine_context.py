@@ -44,7 +44,7 @@ class ShockTime(unittest.TestCase):
         self.assertEqual(to_start.seconds, 2)
         self.assertIn("shock_time_from_removal", to_start.flags)
         self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "shock").flags)
-        # OQ-041 (interim): no start before the removal, so the restart is certain; stop -> start (A8)
+        # D-059: no start or resume before the removal, so the restart is certain; stop -> start (A8)
         # does not depend on the shock time and carries no fallback flag
         self.assertNotIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
         self.assertNotIn("shock_time_from_removal", ctx.elapsed("first_placement", "stop_compressions").flags)
@@ -223,7 +223,7 @@ class StartAnchor(unittest.TestCase):
                 self.assertEqual((anchor.ambiguous, anchor.ineligible), (("s",), ()))
 
     def test_under_the_fallback_an_unambiguous_restart_carries_no_fallback_flag(self):
-        # OQ-041 (interim): a start after the removal, with none before it, is definitely the restart
+        # D-059: a start after the removal, with none before it, is definitely the restart
         ctx = context([REMOVAL, cmd("start_compressions_command", 36, "s")])
         anchor = ctx.anchor("start_compressions")
         self.assertEqual((anchor.event_id, anchor.flags), ("s", ()))
@@ -247,6 +247,25 @@ class StartAnchor(unittest.TestCase):
                 self.assertEqual(anchor.ineligible, ())  # not a sequence mistake for A7
                 self.assertEqual(anchor.flags, ("shock_time_from_removal", "command_before_removal"))
                 self.assertNotIn("start_command_before_shock", anchor.flags)
+
+    def test_under_the_fallback_an_unresolved_resume_before_removal_makes_the_restart_ambiguous(self):
+        # D-059 (OQ-041): "resume" at 30 s, before the removal at 33 s, may have been the restart
+        ctx = context([REMOVAL, cmd("resume_compressions_command", 30, "r"), cmd("start_compressions_command", 40, "s")])
+        anchor = ctx.anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.ambiguous), ("s", ("r",)))  # later start still used, but...
+        self.assertEqual(anchor.flags[:2], ("shock_time_from_removal", "command_before_removal"))
+        self.assertIn("command_before_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
+        self.assertEqual(anchor.ineligible, ())  # never a sequence mistake
+
+    def test_under_the_fallback_only_a_resume_before_removal_leaves_no_restart(self):
+        anchor = context([REMOVAL, cmd("resume_compressions_command", 30, "r")]).anchor("start_compressions")
+        self.assertEqual((anchor.present, anchor.ambiguous), (False, ("r",)))
+        self.assertIn("command_before_removal", anchor.flags)
+
+    def test_with_a_shock_on_screen_a_resume_before_it_is_continue_not_ambiguous(self):
+        anchor = context([SHOCK, cmd("resume_compressions_command", 20, "r"),
+                          cmd("start_compressions_command", 35, "s")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.ambiguous, anchor.flags), ("s", (), ()))
 
     def test_under_the_fallback_a_later_start_is_used_but_the_ambiguity_is_flagged(self):
         anchor = context([REMOVAL, cmd("start_compressions_command", 31, "early"),

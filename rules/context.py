@@ -122,8 +122,12 @@ class ProcedureContext:
         return resolved in (None, event_name)  # unresolvable: it could have been either
 
     @property
+    def config(self):
+        return self.coverage.config
+
+    @property
     def _window(self):
-        return self.coverage.config.engine.value("simultaneous_window_seconds")
+        return self.config.engine.value("simultaneous_window_seconds")
 
 
 def build_context(prepared, config, header=None):
@@ -150,7 +154,7 @@ def build_context(prepared, config, header=None):
     anchors = {"shock": shock}
     for name, event_name in ANCHOR_EVENTS.items():
         anchors[name] = _earliest(name, event_name, events, prepared)
-    anchors["start_compressions"] = _start_anchor(events, shock, prepared)
+    anchors["start_compressions"] = _start_anchor(events, shock, prepared, resolutions)
     for name in ("continue_compressions", "start_compressions"):
         if unresolved:  # an unresolved command might have been this one: do not pretend the anchor is complete
             anchors[name] = replace(anchors[name], flags=anchors[name].flags + (UNRESOLVED_COMMANDS,))
@@ -189,14 +193,16 @@ def _resolve(resolution, time, shock, window):
     return (before if time < shock.time else after), carried
 
 
-def _start_anchor(events, shock, prepared):
+def _start_anchor(events, shock, prepared, resolutions=()):
     """D-025: the restart is the earliest start command after the shock; earlier ones do not count.
 
     Each start command is checked on its own, so a later one can still be the restart.
     D-053: under the removal fallback, start commands at or before the removal are timing-ambiguous
-    (not counted, not a mistake). D-054: with no shock time at all, every start command is.
-    OQ-041 (interim): under the fallback with no ambiguous start command, the restart is certain,
-    so the anchor does not carry shock_time_from_removal (A8's stop -> start does not depend on it).
+    (not counted, not a mistake). D-059: so are "resume" commands left unresolved before the
+    removal (D-024), because they too may have been the restart. D-054: with no shock time at all,
+    every start command is. D-059: under the fallback with no ambiguous command, the restart is
+    certain, so the anchor does not carry shock_time_from_removal (A8's stop -> start does not
+    depend on it).
     """
     starts = [e for e in events if e.event_name == START_EVENT]
     if not shock.present:
@@ -207,8 +213,10 @@ def _start_anchor(events, shock, prepared):
     after = [e for e in starts if e.start > shock.time]
     earlier = tuple(e.event_id for e in starts if e.start <= shock.time)
     if fallback:  # the real shock was at an unknown time before the removal
-        flags = (SHOCK_FROM_REMOVAL, COMMAND_BEFORE_REMOVAL) if earlier else ()
-        before, ambiguous = (), earlier
+        resumes = tuple(r.event_id for r in resolutions if COMMAND_BEFORE_REMOVAL in r.flags)
+        ambiguous = earlier + resumes
+        flags = (SHOCK_FROM_REMOVAL, COMMAND_BEFORE_REMOVAL) if ambiguous else ()
+        before = ()
     else:
         flags = (START_BEFORE_SHOCK,) if earlier else ()
         before, ambiguous = earlier, ()
