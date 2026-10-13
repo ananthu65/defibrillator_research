@@ -30,6 +30,13 @@ increment that adds a code.**
 | `multiple_recordings` | Events carry more than one `metadata.task_id` | One assessment is one recording |
 | `no_confidence_threshold` | An event's source has no threshold in `engine.yaml` | The safety check cannot decide whether to use the event, so it refuses rather than guessing |
 
+## Rejections (`TimelineError`, raised by `rules/coverage.py`, Increment 4)
+
+| Code | When | Why |
+|---|---|---|
+| `invalid_header` | The timeline header is not a mapping, has unknown keys, a non-positive `duration_seconds`, `analyses_run` values other than true/false, or an unknown coverage scope or status | Coverage is decided from the header, so a malformed header cannot be trusted |
+| `header_mismatch` | The header contradicts its events: a different camera angle or recording ID; an event (kept or excluded) that **ends** more than `duration_tolerance_seconds` (placeholder 0.5 s) after `duration_seconds`; or `analyses_run` says a modality did not run although events of that modality exist | Contradictory input: assessing it would give coverage that conflicts with the evidence. The tolerance absorbs rounding at the end of a recording |
+
 ## Anomalies (`rules/prepare.py`, Increment 3)
 
 | Code | When | Why | Details |
@@ -42,11 +49,20 @@ Low-confidence events are not anomalies. They are listed in `PreparedTimeline.ex
 (`ExcludedEvent`, reason `below_confidence_threshold`) and can be looked up with
 `excluded_named(name)`.
 
+## Flags on missing-event outcomes (`rules/coverage.py`, Increment 4)
+
+`Coverage.missing(event_name)` returns a `MissingOutcome`. Rules copy its flags onto their
+result (from Increment 6 on).
+
+| Code | When | Meaning |
+|---|---|---|
+| `low_confidence_evidence` | A required event is missing, but an excluded low-confidence event of the same canonical name exists | The outcome is Unable to Verify, **never Fail**, under every policy setting. Not configurable. The excluded event IDs are listed |
+| `coverage_policy_undecided` | The policy setting that decided the outcome is marked `undecided` (today: `coverage_policy.outcomes.unknown`) | The outcome follows the interim value (Unable to Verify) until the team decides |
+
 ## Planned flags (later increments)
 
 | Code | Step | Meaning |
 |---|---|---|
-| `low_confidence_evidence` | Rules (Increment 6 on) | A required event is missing, but a low-confidence event of the same canonical name exists. The outcome is Unable to Verify, never Fail |
-| `coverage_policy_undecided` | Coverage policy (Increment 4) | A missing event with `unknown` coverage gives Unable to Verify under the interim policy |
+| `annotation_coverage_assumed` | Annotation adapter and report (Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
 | `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |

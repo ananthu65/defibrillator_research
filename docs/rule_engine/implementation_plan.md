@@ -144,6 +144,31 @@ returns a raw finding, `missing`, plus a coverage status (`covered`, `not_covere
 `engine.yaml: coverage_policy`. The policy can be set per modality (video, audio) and per source
 (annotation, video, audio), and explicit coverage carried in the timeline overrides it.
 
+**As built (Increment 4):**
+- **Coverage status of an event**, most specific first:
+  1. `region:<r>` in the header's `coverage`, for events in that region (`apical_paddle_placed`
+     is in `apical_zone`, `sternal_paddle_placed` in `sternal_zone`).
+  2. `source:<s>` in the header's `coverage`, for the single source that produced the event's
+     modality.
+  3. `modality:<m>` in the header's `coverage`, else `analyses_run[<m>]` (ran → covered, did not
+     run → not covered).
+  4. If there is no header, or the header states nothing for the event, the status is
+     `unknown`.
+- **Outcome:** the most specific configured setting wins: `by_region` > `by_source` >
+  `by_modality` > `outcomes`.
+- **Low confidence:** low-confidence evidence overrides every setting and gives Unable to Verify
+  (`low_confidence_evidence`).
+- **Granularity:** coverage covers the whole recording. There are no time windows for now
+  (decided 2026-10-13). `status()` and `missing()` already receive the event name plus an
+  optional `window=(start, end)` in which the rule expected the event. Time-windowed coverage
+  can therefore be added later inside `rules/coverage.py` without changing any rule. **Rules
+  should pass `window` whenever they know it.**
+- **Header duration:** an event may end up to `duration_tolerance_seconds` (placeholder 0.5 s)
+  after `duration_seconds`; beyond that the header is a `header_mismatch`.
+- **Approval date:** `approved_on` may be null only when the clinical-value record has
+  `date_pending: true`. `note` is a human-readable explanation only and is never read by the
+  engine.
+
 | Coverage | Outcome | Status |
 |---|---|---|
 | `covered` + missing | Fail | approved |
@@ -211,7 +236,7 @@ fixtures go in `tests/fixtures/rule_engine/`.
 | 7 | Registry + base rule + engine wiring: discovery, evaluation order from rule-result dependencies (topological sort, display-order tie-break), results reported in display order, dependency → "not evaluable because of X", pending → not counted, `same_as` reporting, all rules always run; `evaluate()` unchanged for the pipeline | `rules/registry.py`, `rules/base.py`, `rules/engine.py` | dummy rules; existing contract tests still pass | — |
 | 8 | Overall result policy: any Fail → Fail; else any Unable → `engine.yaml: unable_to_verify_outcome` (`fail` / `faculty_review`, currently undecided); else Pass | `rules/policy.py` | all branches incl. pending not counted | Unable-to-Verify policy |
 | 9 | JSON report renderer + `python -m rules.run` CLI | `rules/render.py`, `rules/run.py` | report shape, round-trip | — |
-| 10 | Annotation input adapter (reuses `annotation.to_timeline.convert`); derives zone visibility from whether each placement zone (`apical_placement_zone`, `sternal_placement_zone`) is annotated in the recording; no zone information → coverage `unknown` | `rules/adapters/annotation.py` | CVAT record → mapped events + coverage; one zone / both zones / no zone info | Where the per-recording zone annotation comes from (`events.jsonl` has none today) |
+| 10 | Annotation input adapter (reuses `annotation.to_timeline.convert`); derives zone visibility from whether each placement zone (`apical_placement_zone`, `sternal_placement_zone`) is annotated in the recording; no zone information → coverage `unknown`; builds a `TimelineHeader` with `analyses_run: {video: true, audio: false}`, where **`video: true` is a development assumption**; the report for annotation timelines carries the flag **`annotation_coverage_assumed`** (and every rule result built on it), so these results are never mistaken for real assessments | `rules/adapters/annotation.py` | CVAT record → mapped events + header + coverage; one zone / both zones / no zone info; `annotation_coverage_assumed` present on every annotation-based result and absent for model timelines | Where the per-recording zone annotation comes from (`events.jsonl` has none today) |
 | 11 | R2 second paddle after first placed (`simultaneous`, `taken_before_first_placed`, `first_missing`) | `video_rules.py` | applicable matrix rows | First-placed evidence |
 | 12 | R8 apical before sternal: direct comparison when both zones are visible; one-visible-zone inference against `first_paddle_placed` with `placement_match_window_seconds`; Unable to Verify when not determinable; `assume_first_taken_is_apical` fallback (off by default, not counted); `inferred_fail_outcome` setting (`wrong_order`, `simultaneous`) | `video_rules.py` | every row of the R8 logic table; fallback on/off; inferred-fail setting × values | Per-paddle placement source labels |
 | 13 | R5 shock on screen (`missing`, `wrong_order`) | `video_rules.py` | applicable matrix rows | Which "preceding steps" |
@@ -240,6 +265,7 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 - Gel minimum gap between two applications: 1.0 s.
 - R8 placement-match window (`placement_match_window_seconds`): 0.5 s.
 - R8 fallback `assume_first_taken_is_apical`: `false` (off).
+- Header duration tolerance (`duration_tolerance_seconds`): 0.5 s.
 - Coverage policy for `unknown`: interim Unable to Verify, `undecided: true`.
 - Inferred Fail outcome (`inferred_fail_outcome`): interim Unable to Verify, `undecided: true`.
 - Unable to Verify overall outcome: `undecided`.
@@ -299,6 +325,16 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
     they fall within `simultaneous_window_seconds`. `mixed_evidence_sources` stays a flag. One
     camera angle and one task ID per timeline stays a hard error (events with no angle do not
     count as a second angle).
+16. *(Decided 2026-10-13: no time windows now)* Coverage stays per recording. `status()` and
+    `missing()` take an optional `window=(start, end)`, so windows can be added later inside
+    `coverage.py` without changing rules. Revisit if upstream starts sending intervals (for
+    example "audio unclear from 40 s to 55 s").
+17. *(Decided 2026-10-13)* The annotation adapter declares
+    `analyses_run: {video: true, audio: false}`. `video: true` is a **development assumption**:
+    annotators tag only what is visible from that angle, so a missing tag may mean "not
+    visible". Every report built from an annotation timeline carries the flag
+    `annotation_coverage_assumed`, so its results are never mistaken for real assessments
+    (Increment 10).
 
 ---
 

@@ -1167,3 +1167,314 @@ with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline
 
 ### Next increment
 **Increment 4: coverage model and policy.**
+
+---
+
+## Approval-date rule (2026-10-13)
+
+**Question from Arnikan:** in Increment 2, `approved_by` and `approved_on` had to be set
+together, yet A8 now has `approved_on: null`. Was the rule relaxed?
+
+**Answer: yes, in commit `ddfa846`**, when the A8 approval was recorded with an unknown date.
+That change was noted in its commit message and in the "Increment 2 decisions" entry. Exactly
+what changed in `rules/config.py`:
+
+| | Rule |
+|---|---|
+| Increment 2 | `(approved_by is None) != (approved_on is None)` → error "approved_by and approved_on must be given together" |
+| `ddfa846` | Only `approved_on` set without `approved_by` → error "approved_on needs approved_by". An approver with no date was accepted with no further condition |
+| **Now (decided 2026-10-13)** | `approved_on` without `approved_by` → error (unchanged). `approved_by` with `approved_on: null` is allowed **only if `note` says the date is to be confirmed**: the note must contain both "date" and "to be confirmed", in any case. Otherwise: error "approved_on may be null only if note says the date is to be confirmed" |
+
+- **A8 record:** now has `note: approval date to be confirmed`. This replaces the earlier
+  "supervisor approval pending" note, and the record still counts as approved.
+- **Tests:**
+  - The A8 test now checks the note.
+  - "Approver without date is allowed" is replaced by two tests. With no note, an unrelated
+    note, or "to be confirmed" without the word "date" → rejected. With "approval date to be
+    confirmed" or "Date to be confirmed by the supervisor" → accepted.
+
+---
+
+## Increment 4: Coverage model and policy (2026-10-13)
+
+### What was done
+The rule engine can now say whether the evidence for an event could have been observed
+(**coverage**), and what a missing event then means. Rules will never decide this themselves:
+they will call `Coverage.missing(event_name)` and get one answer from one configurable policy.
+
+It covers four things:
+1. **Coverage per region** (`apical_zone`, `sternal_zone`), **per source** (annotation, video,
+   audio) and **per modality** (video, audio).
+2. **The timeline header**, so that "no audio events" can be told apart from "audio not
+   analysed". `analyses_run: {audio: true}` with no audio events means the audio was covered
+   and nothing was said, so a missing command is a Fail. `{audio: false}` means not covered,
+   so Unable to Verify. **No header at all means unknown.**
+3. **Low confidence is not absence:** if a low-confidence event of the same name was excluded,
+   the outcome is Unable to Verify, flagged `low_confidence_evidence`. It is never Fail, under
+   every policy setting, and this is not configurable.
+4. **Every outcome is configurable:**
+   - Defaults per status.
+   - Overrides per modality, source and region.
+   - `unknown` is still marked undecided (interim: Unable to Verify, flagged
+     `coverage_policy_undecided`).
+
+It is not yet called by rules or the engine (Increments 5–7), so the pipeline output is
+unchanged.
+
+### How it was done
+- **`configs/rule_engine/engine.yaml`:** `coverage_policy` now has `outcomes` (defaults,
+  unchanged values), `by_modality`, `by_source` and `by_region` (overrides, all empty for now),
+  and `regions` (`apical_zone: [apical_paddle_placed]`, `sternal_zone: [sternal_paddle_placed]`).
+  All five keys are required.
+- **`rules/config.py`:**
+  - `EngineSettings` gains `coverage_overrides` (keyed `"region:apical_zone"` and so on), a
+    `regions` mapping, and `region_of(event)`.
+  - Validation: overrides may only name known modalities, sources and defined regions; only
+    the three statuses; only `fail` / `unable_to_verify`.
+  - A region's events must be canonical *video* events from the vocabulary, and no event may be
+    in two regions.
+  - `placeholders` and `undecided` now include overrides.
+- **`rules/coverage.py`** (new):
+  - **`TimelineHeader`:** `recording_id`, `camera_angle`, `duration_seconds`, `analyses_run`
+    (modality → ran?) and `coverage` (explicit scope → status, for example
+    `"region:sternal_zone": "not_covered"`). `from_dict` validates it (`invalid_header`).
+  - **`Coverage(prepared, config, header=None)`:** checks the header against the events
+    (`header_mismatch`), then answers two questions:
+    - `status(event)` → `CoverageStatus(status, scope, basis)`;
+    - `missing(event)` → `MissingOutcome(outcome, coverage, decided_by, flags,
+      low_confidence_event_ids)`.
+
+The two lookups:
+
+```python
+def status(self, event_name):
+    if self.header is None:
+        return CoverageStatus(UNKNOWN, None, "no timeline header")
+    for scope in self.scopes(event_name):             # region, source, modality: most specific first
+        if scope in self.header.coverage:
+            return CoverageStatus(self.header.coverage[scope], scope, "header.coverage")
+        kind, name = scope.split(":", 1)
+        if kind == "modality" and name in self.header.analyses_run:
+            ran = self.header.analyses_run[name]
+            return CoverageStatus(COVERED if ran else NOT_COVERED, scope, "header.analyses_run")
+    return CoverageStatus(UNKNOWN, None, "not stated in timeline header")
+
+def missing(self, event_name):
+    coverage = self.status(event_name)
+    low = tuple(e.event_id for e in self.prepared.excluded_named(event_name))
+    if low:                                            # low confidence is not absence: never Fail
+        return MissingOutcome(event_name, "unable_to_verify", coverage, "low confidence is not absence",
+                              (LOW_CONFIDENCE_FLAG,), low)
+    setting = self._policy(event_name, coverage.status)  # by_region > by_source > by_modality > outcomes
+    flags = (UNDECIDED_FLAG,) if setting.undecided else ()
+    return MissingOutcome(event_name, setting.value, coverage, setting.name, flags)
+```
+
+How it works:
+- **`scopes(event)`** lists the scopes that apply, most specific first. For
+  `apical_paddle_placed` in an annotation timeline that is `region:apical_zone`, then
+  `source:annotation`, then `modality:video`. A source scope is used only when exactly one
+  source produced events of that modality. With two sources, no single source "owns" the
+  coverage.
+- **The first scope with stated coverage decides the status.** `basis` records where it came
+  from, so the report can say why.
+- **`decided_by`** names the exact policy setting used, for example
+  `coverage_policy.by_region.apical_zone.covered`. Every Fail or Unable to Verify can then be
+  traced to one line of config.
+- **The header check** rejects a header that contradicts its events: a different camera or
+  recording, events after `duration_seconds`, or "audio did not run" while audio events exist.
+  Trusting such a header could turn a learner's actual commands into "not covered".
+
+### Methods and design choices
+- **Two separate questions:** "was it observable?" (status, from the data) and "what does
+  missing mean?" (outcome, from the team's policy). Status depends on the recording; the outcome
+  is a team decision. Keeping them apart means a decision is one config change, as you
+  required, and the report can show both.
+- **Most-specific-wins** for both status and policy. Region knowledge (for example "the
+  sternal zone is not in this camera view") is more precise than "video ran", so it should win.
+- **No header means unknown, not covered.** This follows "never blame the learner for missing
+  data". The header is the only way the engine can know an analysis ran. Until upstream sends
+  it, missing events are not Fails.
+- **The low-confidence rule is hard-coded, not configurable.** You defined it as "never Fail".
+  Putting it in config would make it changeable by accident.
+- **Whole-recording coverage only, for now.** Per-interval coverage ("audio unclear 40–55 s")
+  needs upstream to send intervals; it is open question 16.
+- **Header passed separately.** The header is not part of the `Event` schema; it is passed to
+  `Coverage` separately, so the shared schema is unchanged. How it travels with the timeline is
+  decided with upstream (open question 13).
+
+### Assumptions
+- **`analyses_run: true` means the analysis covered the whole recording.** If upstream can only
+  say "it ran" but not "it was usable", unusable stretches will need explicit `coverage`
+  entries.
+- **Regions apply to video events only,** and only the two per-paddle placement events belong
+  to a region for now. Other events (for example `paddles_firmly_on_chest`) may need a region
+  later.
+- **Annotation timelines:** I propose the Increment 10 adapter declares
+  `analyses_run: {video: true, audio: false}` (open question 17).
+
+### How it stays adaptable
+- **The team decides `unknown`:** change `coverage_policy.outcomes.unknown` and drop
+  `undecided`.
+- **A different policy for one modality, source or region:** add one line under `by_modality`,
+  `by_source` or `by_region`.
+- **A new camera region:** add it under `regions` with its events.
+- **Upstream sends coverage:** use the header's `coverage` map. New scope kinds would need a
+  code change in `scopes()`.
+
+### Tests
+**`tests/test_rule_engine_coverage.py`, 33 tests:**
+- **Header (5):**
+  - A full header and an empty header are accepted.
+  - 9 invalid headers are rejected with `invalid_header`.
+  - 4 contradictions are rejected with `header_mismatch`.
+  - A matching header is accepted.
+- **Status (7):**
+  - No header → unknown.
+  - A header without the modality → unknown.
+  - `analyses_run` → covered / not covered.
+  - Explicit coverage beats `analyses_run`.
+  - Region coverage applies only to its own events.
+  - Region beats source beats modality.
+  - Source scope only when there is a single source.
+- **No audio vs audio not analysed (3):** the same timeline gives Fail (audio ran),
+  Unable to Verify (audio did not run), and Unable to Verify plus `coverage_policy_undecided`
+  (no header).
+- **Low confidence (3):**
+  - Unable to Verify even when covered.
+  - Never Fail, even with every outcome configured as `fail`.
+  - Only the same canonical name counts.
+- **Every policy setting (5):**
+  - Each status × each outcome gives the configured outcome, with no undecided flag.
+  - Override precedence, region > source > modality.
+  - A modality override.
+  - An override for another status falls back to the default.
+  - An undecided override is flagged.
+- **Repository policy (1):** the shipped values, `unknown` undecided, no overrides, the two
+  regions.
+- **Invalid config (9):**
+  - A missing policy section.
+  - Unknown modality, source, region or status.
+  - A bad outcome.
+  - An event in two regions.
+  - An empty region.
+  - A region event that is not a video event in the vocabulary.
+
+**`tests/test_rule_engine_config.py`:** 43 → 44 tests (approval-date rule above).
+
+Full suite: **187 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output is unchanged. `rules/` imports nothing from `video/`, `audio/`,
+`legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -c "from rules.config import load_rules_config; from rules.prepare import prepare_timeline; from rules.coverage import Coverage, TimelineHeader; from schemas.event import Event as E; c = load_rules_config(); p = prepare_timeline([E('Gel applied', 1, 1, 'annotation', 1.0, event_id='g1'), E('oxygen_away_command', 5, 6, 'audio', 0.2, event_id='o1')], c); [print(h, '->', Coverage(p, c, h and TimelineHeader.from_dict(h)).missing(n)) for h in (None, {'analyses_run': {'video': True, 'audio': True}}) for n in ('stand_clear_command', 'oxygen_away_command')]"
+```
+Expected output:
+- **No header:** a missing `stand_clear_command` is Unable to Verify (`unknown`,
+  `coverage_policy_undecided`).
+- **Header saying audio ran:** the same missing command is `fail` (`covered`).
+- **Either header:** `oxygen_away_command` is Unable to Verify with `low_confidence_evidence`,
+  because its only evidence was excluded at 0.2.
+
+### Open questions
+- 16: Time-windowed coverage.
+- 17: Should the annotation adapter declare `analyses_run: {video: true, audio: false}`?
+- Still open: 1 (final `unknown` policy) and 13 (timeline header format).
+
+### Next increment
+**Increment 5: procedure context** (`rules/context.py`). Computed once and shared by all rules:
+- The shock time (R5, with R6 as fallback; Unable to Verify when there are multiple shocks).
+- Phases before and after the shock.
+- The first placement time, and the per-paddle placement times.
+- Zone visibility, from coverage.
+- Stop and start command times.
+- `resume_compressions_command` resolved into continue (before the shock) or start (after it).
+
+---
+
+## Increment 4 review: changes before committing (2026-10-13)
+
+Arnikan reviewed Increment 4 before it was committed. This supersedes the note-text rule in the
+"Approval-date rule" entry above.
+
+### 1. Approval date: structured `date_pending` field
+- **Decision:** replace the note-text check with a structured field. `approved_on` may be null
+  only when `date_pending: true` is set; the note is a human-readable explanation only.
+- **`rules/config.py`:**
+  - `date_pending` added to the allowed record keys, and `ClinicalValue.date_pending` (default
+    `false`).
+  - The note-text helper `_date_to_be_confirmed` is removed; the engine never reads `note`.
+  - Rules now enforced:
+
+| Record | Result |
+|---|---|
+| `approved_on` set, no `approved_by` | error "approved_on needs approved_by" (unchanged) |
+| `approved_by` set, `approved_on: null`, `date_pending` missing or `false` | error "approved_on may be null only when date_pending: true is set" |
+| `date_pending` not a boolean (`"yes"`, `1`, `null`) | error "date_pending must be true or false" |
+| `date_pending: true` with a date, or without an approver | error "date_pending: true needs approved_by and approved_on: null" |
+| `approved_by` set, `approved_on: null`, `date_pending: true` | accepted; counts as approved |
+
+- **A8 record:** now `approved_by: Dr. Senani Samarasinghe`, `approved_on: null`,
+  `date_pending: true`, and `note: approval date to be confirmed` (explanation only).
+- **Tests:**
+  - The note-text tests are replaced by five tests.
+  - A missing flag, `false`, and wrong types are rejected.
+  - Note text alone is never interpreted.
+  - `date_pending: true` is accepted.
+  - `date_pending` with a date, or without an approver, is rejected.
+  - A dated approval needs no flag.
+
+### 2. Duration tolerance
+- **`engine.yaml`:** new `duration_tolerance_seconds: {value: 0.5, placeholder: true}`.
+  It is required, and must be a nonnegative number.
+- **`rules/coverage.py`:** the header check now uses each event's **end** time. An event (kept
+  or excluded) may end up to the tolerance after `duration_seconds`, with the boundary
+  inclusive. Beyond that it is still `header_mismatch`, and the message names both values.
+  - **Why end, not start:** the event-time rule (start) is for order and timing between
+    events. This check asks "does the event fit inside the recording?", and that depends on
+    where the event ends.
+- **Tests:**
+  - Ending exactly at the duration: accepted.
+  - Ending within the tolerance (60.4 s and 60.5 s against 60 s): accepted.
+  - Ending beyond it (60.6 s): `header_mismatch`.
+  - Low-confidence events are checked too.
+  - The tolerance is configurable (2.0 s).
+  - A negative tolerance is rejected.
+
+### 3. Question 17: annotation `analyses_run` (decided)
+- **Decision:** the annotation adapter declares `analyses_run: {video: true, audio: false}`.
+  `video: true` is recorded as a **development assumption**: annotators tag only what is
+  visible from that angle, so a missing tag may mean "not visible".
+- **Report flag:** the report for annotation timelines, and every result built on one, carries
+  the flag `annotation_coverage_assumed`, so these results are never mistaken for real
+  assessments.
+- **Where recorded:** planned in Increment 10 in the plan, added to `anomalies.md`, and question
+  17 marked decided.
+
+### 4. Question 16: no time windows (decided)
+- **Correction:** when I reported Increment 4, `status()` and `missing()` received only the event
+  *name*, with no time. A rule therefore had no way to say *when* it expected the event, so
+  adding windows later would have meant changing every rule call.
+- **Fix:** both methods now take an optional `window=(start, end)`.
+  - It is validated (a malformed window raises `ValueError`, because it is a programming error,
+    not bad data), and otherwise ignored for now.
+  - Time-windowed coverage can later be added inside `rules/coverage.py` without changing any
+    rule.
+- **Where recorded:** in the module docstring and the plan, which also says rules should pass
+  `window` whenever they know it. Question 16 is marked decided.
+- **Tests:** passing a window does not change today's results, and malformed windows are
+  rejected.
+
+### Docs
+- **`anomalies.md`:** `header_mismatch` now describes the end-time tolerance, and
+  `annotation_coverage_assumed` is added as a planned flag (Increment 10).
+- **Plan:** coverage notes (granularity, duration tolerance, approval date), the Increment 10
+  row, placeholder list (D), and questions 16 and 17.
+
+### Tests
+- `tests/test_rule_engine_config.py`: 44 → 48.
+- `tests/test_rule_engine_coverage.py`: 33 → 41.
+
+Full suite: **198 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline/`.

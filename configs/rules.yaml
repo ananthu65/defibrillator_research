@@ -7,9 +7,10 @@ engine: configs/rule_engine/engine.yaml           # engineering placeholders and
 # Clinical values. Never invented: anything not provided stays null, and a rule with a null
 # limit checks presence and order only and says that timing was not checked. Unused keys are
 # kept on purpose (decided 2026-10-10): they may be used by future rules.
-# A value is a record: {value, approved_by, approved_on, provided_by, provided_on, source, note}.
-# A value counts as approved when it has a value and approved_by is set (approved_on is
-# recorded when known; it cannot be given without approved_by). Quote dates
+# A value is a record: {value, approved_by, approved_on, date_pending, provided_by, provided_on,
+# source, note}. A value counts as approved when it has a value and approved_by is set.
+# approved_on cannot be given without approved_by, and may be null only when date_pending: true
+# is set. note is a human-readable explanation only; the engine never reads it. Quote dates
 # ("YYYY-MM-DD") so the configuration stays JSON-serialisable in pipeline reports.
 timing_limits:
   charge_to_shock_seconds:          {value: null, note: "pre-existing key; not used by any rule yet"}
@@ -21,10 +22,12 @@ timing_limits:
   pre_shock_pause_seconds:               # A8: stop CPR -> start CPR
     value: 5
     approved_by: Dr. Senani Samarasinghe
-    approved_on: null                    # approval date not recorded
+    approved_on: null
+    date_pending: true
     provided_by: Arnikan
     provided_on: "2026-10-10"
     source: team discussion
+    note: approval date to be confirmed
 
 # Rules in DISPLAY order (report and checklist). The engine derives the evaluation order from
 # rule-result dependencies (depends_on, same_as); event dependencies impose no order.

@@ -13,9 +13,10 @@ DEFAULT_ENGINE_PATH = "configs/rule_engine/engine.yaml"
 DEFAULT_VOCABULARY_PATH = "configs/rule_engine/vocabulary.yaml"
 RULE_STATUSES = ("pending", "approved")
 RULE_KEYS = {"id", "title", "status", "enabled", "implementation", "same_as", "depends_on", "parameters"}
-VALUE_KEYS = {"value", "approved_by", "approved_on", "provided_by", "provided_on", "source", "note"}
+VALUE_KEYS = {"value", "approved_by", "approved_on", "date_pending", "provided_by", "provided_on", "source", "note"}
 SETTING_KEYS = {"value", "placeholder", "undecided", "note"}
 SOURCES = ("annotation", "video", "audio")
+MODALITIES = ("video", "audio")
 COVERAGE_STATUSES = ("covered", "not_covered", "unknown")
 MISSING_OUTCOMES = ("fail", "unable_to_verify")
 OVERALL_UNABLE_OUTCOMES = ("fail", "faculty_review")
@@ -32,7 +33,8 @@ class ClinicalValue:
     provided_by: str | None = None
     provided_on: str | None = None
     source: str | None = None
-    note: str | None = None
+    note: str | None = None          # human-readable explanation only; never interpreted
+    date_pending: bool = False       # approved, but the approval date is still to be confirmed
 
     @property
     def approved(self):
@@ -71,6 +73,8 @@ class EngineSettings:
     confidence_thresholds: dict[str, Setting]
     settings: dict[str, Setting]
     coverage_outcomes: dict[str, Setting]
+    coverage_overrides: dict[str, dict[str, Setting]] = field(default_factory=dict)  # "region:x" -> status -> outcome
+    regions: dict[str, tuple[str, ...]] = field(default_factory=dict)  # region -> canonical events it governs
 
     @classmethod
     def from_dict(cls, data, where="engine"):
@@ -78,36 +82,59 @@ class EngineSettings:
             raise ConfigError(f"{where}: expected a mapping with schema_version: 1")
         expected = {"schema_version", "confidence_thresholds", "simultaneous_window_seconds",
                     "gel_minimum_gap_seconds", "placement_match_window_seconds", "assume_first_taken_is_apical",
-                    "coverage_policy", "inferred_fail_outcome", "unable_to_verify_outcome"}
+                    "duration_tolerance_seconds", "coverage_policy", "inferred_fail_outcome",
+                    "unable_to_verify_outcome"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
         settings = {name: _setting(name, data[name], where, _nonnegative) for name in
-                    ("simultaneous_window_seconds", "gel_minimum_gap_seconds", "placement_match_window_seconds")}
+                    ("simultaneous_window_seconds", "gel_minimum_gap_seconds", "placement_match_window_seconds",
+                     "duration_tolerance_seconds")}
         settings["assume_first_taken_is_apical"] = _setting(
             "assume_first_taken_is_apical", data["assume_first_taken_is_apical"], where, _boolean)
         settings["inferred_fail_outcome"] = _setting(
             "inferred_fail_outcome", data["inferred_fail_outcome"], where, _choice(MISSING_OUTCOMES))
         settings["unable_to_verify_outcome"] = _setting(
             "unable_to_verify_outcome", data["unable_to_verify_outcome"], where, _choice(OVERALL_UNABLE_OUTCOMES))
-        policy = _exact_keys(data["coverage_policy"], {"outcomes"}, f"{where} coverage_policy")
+        policy = _exact_keys(data["coverage_policy"], {"outcomes", "by_modality", "by_source", "by_region", "regions"},
+                             f"{where} coverage_policy")
         outcomes = _exact_keys(policy["outcomes"], set(COVERAGE_STATUSES), f"{where} coverage_policy.outcomes")
         coverage = {s: _setting(f"coverage_policy.outcomes.{s}", outcomes[s], where, _choice(MISSING_OUTCOMES))
                     for s in COVERAGE_STATUSES}
-        return cls(confidence, settings, coverage)
+        regions = _regions(policy["regions"], f"{where} coverage_policy.regions")
+        overrides = {}
+        for kind, allowed in (("modality", MODALITIES), ("source", SOURCES), ("region", tuple(regions))):
+            at = f"{where} coverage_policy.by_{kind}"
+            entries = policy[f"by_{kind}"] or {}
+            if not isinstance(entries, dict):
+                raise ConfigError(f"{at}: expected a mapping")
+            for name, statuses in entries.items():
+                if name not in allowed:
+                    raise ConfigError(f"{at}: unknown {kind} {name!r}; expected one of {list(allowed)}")
+                if not isinstance(statuses, dict) or not statuses or set(statuses) - set(COVERAGE_STATUSES):
+                    raise ConfigError(f"{at}.{name}: expected a mapping of {list(COVERAGE_STATUSES)} to outcomes")
+                overrides[f"{kind}:{name}"] = {s: _setting(f"coverage_policy.by_{kind}.{name}.{s}", value, where,
+                                                           _choice(MISSING_OUTCOMES)) for s, value in statuses.items()}
+        return cls(confidence, settings, coverage, overrides, regions)
 
     def value(self, name):
         return self.settings[name].value
 
+    def _all_settings(self):
+        overrides = [s for statuses in self.coverage_overrides.values() for s in statuses.values()]
+        return [*self.confidence_thresholds.values(), *self.settings.values(), *self.coverage_outcomes.values(),
+                *overrides]
+
     @property
     def placeholders(self):
-        items = [*self.confidence_thresholds.values(), *self.settings.values(), *self.coverage_outcomes.values()]
-        return sorted(s.name for s in items if s.placeholder)
+        return sorted(s.name for s in self._all_settings() if s.placeholder)
 
     @property
     def undecided(self):
-        items = [*self.settings.values(), *self.coverage_outcomes.values()]
-        return sorted(s.name for s in items if s.undecided)
+        return sorted(s.name for s in self._all_settings() if s.undecided)
+
+    def region_of(self, event_name):
+        return next((region for region, events in self.regions.items() if event_name in events), None)
 
 
 @dataclass(frozen=True)
@@ -129,7 +156,13 @@ class RuleEngineConfig:
         engine_path = _path(data.get("engine", DEFAULT_ENGINE_PATH), root, f"{where} engine")
         vocabulary_path = _path(data.get("vocabulary", DEFAULT_VOCABULARY_PATH), root, f"{where} vocabulary")
         engine = EngineSettings.from_dict(_load(engine_path), where=str(engine_path))
-        return cls(rules, timing, engine, load_vocabulary(vocabulary_path))
+        vocabulary = load_vocabulary(vocabulary_path)
+        for region, events in engine.regions.items():
+            for name in events:
+                if name not in vocabulary.events or vocabulary.modality(name) != "video":
+                    raise ConfigError(f"{engine_path} coverage_policy.regions.{region}: {name!r} is not a "
+                                      "canonical video event in the vocabulary")
+        return cls(rules, timing, engine, vocabulary)
 
     def rule(self, rule_id):
         return next(r for r in self.rules if r.id == rule_id)
@@ -232,14 +265,40 @@ def _clinical_value(name, value, where):
     for key in ("approved_on", "provided_on"):
         if value.get(key) is not None and not (isinstance(value[key], str) and DATE.match(value[key])):
             raise ConfigError(f'{where}: {key} must be a quoted date "YYYY-MM-DD"')
-    if value.get("approved_on") is not None and value.get("approved_by") is None:
-        raise ConfigError(f"{where}: approved_on needs approved_by")  # an approver may be known without a date
-    if value.get("approved_by") is not None and number is None:
+    pending = value.get("date_pending", False)
+    if not isinstance(pending, bool):
+        raise ConfigError(f"{where}: date_pending must be true or false")
+    approved_by, approved_on = value.get("approved_by"), value.get("approved_on")
+    if approved_on is not None and approved_by is None:
+        raise ConfigError(f"{where}: approved_on needs approved_by")
+    if approved_by is not None and approved_on is None and not pending:
+        raise ConfigError(f"{where}: approved_on may be null only when date_pending: true is set")
+    if pending and (approved_by is None or approved_on is not None):
+        raise ConfigError(f"{where}: date_pending: true needs approved_by and approved_on: null")
+    if approved_by is not None and number is None:
         raise ConfigError(f"{where}: an approval needs a value")
     if number is not None and not value.get("source"):
         raise ConfigError(f"{where}: a value needs a source")
     return ClinicalValue(name, number, *(value.get(k) for k in
-                                         ("approved_by", "approved_on", "provided_by", "provided_on", "source", "note")))
+                                         ("approved_by", "approved_on", "provided_by", "provided_on", "source", "note")),
+                         pending)
+
+
+def _regions(value, where):
+    if not isinstance(value, dict):
+        raise ConfigError(f"{where}: expected a mapping of region -> list of canonical events")
+    regions, owner = {}, {}
+    for region, events in value.items():
+        if not isinstance(region, str) or not region:
+            raise ConfigError(f"{where}: region names must be nonempty strings")
+        if not isinstance(events, list) or not events or not all(isinstance(e, str) and e for e in events):
+            raise ConfigError(f"{where}.{region}: expected a nonempty list of canonical event names")
+        for name in events:
+            if name in owner:
+                raise ConfigError(f"{where}.{region}: {name!r} is already in region {owner[name]!r}")
+            owner[name] = region
+        regions[region] = tuple(events)
+    return regions
 
 
 def _setting(name, raw, where, check):

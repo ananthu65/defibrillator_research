@@ -45,8 +45,9 @@ class RepositoryConfig(unittest.TestCase):
         self.assertEqual((limit.value, limit.provided_by, limit.provided_on, limit.source),
                          (5, "Arnikan", "2026-10-10", "team discussion"))
         self.assertEqual(limit.approved_by, "Dr. Senani Samarasinghe")
-        self.assertIsNone(limit.approved_on)  # date not recorded
-        self.assertIsNone(limit.note)  # "supervisor approval pending" removed
+        self.assertIsNone(limit.approved_on)
+        self.assertTrue(limit.date_pending)
+        self.assertEqual(limit.note, "approval date to be confirmed")  # explanation only
         self.assertTrue(limit.approved)
 
     def test_unused_clinical_limits_are_kept_null_with_a_note(self):
@@ -153,11 +154,36 @@ class InvalidRulesConfig(unittest.TestCase):
         self.assertRejected("approved_on needs approved_by",
                             timing_limits={"x": {"value": 5, "source": "s", "approved_on": "2026-10-10"}})
 
-    def test_approver_without_date_is_allowed(self):
+    def test_approver_without_date_needs_date_pending_true(self):
+        base = {"value": 5, "source": "s", "approved_by": "Dr X", "note": "approval date to be confirmed"}
+        self.assertRejected("only when date_pending: true", timing_limits={"x": base})  # flag missing
+        self.assertRejected("only when date_pending: true", timing_limits={"x": {**base, "date_pending": False}})
+        for wrong in ("yes", 1, None):
+            with self.subTest(date_pending=wrong):
+                self.assertRejected("date_pending must be true or false",
+                                    timing_limits={"x": {**base, "date_pending": wrong}})
+
+    def test_note_text_alone_is_never_interpreted(self):
+        self.assertRejected("only when date_pending: true", timing_limits={"x": {
+            "value": 5, "source": "s", "approved_by": "Dr X", "note": "Date to be confirmed by the supervisor"}})
+
+    def test_approver_without_date_is_allowed_with_date_pending(self):
         config = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {
-            "value": 5, "source": "s", "approved_by": "Dr X"}}))
+            "value": 5, "source": "s", "approved_by": "Dr X", "date_pending": True}}))
         self.assertTrue(config.limit("x").approved)
+        self.assertTrue(config.limit("x").date_pending)
         self.assertIsNone(config.limit("x").approved_on)
+
+    def test_date_pending_with_a_date_or_without_an_approver_is_rejected(self):
+        self.assertRejected("needs approved_by and approved_on: null", timing_limits={"x": {
+            "value": 5, "source": "s", "approved_by": "Dr X", "approved_on": "2026-10-10", "date_pending": True}})
+        self.assertRejected("needs approved_by and approved_on: null", timing_limits={"x": {
+            "value": 5, "source": "s", "date_pending": True}})
+
+    def test_dated_approval_needs_no_flag(self):
+        config = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {
+            "value": 5, "source": "s", "approved_by": "Dr X", "approved_on": "2026-10-10"}}))
+        self.assertFalse(config.limit("x").date_pending)
 
     def test_approval_without_value(self):
         self.assertRejected("needs a value", timing_limits={"x": {"approved_by": "Dr X", "approved_on": "2026-10-10"}})
