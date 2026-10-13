@@ -46,8 +46,9 @@ first, so that section can be printed for supervisor meetings.
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
-| OQ-040 | new (2026-10-13) | Arnikan | — | open | R8 when a placement event is missing: confirm the proposed outcomes |
-| OQ-041 | new (2026-10-13) | Arnikan | — | open | R7/A6 and A8 under the removal fallback: confirm the planned behaviour |
+| OQ-042 | new (2026-10-13) | Arnikan | — | open | Is a provided but unapproved time limit ignored or used? |
+| OQ-040 | new (2026-10-13) | Arnikan | — | answered | R8 when a placement event is missing |
+| OQ-041 | new (2026-10-13) | Arnikan | — | answered | R7/A6 and A8 under the removal fallback |
 | OQ-003 | E-3 | Arnikan | — | answered | Real CVAT tag for "first paddle placed" |
 | OQ-011 | E-5 | Arnikan | — | answered | A7/A4 overlap |
 | OQ-024 | E-15 / Inc3-Q1 | Arnikan | — | answered | Merge duplicate shocks? |
@@ -314,48 +315,35 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
 
-### OQ-040 R8 when a placement event is missing: confirm the proposed outcomes
+### OQ-042 Is a provided but unapproved time limit ignored or used?
 - **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
   2026-10-13 · **Status:** open
-- **Question:** R8 needs placement events. Please confirm the proposed outcome in two cases:
-  - **(a) One zone visible, but its paddle has no placement event.**
-    - **Proposed:** Unable to Verify, flagged `placement_missing`. No inference is made.
-    - **Why:** The order cannot be established. The missing placement is R3's finding (one
-      mistake reported once, D-003). "The visible paddle was never placed, so the other one was
-      first" would rely on the visible paddle never having been placed at all, which the
-      evidence does not show (it may have been placed outside the zone).
-  - **(b) Both zones visible, but one paddle's placement event is missing.**
-    - **Proposed:** Unable to Verify, flagged `placement_missing`, and not Fail
-      `wrong_order`.
-    - **Why:** A missing event does not show the order, and R3 reports the missing placement.
-- **Affects:** R8 (and R3, which reports the missing placement); P-015.
-- **Interim behaviour:** R8 is not built yet (Increment 12). These are the planned outcomes in
-  P-015, [pathways.md](pathways.md) (W-17, W-18) and [diagrams.md](diagrams.md) (f).
+- **Question:** If a time limit in `rules.yaml` has a value but no approver, should rules
+  ignore it (timing not checked) or use it with a flag?
+- **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-024.
+- **Why it matters:** It decides whether a value still under discussion can change a result.
+- **Interim behaviour:** Ignored, flagged `timing_not_checked` and `limit_not_approved`
+  (A-017). No current limit is in this state.
 
-### OQ-041 R7/A6 and A8 under the removal fallback: confirm the planned behaviour
-- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
-  2026-10-13 · **Status:** open
-- **Question:** When the shock time comes from paddle removal and **no** start command is
-  timing-ambiguous, please confirm:
-  - **A start command after the removal is definitely the restart.**
-  - **A8:** the stop → restart interval does not depend on the shock time, so it is measured
-    without the fallback flag.
-  - **R7/A6:** the delay measured from the removal is **shorter** than the real delay.
-    - If it already exceeds the limit, the result is a confident **Fail `too_late`**.
-    - If it is within the limit, the result is **Unable to Verify**, flagged
-      `shock_time_from_removal`.
-  - **Agent's addition:** a "resume compressions" before the removal is left unresolved
-    (D-024), so it may also have been the restart. Should it make the restart ambiguous in the
-    same way as an explicit start command (R7/A6 and A8 then give Unable to Verify)? The
-    proposal is yes. The context already flags the start time `unresolved_commands` in that
-    case.
-- **Affects:** R7/A6, A8; P-012, P-014.
-- **Interim behaviour:**
-  - **Context:** the start time no longer carries `shock_time_from_removal` when no start
-    command is ambiguous, so A8's stop → restart is unflagged. The shock → restart delay (R7/A6)
-    is still flagged.
-  - **Rules:** the R7/A6 and A8 behaviour above is planned in P-014. R7/A6 and A8 are built in
-    Increments 21 and 23.
+### OQ-040 R8 when a placement event is missing — *answered*
+- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**
+  answered
+- **Question:** What should R8 give when (a) the visible zone's paddle has no placement event,
+  or (b) both zones are visible but one paddle's placement event is missing?
+- **Answer:** The proposal was approved. In both cases: Unable to Verify, flagged
+  `placement_missing`, with no inference, and R3 reports the missing placement.
+- **Answered:** 2026-10-13 → **D-058**.
+
+### OQ-041 R7/A6 and A8 under the removal fallback — *answered*
+- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**
+  answered
+- **Question:** Under the removal fallback with no ambiguous start, is a start after the removal
+  definitely the restart? Is A8's stop → restart measured without the fallback flag? Is R7/A6 a
+  Fail `too_late` when the delay from the removal already exceeds the limit, and Unable to
+  Verify otherwise? Should an unresolved "resume" before the removal also make the restart
+  ambiguous?
+- **Answer:** Yes to all; the agent's addition (the unresolved resume) was approved too.
+- **Answered:** 2026-10-13 → **D-059**.
 
 ### OQ-039 Start command before the removal under the fallback — *answered*
 - **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**

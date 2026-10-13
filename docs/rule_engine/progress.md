@@ -1895,3 +1895,173 @@ reasoning that the interval does not depend on the shock time.
 ### Tests
 Full suite: **252 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
 with 0.
+
+---
+
+## Answers to OQ-040/OQ-041, and the assumed-result rule (2026-10-13)
+
+- **D-057 kept** as a decision (Arnikan).
+- **OQ-040 → D-058:** R8 with a missing placement event (visible zone without a placement, or
+  one of two visible placements missing) gives Unable to Verify, flagged `placement_missing`,
+  with no inference; R3 reports the missing placement.
+- **OQ-041 → D-059:** R7/A6 and A8 under the removal fallback, as specified. It also makes an
+  unresolved "resume" before the removal leave the restart ambiguous.
+  - **Context:** `_start_anchor` now also lists unresolved resume commands before the removal
+    (`command_before_removal`) in `Anchor.ambiguous`.
+  - **Tests:** 3 new context tests (43 → 46).
+- **D-060:** an assumed result (R8's apical-first fallback) prevents an overall Pass, like a
+  pending rule (D-055).
+- **Docs:**
+  - `decision_flow.yaml`: P-012, P-014, P-015, P-017.
+  - `pathways.md`: the matching rows, plus W-23 (R8 assumed → incomplete) and W-24 (resume before
+    the removal → restart ambiguous).
+  - `diagrams.md`: (e2), (f), (g).
+  - `anomalies.md` and `rules_status.md`.
+
+---
+
+## Increment 6: RuleOutcome and shared checks (2026-10-13)
+
+### What was done
+Every rule will now be built from two new modules:
+- **`rules/outcome.py`:** `RuleOutcome`, the rule engine's own result for one rule. It holds the
+  kind, reason, failure code, evidence, flags, `blocked_by` and `timing_checked`, and converts to
+  the shared `RuleResult`.
+- **`rules/checks.py`:** the ladder steps of diagram (c), as shared checks with the decision points
+  P-019 to P-025. Each check returns either an outcome or "go on" (`None`).
+
+No individual rule is built yet. The engine that runs the ladder for each rule is Increment 7,
+so the pipeline output is unchanged.
+
+The five properties you asked for:
+
+| Requirement | Where | How |
+|---|---|---|
+| Inference **before** coverage for weak or missing evidence | `missing()` (P-023) | If the rule passes `inference=` event names and one is confirmed → Pass – Inferred. Only otherwise is `ctx.missing()` asked (D-057) |
+| `ctx.missing()` for **every** missing event, so low confidence is never Fail | `missing()`, `occurrences()` | No check builds a missing Fail itself. When confident occurrences exist but none is valid, a low-confidence occurrence still gives Unable to Verify (P-022) |
+| A null limit means "timing not checked" | `time_limit()`, `timed()` (P-024) | A null, unapproved or unmeasurable limit → `checked=False` and the flag `timing_not_checked`. `timed()` then passes on presence and order, with `timing_checked=False` and "timing not checked" in the reason |
+| Repeated events: any valid occurrence satisfies the rule | `first_valid()`, `occurrences()` (P-022) | The earliest **valid** occurrence is cited; invalid ones elsewhere don't matter (D-012) |
+| Anchor and elapsed-time flags carried onto every result | `outcome.flags_of`, `uses=` on every builder | Every builder takes `uses=(anchor, elapsed, check, missing_outcome…)` and merges their flags in order, without duplicates |
+
+### How it was done
+`RuleOutcome` checks its own consistency:
+- a Fail needs a failure code, and only a Fail has one;
+- a Pass must cite evidence;
+- `blocked_by` exists only for "not evaluable";
+- flags and evidence are de-duplicated in order.
+
+`to_rule_result()` maps the kinds onto the existing statuses (D-045): passes and Fail keep
+theirs, and everything else becomes `unable_to_assess`. The reason text spells out what the
+status can't, for example `"7 s against a limit of 5 s [failure code: pre_shock_pause; flags:
+shock_time_from_removal]"`. `as_rule("A6")` reports R7's outcome under A6 (D-044).
+
+A rule will read as a chain in diagram (c) order (illustration of Increment 18's A3):
+
+```python
+return (checks.requires("A3", ctx.shock, "R5")
+        or checks.occurrences("A3", ctx, "stand_clear_command",
+                              valid=lambda e: e.start < ctx.shock.time,
+                              invalid_code="after_shock", what="stand clear", uses=(ctx.shock,)))
+```
+
+How it works: `requires` returns "not evaluable because of R5" if there is no shock time,
+otherwise `None`, so `or` moves to the next step. `occurrences` returns:
+- Pass – Direct for the earliest command before the shock;
+- Fail `after_shock` if every command was after it, unless a weak one may have been before it;
+- the missing-event outcome if none was said.
+
+`uses=(ctx.shock,)` carries, for example, `shock_time_from_removal` onto whichever result comes
+out.
+
+### Methods and design choices
+- **Return an outcome or `None`.** The ladder becomes a readable `or` chain, and the order of the
+  steps is the same in every rule. The alternative, a class hierarchy with a fixed template
+  method, would hide the order and make rule-specific steps (such as R8's inference) awkward.
+- **`uses=` instead of copying flags by hand.** A rule cannot forget a flag, because flags come
+  from the objects the result was built from.
+- **`occurrences()` checks low confidence even when confident evidence exists.** "Stand clear"
+  confidently after the shock plus a weak one before it is Unable to Verify, not Fail, because
+  the weak one may have been the valid one. This is the same principle as D-010, applied to
+  invalid evidence.
+- **Unapproved limits are ignored** (A-017, OQ-042). This follows D-005 and "never invent
+  clinical values".
+
+### Assumptions
+- **A-017 (new):** a limit with a value but no approver is not used. It is open as OQ-042.
+- **Confirmed means confident:** "confidently confirmed" for an inference means the event
+  survived the confidence step (P-004). No higher bar is applied.
+
+### How it stays adaptable
+- **New rules** are short chains of these checks. New ladder steps become new checks with a
+  P-ID.
+- **Limits:** when the supervisor approves a limit, the same rule starts checking timing, with
+  no code change.
+- **Overall policy:** it reads `kind`, `passed` and `evaluated` (Increment 8).
+
+### Tests
+`tests/test_rule_engine_checks.py`, 37 tests:
+- **Outcome (7):** validation, de-duplication, mapping of all 7 kinds, reason text, evaluated
+  and passed, same_as, `flags_of`.
+- **Dependencies (3):** passed → go on; each non-passing kind → not evaluable; evaluation-order
+  mistakes are loud.
+- **Required facts (2).**
+- **Restart ambiguity (2).**
+- **Occurrences (6):**
+  - A valid occurrence passes.
+  - **Repeated events: any valid one** satisfies the rule.
+  - Only invalid occurrences → Fail with the rule's code.
+  - Invalid but weak-valid → Unable to Verify.
+  - No occurrence → the missing ladder.
+  - **Anchor flags are carried.**
+- **Missing ladder (7):**
+  - **Inference before coverage**, which would otherwise have said Fail.
+  - The earliest supporting event is cited.
+  - With no inference, it falls through to coverage.
+  - All three coverage outcomes.
+  - **Low confidence is never Fail, even when covered.**
+  - A low-confidence ambiguous command is never Fail.
+  - A custom failure code.
+- **Timing (8):**
+  - **A null limit means timing not checked.**
+  - An unapproved limit is not used.
+  - An unmeasurable interval.
+  - Within, at and over the limit.
+  - The repository's A8 limit is usable.
+  - `timed` passes without a limit but says so.
+  - `timed` fails over the limit and **carries the elapsed time's flags**.
+  - Within the limit.
+- **Order (2).**
+
+`tests/test_rule_engine_docs.py` now also reads `checks.FLAGS`. It failed until
+`timing_not_checked` and `limit_not_approved` were documented and P-019 to P-025 existed.
+
+Full suite: **292 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m unittest tests.test_rule_engine_checks -v
+```
+
+### Documents updated
+- **Code and tests:** `rules/outcome.py` (new), `rules/checks.py` (new), `rules/context.py`,
+  `tests/test_rule_engine_checks.py` (new), `tests/test_rule_engine_context.py`,
+  `tests/test_rule_engine_docs.py`.
+- **`decision_flow.yaml`:** P-019 to P-025 built; P-012, P-014, P-015 and P-017 updated.
+- **`pathways.md`:** a shared-checks section, and W-23 to W-26.
+- **`diagrams.md`:** (b), (c) (P-IDs; the built steps are no longer dashed), (e2), (f), (g).
+- **Registers:** `decisions.md` (D-058, D-059, D-060), `assumptions.md` (A-017),
+  `open_questions.md` (OQ-040 and OQ-041 answered, OQ-042 new).
+- **Other docs:** `anomalies.md`, `methods.md`, `rules_status.md`, `progress.md`,
+  `ai_usage_log.md`.
+
+### Open questions
+- **New:** **OQ-042**, whether a provided but unapproved time limit is ignored (current) or
+  used with a flag.
+- **Answered:** OQ-040 → D-058, OQ-041 → D-059.
+
+### Next increment
+**Increment 7: rule registry and engine wiring.**
+- Discover the rules.
+- Run the ladder in evaluation order, so pending rules become `pending` and A6 reuses R7.
+- Keep `evaluate()` unchanged for the pipeline.

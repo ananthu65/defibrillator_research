@@ -42,7 +42,7 @@ flowchart TD
     F["P-006 Check header"]
     G["P-007 Coverage status<br/>P-008 What missing means"]
     H["P-009 Shock time · P-010 Phases<br/>P-011 Resolve commands · P-012 Key times<br/>P-013 Weak ambiguous commands"]
-    I["P-014 Each rule<br/>(P-015 R8, P-016 R3/R4)"]:::planned
+    I["P-014 Each rule (planned)<br/>shared checks P-019 to P-025 built<br/>P-015 R8, P-016 R3/R4 planned"]:::planned
     J["P-017 Overall result"]:::planned
     K["P-018 Report and checklist"]:::planned
     X["Rejected: no assessment"]
@@ -54,26 +54,30 @@ flowchart TD
     classDef planned stroke-dasharray: 5 5
 ```
 
-## (c) The decision ladder every rule follows (P-014, planned)
+## (c) The decision ladder every rule follows (P-014)
+
+The shared checks (P-019 to P-025) are **built** (Increment 6). The engine that runs the ladder
+for each rule, including the approval check, is planned for Increment 7. Times on the ladder are
+compared with P-025, and time limits with P-024 (timing not checked when there is no limit).
 
 ```mermaid
 flowchart TD
     S["Rule"] --> P1{"Approved?"}
     P1 -->|no| R0["Pending<br/>overall cannot be Pass"]
-    P1 -->|yes| P2{"Rules it depends on<br/>evaluable and passed?"}
+    P1 -->|yes| P2{"P-019 Rules it depends on<br/>evaluable and passed?"}
     P2 -->|no| R1["Not evaluable<br/>because of that rule"]
-    P2 -->|yes| P3{"Facts it needs present?<br/>e.g. shock time"}
+    P2 -->|yes| P3{"P-020 Facts it needs present?<br/>e.g. shock time"}
     P3 -->|no| R2["Not evaluable<br/>because of the missing step"]
-    P3 -->|yes| PA{"Needs the restart, and a start<br/>command is timing-ambiguous?"}
-    PA -->|yes| RA["Unable to Verify<br/>never Fail (D-053, D-054)"]
-    PA -->|no| P4{"Direct evidence?"}
-    P4 -->|present, correct| R3["Pass – Direct"]
+    P3 -->|yes| PA{"P-021 Needs the restart, and a start<br/>or resume command is ambiguous?"}
+    PA -->|yes| RA["Unable to Verify<br/>never Fail (D-053, D-059)"]
+    PA -->|no| P4{"P-022 Direct evidence?<br/>any valid occurrence counts"}
+    P4 -->|present, valid| R3["Pass – Direct"]
     P4 -->|present, shows the mistake| R4["Fail<br/>with failure code"]
-    P4 -->|weak or missing| P5{"Rule has an approved inference?<br/>P-015 / P-016 (D-057)"}
+    P4 -->|weak or missing| P5{"P-023 Approved inference?<br/>P-015 / P-016 (D-057)"}
     P5 -->|yes, it applies| R5["Pass – Inferred"]
-    P5 -->|no, or it does not apply| M["What missing means<br/>P-008 coverage step"]
+    P5 -->|no, or it does not apply| M["What missing means<br/>P-013 / P-008 coverage step"]
     classDef planned stroke-dasharray: 5 5
-    class S,P1,P2,P3,PA,RA,P4,P5,R0,R1,R2,R3,R4,R5 planned
+    class S,P1,R0 planned
 ```
 
 ## (d) What a missing event means (P-007, P-008, P-013)
@@ -123,6 +127,7 @@ flowchart TD
     K -->|from paddle removal| C{"This command at or<br/>before the removal?"}
     C -->|yes| C1["Ambiguous, not a mistake<br/>command_before_removal (D-053)<br/>R7/A6, A8 → Unable to Verify"]
     C -->|no| RR["Candidate: after the removal"]
+    RES["Unresolved resume command<br/>before the removal (D-024)"] -->|"also makes the restart ambiguous (D-059)"| C1
     RS --> E["Restart = earliest candidate"]
     RR --> E
 ```
@@ -132,13 +137,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     Z{"Placement zones visible?"} -->|both| B2{"Both placement<br/>events present?"}
-    B2 -->|no| PM1["Unable to Verify<br/>placement_missing<br/>(proposed, OQ-040)"]
+    B2 -->|no| PM1["Unable to Verify<br/>placement_missing (D-058)<br/>R3 reports the missing placement"]
     B2 -->|yes| D1{"Compare apical and<br/>sternal placement times"}
     D1 -->|apical first| P["Pass – Direct"]
     D1 -->|sternal first| F["Fail wrong_order"]
     D1 -->|same time| FS["Fail simultaneous"]
     Z -->|one| V{"Visible paddle has<br/>a placement event?"}
-    V -->|no| PM2["Unable to Verify, no inference<br/>placement_missing<br/>(proposed, OQ-040)"]
+    V -->|no| PM2["Unable to Verify, no inference<br/>placement_missing (D-058)"]
     V -->|yes| I{"Visible paddle placed at<br/>the first placement time?"}
     I -->|same time| W1["That paddle was first<br/>(inferred)"]
     I -->|clearly later| W2["The other paddle was first<br/>(inferred)"]
@@ -149,7 +154,7 @@ flowchart TD
     O -->|no| IF["Inferred mistake<br/>Unable to Verify until decided<br/>inferred_fail_policy_undecided"]
     Z -->|none, or no first placement| N{"Fallback switched on?<br/>(off by default)"}
     N -->|no| U["Unable to Verify"]
-    N -->|yes| AS["Assumed apical first<br/>not counted"]
+    N -->|yes| AS["Assumed apical first<br/>to be checked by the evaluator<br/>overall cannot be Pass (D-060)"]
     classDef planned stroke-dasharray: 5 5
     class Z,B2,PM1,D1,P,F,FS,V,PM2,I,W1,W2,C,O,PI,IF,N,U,AS planned
 ```
@@ -159,8 +164,8 @@ flowchart TD
 ```mermaid
 flowchart TD
     A{"Any evaluated rule Fail?"} -->|yes| F["Overall Fail<br/>(any mistake fails, D-001)"]
-    A -->|no| PD{"Any rule pending<br/>(not yet approved)?"}
-    PD -->|yes| INC["Incomplete:<br/>rules not yet approved<br/>never Pass (D-055)"]
+    A -->|no| PD{"Any rule pending, or<br/>a result assumed (R8 fallback)?"}
+    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>or assumed result to be checked<br/>never Pass (D-055, D-060)"]
     PD -->|no| B{"Any Unable to Verify<br/>or Not evaluable? (D-056)"}
     B -->|yes| U["Fail or faculty review<br/>(undecided, OQ-002)"]
     B -->|no| P["Overall Pass<br/>every rule evaluated and passed"]

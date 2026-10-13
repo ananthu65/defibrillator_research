@@ -12,7 +12,7 @@ import unittest
 import yaml
 
 from pipeline.config import ROOT
-from rules import context, coverage
+from rules import checks, context, coverage
 
 DOCS = ROOT / "docs/rule_engine"
 FLOW = yaml.safe_load((DOCS / "decision_flow.yaml").read_text(encoding="utf-8"))
@@ -29,7 +29,7 @@ def raised_in_code():
     source = code_sources()
     return {"rejections": set(re.findall(r'TimelineError\(\s*"([a-z_]+)"', source)),
             "anomalies": set(re.findall(r'Anomaly\(\s*"([a-z_]+)"', source)),
-            "flags": set(coverage.FLAGS) | set(context.FLAGS)}
+            "flags": set(coverage.FLAGS) | set(context.FLAGS) | set(checks.FLAGS)}
 
 
 def listed_in_flow(status=None):

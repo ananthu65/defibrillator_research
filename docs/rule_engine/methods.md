@@ -18,7 +18,9 @@ A stable core between two adaptable edges, with every changeable value in config
 | Preparation | `rules/prepare.py`, `rules/vocabulary.py` | P-002 to P-005 | Validate, map names, set aside low-confidence events, flag anomalies → `PreparedTimeline` | built |
 | Coverage | `rules/coverage.py` | P-006 to P-008 | Validate the header; decide whether each event was observable and what "missing" means | built |
 | Context | `rules/context.py` | P-009 to P-013 | Shock time, phases, command resolution, key times (anchors), computed once → `ProcedureContext` | built |
-| Rules | `rules/video_rules.py`, `rules/audio_rules.py`, `rules/checks.py`, `rules/registry.py` | P-014 to P-016 | One small unit per rule, using shared checks | planned (Increments 6–23) |
+| Rule outcome | `rules/outcome.py` | (all rule results) | `RuleOutcome`: kind, reason, failure code, evidence, flags, `blocked_by`, `timing_checked`; maps onto the shared `RuleResult` | built (Increment 6) |
+| Shared checks | `rules/checks.py` | P-019 to P-025 | The ladder steps every rule uses: dependency, required facts, restart ambiguity, occurrences, weak or missing evidence (inference before coverage), time limits, order | built (Increment 6) |
+| Rules | `rules/video_rules.py`, `rules/audio_rules.py`, `rules/registry.py` | P-014 to P-016 | One small unit per rule, built from the shared checks | planned (Increments 7–23) |
 | Overall policy | `rules/policy.py` | P-017 | Overall Pass / Fail / faculty review | planned (Increment 8) |
 | Renderers | `rules/render.py` | P-018 | JSON report, evaluator checklist, feedback handover | planned (Increments 9, 25) |
 
@@ -41,7 +43,8 @@ schemas (`schemas/`) are not changed (D-038). `rules.engine.evaluate()` keeps it
 | **Separate status from policy** | `coverage.py` | "Was it observable?" is data; "what does missing mean?" is a team decision. A policy change is then one config edit (D-007, D-008) |
 | **Hard-coded safety rule** | `coverage.py`, `context.py` | "Low confidence is never absence" is not configurable, so it cannot be switched off by accident (D-010) |
 | **Absent, not guessed** | `context.py` `Anchor` | A key time that cannot be established has `time=None`, a reason and flags. Defaults would hide data problems; exceptions would stop the other rules (D-002, D-039) |
-| **Flags travel with values** | `context.py` `Elapsed` | A time difference carries both anchors' flags, so no timing result can lose `shock_time_from_removal` (D-023) |
+| **Flags travel with values** | `context.py` `Elapsed`, `outcome.py` `flags_of` | A time difference carries both anchors' flags, and every rule outcome carries the flags of everything it used (`uses=`), so no result can lose `shock_time_from_removal` (D-023) |
+| **Checks return an outcome or "go on"** | `checks.py` | Each ladder step returns a `RuleOutcome` or `None`. A rule is then a short chain such as `depends(...) or requires(...) or occurrences(...)`, and the order of diagram (c) is the same in every rule |
 | **Immutable data** | all stages (frozen dataclasses, tuples) | One rule cannot change the evidence another rule sees. Inputs are never modified |
 | **Provenance records for clinical values** | `config.py` `ClinicalValue` | Every clinical number states who provided and who approved it. Unapproved values stay null (D-005, D-033) |
 | **Documentation checked by tests** | `tests/test_rule_engine_docs.py` | `decision_flow.yaml` must match the codes raised in code, and every D/A/OQ/P reference must exist in its register |
@@ -66,9 +69,11 @@ a tolerance (D-034).
 ### Add a rule
 1. Add a line to `configs/rules.yaml` in its display position, with `status: pending` and any
    `depends_on` on other rules' results.
-2. Implement it in `rules/video_rules.py` or `rules/audio_rules.py` using the shared checks (from
-   Increment 6). Use `ctx.named()`, `ctx.anchor()`, `ctx.elapsed()` and `ctx.missing()`, and copy
-   the flags of every anchor or elapsed time used.
+2. Implement it in `rules/video_rules.py` or `rules/audio_rules.py` with the shared checks in
+   ladder order: `depends` → `requires` → (`restart_ambiguity`) → `occurrences` (which calls
+   `missing`, with any approved `inference`), and `timed` for limits. Pass every anchor and elapsed
+   time used as `uses=`, so their flags are carried. Never build a Fail for a missing event
+   yourself: `missing()` goes through `ctx.missing()`.
 3. Update the shared contract test count in `tests/test_pipeline_contracts.py` (D-022) and log
    it.
 4. Add its failure codes to `anomalies.md`, its row to `rules_status.md`, and its decision

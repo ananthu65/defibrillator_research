@@ -161,11 +161,33 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   in video postprocessing.
 - **Affects:** R8; P-015; Increments 4, 5, 10, 12. **Related:** D-014, D-015, OQ-004, OQ-006.
 
+### D-058 R8 with a missing placement event: Unable to Verify, no inference
+- **Date / by / status:** 2026-10-13 · agent proposal approved by Arnikan · approved
+- **Decision:** In both of these cases R8 gives **Unable to Verify**, flagged
+  `placement_missing`, with no inference and never `wrong_order`. R3 reports the missing
+  placement.
+  - **(a)** the visible zone's paddle has no placement event;
+  - **(b)** both zones are visible but one paddle's placement event is missing.
+- **Reason:** A missing event does not show the order, and the missing placement is R3's
+  finding (D-003). "The visible paddle was never placed, so the other was first" is not shown
+  by the evidence, because it may have been placed outside its zone.
+- **Affects:** R8, R3; P-015; Increment 12. **Resolved:** OQ-040.
+
+### D-060 An assumed result prevents an overall Pass
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** When R8 uses the apical-first fallback (D-014), its result is **assumed**, not
+  evaluated. Like a pending rule (D-055), it makes the overall result **incomplete** ("assumed
+  result, to be checked by the evaluator"), never Pass. A Fail in an evaluated rule still makes
+  the overall result Fail.
+- **Reason:** Consistency with D-055: a Pass must mean every step was actually checked.
+- **Affects:** R8; P-015, P-017; Increments 8 and 12.
+
 ### D-014 "First paddle taken is apical" is an off-by-default fallback
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
 - **Decision:** The team's assumption that the first paddle taken is the apical one may be used
-  only as a configurable last resort, **off by default**. If it is used, R8 is not counted and
-  says "assumed apical first, to be checked by the evaluator".
+  only as a configurable last resort, **off by default**. If it is used, R8's result is
+  "assumed apical first, to be checked by the evaluator", and it prevents an overall Pass
+  (D-060).
 - **Affects:** R8; P-015; setting `assume_first_taken_is_apical`. **Open question:** OQ-006.
 
 ### D-015 Whether an inferred Fail counts as Fail is undecided
@@ -332,7 +354,7 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** For R7/A6 and A8, the "start compressions" anchor is the earliest start command
   after the shock. A start command at or before the shock does not count as the restart, and
   A7 reports it as a sequence problem (`start_command_before_shock`).
-- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Refined by:** D-053 and D-054, for the
+- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Refined by:** D-053, D-054 and D-059, for the
   case where the shock time is not known exactly.
 
 ### D-053 A start command before the removal is timing-ambiguous, not a mistake
@@ -353,6 +375,23 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Alternatives considered:** Treat it as a start before the shock, which does not count and
   is reported by A7 (the agent's A-014 proposal), rejected.
 - **Affects:** R7/A6, A7, A8; P-012, P-014. **Resolved:** OQ-039.
+
+### D-059 R7/A6 and A8 under the removal fallback
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** When the shock time comes from paddle removal:
+  - **Ambiguous restart:** an unresolved "resume compressions" before the removal (D-024) makes
+    the restart ambiguous, exactly like an explicit start command before the removal (D-053).
+    R7/A6 and A8 then give Unable to Verify.
+  - **With no ambiguous command:** a start command after the removal is definitely the restart.
+    It carries no fallback flag of its own.
+  - **A8:** stop → restart does not depend on the shock time, so it is measured normally,
+    without the fallback flag.
+  - **R7/A6:** the delay measured from the removal is shorter than the real delay. If it
+    already exceeds the limit, the result is a confident **Fail `too_late`**. If it is within
+    the limit, the result is **Unable to Verify**, flagged `shock_time_from_removal`.
+- **Reason:** The removal time is a lower bound for the delay since the real shock. A delay
+  over the limit is therefore certain, and one within it is not.
+- **Affects:** R7/A6, A8; P-012, P-014; Increments 21 and 23. **Resolved:** OQ-041.
 
 ### D-054 With no shock time, start commands are timing-ambiguous
 - **Date / by / status:** 2026-10-13 · agent proposal approved by Arnikan · approved

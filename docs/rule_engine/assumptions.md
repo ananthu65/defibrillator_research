@@ -142,3 +142,15 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Assumption:** Apart from A6 reusing R7, only A7 depends on other rules' results (A1–A5).
   Everything else depends only on events.
 - **Status:** active; will be revisited as each rule is built.
+
+### A-017 A time limit with a value but no approver is not used
+- **Assumption:** If a clinical limit in `rules.yaml` has a value but no `approved_by`, the rule
+  does not use it. Timing is not checked, and the result is flagged `timing_not_checked` and
+  `limit_not_approved`.
+- **Why:** D-005 says unapproved values stay empty, and the brief says clinical values are never
+  invented. A value that is present but unapproved is treated as if it were empty, rather than
+  silently used. No current limit is in this state (A8's 5 s is approved, D-016).
+- **Status:** active, to be confirmed (OQ-042).
+- **If wrong:** A provided value would be used, flagged instead. That is one line in
+  `rules/checks.py` (`time_limit`).
+- **Related:** D-005, OQ-042.

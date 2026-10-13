@@ -73,7 +73,7 @@ timing result built on a flagged anchor is flagged too. Rules copy them onto the
 | `multiple_shocks` | Shock anchor, and every elapsed time using it | The `multiple_shocks` anomaly is present | No shock time is chosen (**not guessed**, even if a removal exists). Candidates are listed |
 | `multiple_candidates` | Any anchor | More than one event could be the anchor (for example two `first_paddle_placed`) | The **earliest** is used, and all candidate IDs are recorded in `Anchor.candidates` |
 | `command_near_shock` | Command resolution | A `resume_compressions_command` starts within `simultaneous_window_seconds` of the shock time | Left **unresolved**: it cannot be classified as continue (before) or start (after) |
-| `command_before_removal` | Command resolution; start anchor | The shock time comes from removal, and a `resume_compressions_command` (D-024) or an explicit `start_compressions_command` (D-053) starts at or **before** the removal | **Timing-ambiguous:** the real shock happened at an unknown time before the removal, so the command may be a genuine restart. A resume command is left unresolved. A start command is listed in `Anchor.ambiguous`: not counted as the restart and **not a mistake**. R7/A6 and A8 give Unable to Verify (not Fail), and A7 does not report it |
+| `command_before_removal` | Command resolution; start anchor | The shock time comes from removal, and a `resume_compressions_command` (D-024) or an explicit `start_compressions_command` (D-053) starts at or **before** the removal | **Timing-ambiguous:** the real shock happened at an unknown time before the removal, so the command may be a genuine restart. A resume command is left unresolved, and it also makes the restart ambiguous (D-059). A start command is listed in `Anchor.ambiguous`: not counted as the restart and **not a mistake**. R7/A6 and A8 give Unable to Verify (not Fail), and A7 does not report it |
 | `start_command_before_shock` | Start anchor | A `start_compressions_command` starts at or before a **confirmed on-screen** shock (D-025) | It does **not** count as the restart (it is listed in `Anchor.ineligible`). A7 reports it as a sequence problem. Never raised under the removal fallback (D-053) or without a shock time (D-054) |
 | `no_shock_time` | Command resolution, start anchor | A `resume_compressions_command` while there is no shock time (no shock, or multiple shocks); or the start anchor when there is no shock time | Left **unresolved**; the start anchor is absent, because "the earliest start after the shock" cannot be identified, and every start command is listed as ambiguous (not a mistake, D-054) |
 | `unresolved_commands` | Continue and start anchors | At least one ambiguous command is unresolved | An unresolved command might have been the continue or start command, so these anchors may be incomplete |
@@ -82,6 +82,21 @@ timing result built on a flagged anchor is flagged too. Rules copy them onto the
 `ProcedureContext.missing(name)` extends `Coverage.missing`. A low-confidence ambiguous command
 that could have been `name` (resolved to it, or unresolvable) also gives Unable to Verify,
 flagged `low_confidence_evidence`.
+
+## Shared-check flags (`rules/checks.py`, Increment 6)
+
+Flags that the shared checks (P-019 to P-025) put on rule results. Every result also carries the
+flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`).
+
+| Code | On | When | Meaning |
+|---|---|---|---|
+| `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005) |
+| `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (A-017, OQ-042). Timing is not checked |
+
+Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
+`pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`. The last
+four map to the shared status `unable_to_assess` (D-045). `pending` and `assumed` prevent an
+overall Pass (D-055, D-060).
 
 ## Planned flags (later increments)
 
@@ -93,7 +108,7 @@ The decision points that will raise these are P-001, P-015 and P-018 in
 | `annotation_coverage_assumed` | Annotation adapter and report (Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
 | `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
-| `placement_missing` | R8 (Increment 12; proposed, OQ-040) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
+| `placement_missing` | R8 (Increment 12; D-058) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
 
 ## Rule failure codes (planned, Increments 11 to 23)
 
