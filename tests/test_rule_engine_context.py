@@ -44,8 +44,9 @@ class ShockTime(unittest.TestCase):
         self.assertEqual(to_start.seconds, 2)
         self.assertIn("shock_time_from_removal", to_start.flags)
         self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "shock").flags)
-        # D-025: which start command counts depends on the shock time, so stop -> start (A8) is flagged too
-        self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
+        # OQ-041 (interim): no start before the removal, so the restart is certain; stop -> start (A8)
+        # does not depend on the shock time and carries no fallback flag
+        self.assertNotIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
         self.assertNotIn("shock_time_from_removal", ctx.elapsed("first_placement", "stop_compressions").flags)
 
     def test_multiple_removals_without_shock_use_the_earliest(self):
@@ -218,13 +219,23 @@ class StartAnchor(unittest.TestCase):
                 anchor = context(timeline).anchor("start_compressions")
                 self.assertFalse(anchor.present)
                 self.assertEqual(anchor.flags, ("no_shock_time", shock_flag))
-                # D-053: timing unknown, so ambiguous, not a sequence mistake for A7
+                # D-054: timing unknown, so ambiguous, not a sequence mistake for A7
                 self.assertEqual((anchor.ambiguous, anchor.ineligible), (("s",), ()))
 
-    def test_under_the_fallback_the_start_anchor_carries_the_flag(self):
-        anchor = context([REMOVAL, cmd("start_compressions_command", 36, "s")]).anchor("start_compressions")
-        self.assertEqual((anchor.event_id, anchor.flags), ("s", ("shock_time_from_removal",)))
+    def test_under_the_fallback_an_unambiguous_restart_carries_no_fallback_flag(self):
+        # OQ-041 (interim): a start after the removal, with none before it, is definitely the restart
+        ctx = context([REMOVAL, cmd("start_compressions_command", 36, "s")])
+        anchor = ctx.anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.flags), ("s", ()))
         self.assertEqual((anchor.ambiguous, anchor.ineligible), ((), ()))
+        # R7/A6 still measure from the removal-based shock time, so their delay stays flagged
+        self.assertIn("shock_time_from_removal", ctx.elapsed("shock", "start_compressions").flags)
+
+    def test_each_start_command_is_checked_on_its_own(self):
+        # (e2): the later start after the shock is still the restart when an earlier one does not count
+        anchor = context([SHOCK, cmd("start_compressions_command", 20, "pre"), cmd("start_compressions_command", 31, "post"),
+                          cmd("start_compressions_command", 40, "late")]).anchor("start_compressions")
+        self.assertEqual((anchor.event_id, anchor.candidates, anchor.ineligible), ("post", ("post", "late"), ("pre",)))
 
     def test_under_the_fallback_a_start_before_removal_is_ambiguous_not_a_mistake(self):
         # D-053 (OQ-039): the real shock was at an unknown time before the removal (33 s)

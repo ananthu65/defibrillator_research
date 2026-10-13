@@ -192,8 +192,11 @@ def _resolve(resolution, time, shock, window):
 def _start_anchor(events, shock, prepared):
     """D-025: the restart is the earliest start command after the shock; earlier ones do not count.
 
-    D-053: when the real shock time is unknown (removal fallback, or no shock time at all), start
-    commands that may have been the restart are timing-ambiguous: not counted, not a mistake.
+    Each start command is checked on its own, so a later one can still be the restart.
+    D-053: under the removal fallback, start commands at or before the removal are timing-ambiguous
+    (not counted, not a mistake). D-054: with no shock time at all, every start command is.
+    OQ-041 (interim): under the fallback with no ambiguous start command, the restart is certain,
+    so the anchor does not carry shock_time_from_removal (A8's stop -> start does not depend on it).
     """
     starts = [e for e in events if e.event_name == START_EVENT]
     if not shock.present:
@@ -204,7 +207,7 @@ def _start_anchor(events, shock, prepared):
     after = [e for e in starts if e.start > shock.time]
     earlier = tuple(e.event_id for e in starts if e.start <= shock.time)
     if fallback:  # the real shock was at an unknown time before the removal
-        flags = (SHOCK_FROM_REMOVAL,) + ((COMMAND_BEFORE_REMOVAL,) if earlier else ())
+        flags = (SHOCK_FROM_REMOVAL, COMMAND_BEFORE_REMOVAL) if earlier else ()
         before, ambiguous = (), earlier
     else:
         flags = (START_BEFORE_SHOCK,) if earlier else ()

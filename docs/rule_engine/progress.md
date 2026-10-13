@@ -1814,3 +1814,84 @@ with 0.
 ### Tests
 Full suite: **251 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
 with 0.
+
+---
+
+## Diagram review: logic fixes (2026-10-13)
+
+Arnikan checked that the diagrams render on GitHub, and found logic issues.
+
+### Decisions recorded
+- **D-055:** the overall result can be Pass only if every rule was evaluated. Any pending rule
+  makes it "incomplete: rules not yet approved", never Pass. It refines D-043.
+- **D-056:** "not evaluable" counts like Unable to Verify in the overall policy.
+- **D-054:** with no shock time, start commands are timing-ambiguous. This was split out of
+  D-053, and cross-references in the code, tests, decision flow, anomalies, pathways and rule
+  status are updated.
+- **D-057:** an approved inference (R3/R4) applies when direct evidence is missing as well as
+  when it is weak, checked before the coverage step.
+
+### Open questions added (for Arnikan)
+- **OQ-040:** R8 when a placement event is missing. The proposed outcome for both (a) the
+  visible zone's paddle has no placement event and (b) both zones visible but one placement
+  missing: Unable to Verify, flagged `placement_missing`, with no inference and not
+  `wrong_order`. R3 reports the missing placement (D-003).
+- **OQ-041:** R7/A6 and A8 under the removal fallback with no ambiguous start. Planned in P-014:
+  - The start after the removal is definitely the restart.
+  - A8's stop → restart is measured without the fallback flag.
+  - R7/A6: a delay from the removal that is already over the limit is a confident Fail
+    `too_late`; one within the limit is Unable to Verify (`shock_time_from_removal`).
+  - **Agent's addition:** should an unresolved "resume" before the removal make the restart
+    ambiguous too (proposed: yes)?
+
+### Code change (interim, under OQ-041)
+`rules/context.py` `_start_anchor`: under the fallback, the start time now carries
+`shock_time_from_removal` (with `command_before_removal`) **only** when a start command before
+the removal is ambiguous. When the restart is certain it is unflagged, so A8's stop → restart
+elapsed time is unflagged; R7/A6's shock → restart is still flagged through the shock time.
+This reverses the "consequence" noted on 2026-10-13 (stop → start flagged), on Arnikan's
+reasoning that the interval does not depend on the shock time.
+
+### Logic fixes in the documentation
+- **P-017** (`decision_flow.yaml`, `pathways.md`, diagram g): Fail first (even with pending
+  rules), then any pending → incomplete, then Unable to Verify or Not evaluable → the undecided
+  policy, else Pass.
+- **P-014 / P-016** (diagram c): "weak **or missing**" direct evidence goes to the inference
+  check **before** the coverage step. P-014 also has the planned R7/A6 and A8 fallback branches
+  and a separate route to P-015 for R8.
+- **P-015** (diagram f): the two missing-placement branches (OQ-040), plus the planned flag
+  `placement_missing` (in `anomalies.md`).
+- **Diagram (e2):** each start command is checked on its own, and the restart is the earliest
+  remaining candidate.
+- **Diagram (e):** the window is labelled as configurable, `simultaneous_window_seconds`
+  (placeholder 0.5 s).
+- **Diagram (b):** P-013 added.
+- **New worked pathways:** W-15 to W-22.
+  - R7/A6 under the fallback: Fail, and Unable to Verify.
+  - R8 missing placements: two cases.
+  - A8 under the fallback.
+  - R3 inference with missing evidence.
+  - Overall result with a pending rule, and with a "not evaluable" rule.
+- **W-5** rewritten.
+
+### Tests
+- **Changed:** "stop → start flagged under the fallback" now asserts the opposite (OQ-041).
+- **Replaced:** "start anchor carries the fallback flag" is now "an unambiguous restart carries
+  no fallback flag (but shock → restart does)".
+- **Added:** each start command is checked on its own.
+- `tests/test_rule_engine_context.py`: 42 → 43.
+- The documentation consistency test caught the undocumented `placement_missing` before it was
+  added to `anomalies.md`.
+
+### Documents updated
+`rules/context.py`, `tests/test_rule_engine_context.py`, `decisions.md`, `open_questions.md`,
+`decision_flow.yaml`, `pathways.md`, `diagrams.md`, `anomalies.md`, `rules_status.md`,
+`progress.md`, `ai_usage_log.md`.
+
+### Open questions in this step
+- **New:** OQ-040, OQ-041.
+- **Answered:** none.
+
+### Tests
+Full suite: **252 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.

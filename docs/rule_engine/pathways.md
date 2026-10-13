@@ -123,7 +123,11 @@ low-confidence rule.
 | No candidate | Absent, with a reason | — |
 | A start command at or before a confirmed on-screen shock | Not the restart (D-025); a mistake A7 reports | `start_command_before_shock` |
 | Shock time from removal, and a start command at or before the removal | Timing-ambiguous: not the restart, **not a mistake** (D-053); a later start is still used, but stays flagged | `command_before_removal`, `shock_time_from_removal` |
-| No shock time (start only) | No restart time; start commands are ambiguous, not mistakes | `no_shock_time` |
+| Shock time from removal, no start command before the removal | The first start after the removal is definitely the restart; no fallback flag on the restart itself (OQ-041, interim) | — |
+| No shock time (start only) | No restart time; start commands are ambiguous, not mistakes (D-054) | `no_shock_time` |
+
+Each start command is checked on its own, so a later start can still be the restart when an
+earlier one does not count.
 | A "resume" command is unresolved | Continue and start times may be incomplete | `unresolved_commands` |
 
 #### P-013 Low-confidence ambiguous command (built)
@@ -137,30 +141,36 @@ low-confidence rule.
 #### P-014 Rule decision ladder (planned, Increments 6–7)
 | Condition | Outcome |
 |---|---|
-| Rule not yet approved | Reported as pending; not counted |
+| Rule not yet approved | Reported as pending; the overall result cannot be Pass (D-055) |
 | A rule it depends on failed or was not evaluable | "Not evaluable because of …" |
 | Required facts missing (e.g. no shock time) | "Not evaluable because of …", with the facts' flags |
-| The restart is needed (R7/A6, A8), but a start command is timing-ambiguous | **Unable to Verify, never Fail**; A7 does not report it (D-053) |
+| The restart is needed (R7/A6, A8), but a start command is timing-ambiguous | **Unable to Verify, never Fail**; A7 does not report it (D-053, D-054) |
+| R7/A6 under the removal fallback, no ambiguous start, delay **from the removal** already over the limit | **Fail `too_late`**: the real delay is even longer (planned, OQ-041) |
+| R7/A6 under the removal fallback, no ambiguous start, delay from the removal within the limit | Unable to Verify, `shock_time_from_removal`: the real delay may be over the limit (planned, OQ-041) |
+| A8 under the removal fallback, no ambiguous start | Stop → restart measured normally, without the fallback flag (planned, OQ-041) |
 | Evidence present, in order and in time | Pass – Direct |
 | Evidence clearly shows the mistake | Fail, with the rule's failure code |
-| Evidence weak, but an approved inference applies | → P-015 or P-016 |
-| Required event missing | → P-008 |
+| Evidence weak **or missing**, and the rule has an approved inference (R3, R4) | → P-016, **before** the coverage step (D-057) |
+| R8 order not directly observable | → P-015 |
+| Required event missing, and no approved inference applies | → P-008 |
 
 #### P-015 R8 inference (planned, Increment 12)
 | Condition | Outcome | Codes |
 |---|---|---|
-| Both zones visible | Compare the two placement times | `wrong_order`, `simultaneous` |
+| Both zones visible, both placements observed | Compare the two placement times | `wrong_order`, `simultaneous` |
+| Both zones visible, one placement event missing | Unable to Verify, not `wrong_order`; R3 reports the missing placement (proposed, OQ-040) | `placement_missing` |
 | One zone visible, its placement matches the first placement | That paddle was first (inferred) | `inferred_fail_policy_undecided` if it is the sternal one |
 | One zone visible, its placement clearly after the first | The other paddle was first (inferred) | `inferred_fail_policy_undecided` if that means a mistake |
+| One zone visible, its paddle has no placement event | Unable to Verify, no inference; R3 reports the missing placement (proposed, OQ-040) | `placement_missing` |
 | The visible paddle placed clearly before the first placement | Unable to Verify | `contradictory` |
-| Not determinable | Unable to Verify (or "assumed apical first", not counted, if the fallback is on) | — |
+| Not determinable (no zone visible, or no first placement) | Unable to Verify (or "assumed apical first", not counted, if the fallback is on) | — |
 
 #### P-016 R3/R4 inferred pass (planned, Increments 15–16)
 | Condition | Outcome | Codes |
 |---|---|---|
 | Direct evidence in time | Pass – Direct | — |
 | Direct evidence shows the mistake | Fail | `not_in_zone`, `placed_after_shock`, `before_placement`, `not_pressed` |
-| Direct evidence weak; shock on screen or removal confirmed | Pass – Inferred | — |
+| Direct evidence weak **or missing**; shock on screen or removal confirmed | Pass – Inferred (D-057) | — |
 | Neither | → P-008 | — |
 
 ### Stage: overall policy (planned)
@@ -168,9 +178,10 @@ low-confidence rule.
 #### P-017 Overall result (planned, Increment 8)
 | Condition | Overall result |
 |---|---|
-| Any counted rule fails | Fail |
-| No Fail, some Unable to Verify | Fail or faculty review (undecided, OQ-002) |
-| All counted rules pass | Pass |
+| Any evaluated rule fails | **Fail** (any mistake fails, D-001), even if other rules are pending |
+| No Fail, but any rule is pending | **Incomplete: "rules not yet approved"**, never Pass (D-055) |
+| No Fail, no pending rule, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
+| Every rule evaluated and passed (direct or inferred) | **Pass** |
 
 ### Stage: renderer (planned)
 
@@ -212,10 +223,11 @@ today.
 ### W-5 No shock on screen, paddles removed at 52 s → timing flagged
 1. P-009: no shock indication; first removal at 52 s → shock time **52 s**, flagged
    `shock_time_from_removal`.
-2. "Start compressions" at 55 s → P-012: the restart anchor is 55 s, carrying the flag.
+2. "Start compressions" at 55 s, and none before the removal → P-012: the restart is
+   **definitely** 55 s, so the restart itself carries no fallback flag (OQ-041, interim).
 3. Shock → restart = 3 s, flagged `shock_time_from_removal`. Removal comes after the real
-   shock, so the real delay was longer.
-4. R7/A6 (Increment 21) report the timing with the flag.
+   shock, so the real delay was **longer** than 3 s.
+4. R7/A6 (Increment 21): see W-15 and W-16. A8 (Increment 23): see W-19.
 
 ### W-6 Under the removal fallback, "resume compressions" at 50 s
 1. Shock time from removal at 52 s (W-5).
@@ -275,3 +287,63 @@ today.
    not Fail, not even `too_late` or `pre_shock_pause` measured to 58 s.
 5. A7 (Increment 22) does **not** report the 50 s command as a sequence error. Compare W-10,
    where the shock was confirmed on screen and an early start command is a sequence problem.
+
+### W-15 R7/A6 under the removal fallback, delay from the removal already too long → Fail
+*(Planned, OQ-041. The R7 limit is not approved yet, OQ-016; a limit of 10 s is used here for
+illustration only.)*
+1. No shock on screen; removal at 52 s → shock time 52 s (`shock_time_from_removal`).
+2. No start command before 52 s. First start after it at 64 s → definitely the restart.
+3. Delay from the removal = 12 s, already over 10 s. The real shock was earlier, so the real
+   delay is even longer.
+4. R7/A6 → **Fail `too_late`**, a confident Fail even under the fallback, flagged
+   `shock_time_from_removal` for transparency.
+
+### W-16 R7/A6 under the removal fallback, delay from the removal within the limit → Unable to Verify
+*(Planned, OQ-041; illustrative 10 s limit.)*
+1. As W-15, but the first start after the removal is at 58 s → delay from the removal = 6 s.
+2. The real delay is longer than 6 s by an unknown amount, so it may exceed 10 s.
+3. R7/A6 → **Unable to Verify**, flagged `shock_time_from_removal`.
+
+### W-17 R8, one zone visible, its paddle has no placement event → Unable to Verify
+*(Proposed, OQ-040.)*
+1. Only the apical zone is visible. The first paddle was placed at 12 s, but there is no
+   apical placement event.
+2. P-015: the visible paddle's placement is not observed, so the order cannot be established.
+   **No inference** ("the apical paddle was never placed, so sternal was first" is not shown by
+   the evidence).
+3. R8 → **Unable to Verify**, `placement_missing`. R3 reports the missing placement (one
+   mistake reported once, D-003).
+
+### W-18 R8, both zones visible, one placement event missing → Unable to Verify
+*(Proposed, OQ-040.)*
+1. Both zones are visible. Apical placed at 12 s; no sternal placement event.
+2. P-015: the order cannot be compared → **Unable to Verify**, `placement_missing`, and **not**
+   Fail `wrong_order`. R3 reports the missing sternal placement.
+
+### W-19 A8 under the removal fallback, no ambiguous start → measured normally
+*(Planned, OQ-041.)*
+1. Removal at 52 s (the shock time comes from removal). "Stop compressions" at 48 s; first
+   start after the removal at 55 s; no start before the removal.
+2. The restart is certain (P-012), and stop → restart = 7 s does not depend on the shock time,
+   so it carries no fallback flag.
+3. A8 (limit 5 s, approved, D-016) → **Fail `pre_shock_pause`**.
+
+### W-20 R3 with no direct placement evidence, removal confirmed → Pass – Inferred
+*(Planned, D-057.)*
+1. The camera never shows both paddles stable in their zones (no `paddles_firmly_on_chest`).
+2. P-014: R3 has an approved inference, so it is checked **before** the coverage step.
+3. P-016: paddle removal is confidently confirmed → **Pass – Inferred**, naming the removal
+   event. The coverage step (P-008) is not reached.
+
+### W-21 Overall result with a pending rule → Incomplete
+*(Planned, D-055.)*
+1. Fifteen rules pass; R8 is still pending (not approved).
+2. P-017: no Fail, but a rule is pending → **Incomplete: "rules not yet approved"**, never Pass.
+3. If any evaluated rule had failed, the overall result would be **Fail** regardless (D-001).
+
+### W-22 Overall result with a "not evaluable" rule → Unable to Verify policy
+*(Planned, D-056.)*
+1. No shock time (W-7). R7/A6 and A8 are "not evaluable because of R5"; R5 itself is Unable to
+   Verify; every other rule passes; none is pending.
+2. P-017: "not evaluable" counts like Unable to Verify → **Fail or faculty review**, per the
+   undecided setting (OQ-002).

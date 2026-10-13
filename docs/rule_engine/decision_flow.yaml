@@ -307,21 +307,21 @@ decision_points:
         flags: [low_confidence_evidence]
       - condition: No candidate at all
         outcome: Absent, with a reason
-      - condition: Start command at or before a confirmed on-screen shock (start anchor only)
+      - condition: A start command at or before a confirmed on-screen shock (start anchor only; each start command is checked on its own, so a later one can still be the restart)
         outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
         flags: [start_command_before_shock]
       - condition: Shock time from removal and a start command at or before the removal (start anchor only)
-        outcome: Timing-ambiguous (the real shock was at an unknown earlier time); not counted, not a mistake; listed as ambiguous; a later start is still used but the anchor stays flagged
+        outcome: Timing-ambiguous (the real shock was at an unknown earlier time); not counted, not a mistake; listed as ambiguous; a later start is still used but the anchor stays flagged (D-053). With no ambiguous start the restart is certain and carries no fallback flag (OQ-041, interim)
         flags: [command_before_removal, shock_time_from_removal]
       - condition: No shock time (start anchor only)
-        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake
+        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054)
         flags: [no_shock_time]
       - condition: An ambiguous command is unresolved (continue and start anchors)
         outcome: Anchor may be incomplete
         flags: [unresolved_commands]
     config: []
     code: rules/context.py (_earliest, _start_anchor)
-    decisions: [D-025, D-053, D-040, D-012]
+    decisions: [D-025, D-053, D-054, D-040, D-012]
     assumptions: [A-014]
     open_questions: [OQ-022]
 
@@ -352,29 +352,42 @@ decision_points:
     inputs: [rule definition and status, results of rules it depends on, context]
     branches:
       - condition: Rule not approved (pending)
-        outcome: Reported as pending, not counted
+        outcome: Reported as pending; the overall result cannot be Pass (P-017)
       - condition: A rule-result dependency failed or could not be evaluated
         outcome: Not evaluable because of that rule (one mistake reported once)
       - condition: Required facts absent (e.g. no shock time)
         outcome: Not evaluable because of the step that provides them, with its flags
-      - condition: Restart needed (R7/A6, A8) but timing-ambiguous start commands exist (Anchor.ambiguous)
+      - condition: Restart needed (R7/A6, A8) but timing-ambiguous start commands exist (Anchor.ambiguous; OQ-041 proposes the same for unresolved resume commands)
         outcome: Unable to Verify, never Fail; A7 does not report ambiguous commands as sequence errors
         flags: [command_before_removal]
+      - condition: R7/A6 under the removal fallback, no ambiguous start, delay from the removal already exceeds the limit (planned, OQ-041)
+        outcome: Fail too_late (the real delay is even longer)
+        failure_codes: [too_late]
+        flags: [shock_time_from_removal]
+      - condition: R7/A6 under the removal fallback, no ambiguous start, delay from the removal within the limit (planned, OQ-041)
+        outcome: Unable to Verify (the real delay may exceed the limit)
+        flags: [shock_time_from_removal]
+      - condition: A8 under the removal fallback, no ambiguous start (planned, OQ-041)
+        outcome: Stop to restart measured normally, without the fallback flag (it does not depend on the shock time)
+        failure_codes: [pre_shock_pause]
       - condition: Direct evidence present, in order and in time
         outcome: Pass – Direct
       - condition: Direct evidence shows the mistake clearly
         outcome: Fail with the rule's failure code
-      - condition: Direct evidence weak but an approved inference applies
+      - condition: Direct evidence weak or missing, and the rule has an approved inference (checked before coverage)
         outcome: Inference
+        next: P-016
+      - condition: R8 order not directly observable
+        outcome: R8 inference
         next: P-015
-      - condition: Required event missing
+      - condition: Required event missing, no approved inference (or the inference does not apply)
         outcome: Missing-event outcome
         next: P-008
-    config: [configs/rules.yaml rules]
+    config: [configs/rules.yaml rules, configs/rules.yaml timing_limits]
     code: rules/checks.py, rules/registry.py, rules/engine.py (Increments 6 and 7)
-    decisions: [D-001, D-002, D-003, D-043, D-045, D-053]
-    assumptions: [A-016]
-    open_questions: []
+    decisions: [D-001, D-002, D-003, D-043, D-045, D-053, D-054, D-057]
+    assumptions: [A-014, A-016]
+    open_questions: [OQ-041]
 
   - id: P-015
     name: R8 apical-before-sternal inference
@@ -383,27 +396,33 @@ decision_points:
     decides: Which paddle was placed first (Increment 12)
     inputs: [apical and sternal placement times, first placement time, zone visibility]
     branches:
-      - condition: Both zones visible
+      - condition: Both zones visible and both placements observed
         outcome: Compare the placement times; Pass – Direct, or Fail
         failure_codes: [wrong_order, simultaneous]
+      - condition: Both zones visible but one paddle's placement event missing (proposed, OQ-040)
+        outcome: Unable to Verify, not wrong_order; R3 reports the missing placement
+        flags: [placement_missing]
       - condition: One zone visible and its placement matches the first placement
         outcome: That paddle was first (apical → Pass – Inferred; sternal → inferred mistake)
         flags: [inferred_fail_policy_undecided]
       - condition: One zone visible and its placement is clearly after the first placement
         outcome: The other paddle was first (inferred)
         flags: [inferred_fail_policy_undecided]
+      - condition: One zone visible but its paddle has no placement event (proposed, OQ-040)
+        outcome: Unable to Verify, no inference; R3 reports the missing placement
+        flags: [placement_missing]
       - condition: The visible paddle is placed clearly before the first placement
         outcome: Unable to Verify
         flags: [contradictory]
-      - condition: Not determinable, fallback off
+      - condition: Not determinable (no zone visible, or no first placement), fallback off
         outcome: Unable to Verify
       - condition: Not determinable, fallback on
         outcome: Assumed apical first; not counted; to be checked by the evaluator
     config: [engine.yaml placement_match_window_seconds, engine.yaml assume_first_taken_is_apical, engine.yaml inferred_fail_outcome]
     code: rules/video_rules.py (Increment 12)
-    decisions: [D-013, D-014, D-015]
+    decisions: [D-013, D-014, D-015, D-003]
     assumptions: [A-009]
-    open_questions: [OQ-004, OQ-005, OQ-006]
+    open_questions: [OQ-004, OQ-005, OQ-006, OQ-040]
 
   - id: P-016
     name: R3/R4 inferred pass from shock or removal
@@ -417,14 +436,14 @@ decision_points:
       - condition: Direct evidence shows the mistake
         outcome: Fail
         failure_codes: [not_in_zone, placed_after_shock, before_placement, not_pressed]
-      - condition: Direct evidence weak, shock on screen or removal confidently confirmed
+      - condition: Direct evidence weak or missing; shock on screen or removal confidently confirmed
         outcome: Pass – Inferred, naming the supporting event
       - condition: Neither
         outcome: Missing-event outcome
         next: P-008
     config: []
     code: rules/video_rules.py (Increments 15 and 16)
-    decisions: [D-004]
+    decisions: [D-004, D-057]
     assumptions: []
     open_questions: [OQ-012]
 
@@ -432,18 +451,20 @@ decision_points:
     name: Overall result policy
     stage: overall_policy
     status: planned
-    decides: The overall Pass or Fail of the procedure (Increment 8)
-    inputs: [counted rule results]
+    decides: The overall result of the procedure (Increment 8)
+    inputs: [every rule result]
     branches:
-      - condition: Any counted rule failed
-        outcome: Fail
-      - condition: No Fail, at least one Unable to Verify
+      - condition: Any evaluated rule failed
+        outcome: Fail (any mistake fails, even if other rules are pending)
+      - condition: No Fail, and any rule is pending (not yet approved)
+        outcome: Incomplete, rules not yet approved; never Pass
+      - condition: No Fail, no pending rule, at least one Unable to Verify or Not evaluable
         outcome: Fail or faculty review (setting unable_to_verify_outcome, undecided)
-      - condition: All counted rules pass (direct or inferred)
+      - condition: Every rule evaluated and passed (direct or inferred)
         outcome: Pass
     config: [engine.yaml unable_to_verify_outcome]
     code: rules/policy.py (Increment 8)
-    decisions: [D-001, D-019, D-042, D-043]
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056]
     assumptions: []
     open_questions: [OQ-002]
 

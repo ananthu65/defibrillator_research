@@ -62,13 +62,43 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   either Fail or "faculty review". This is one setting (`unable_to_verify_outcome`), currently
   unset.
 - **Reason:** It is a study-method decision for the supervisor.
-- **Affects:** P-017; Increment 8. **Open question:** OQ-002.
+- **Affects:** P-017; Increment 8. **Open question:** OQ-002. **See also:** D-056 ("not
+  evaluable" counts as Unable to Verify).
 
 ### D-043 Rules not yet approved are reported but not counted
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
-- **Decision:** A rule whose definition is not approved appears in the report as "pending" and
-  does not affect the overall result.
-- **Affects:** all rules; P-014, P-017.
+- **Decision:** A rule whose definition is not approved appears in the report as "pending". It
+  has no Pass or Fail of its own.
+- **Affects:** all rules; P-014, P-017. **Refined by:** D-055 (a pending rule prevents an
+  overall Pass).
+
+### D-055 The overall result can be Pass only if every rule was evaluated
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** If any rule is pending (not yet approved), the overall result is **incomplete
+  ("rules not yet approved")**, never Pass. A Fail in an evaluated rule still makes the overall
+  result Fail, because any mistake fails (D-001).
+- **Reason:** A Pass must mean every step was checked. Ignoring pending rules could make a
+  procedure pass with steps that were never assessed.
+- **Alternatives considered:** Pending rules not counted at all, so the overall result could
+  be Pass (D-043 as first written), rejected.
+- **Affects:** all rules; P-017; Increment 8.
+
+### D-056 "Not evaluable" counts like Unable to Verify in the overall result
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** A rule result "not evaluable because of X" is treated like Unable to Verify by
+  the overall policy (D-042). It never makes the overall result Pass.
+- **Reason:** The step was not checked. Its cause (X) is reported once, under its own rule
+  (D-003).
+- **Affects:** P-017; Increment 8. **Open question:** OQ-002.
+
+### D-057 Approved inference applies when direct evidence is missing, not only weak
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** For rules with an approved inference (R3, R4 via P-016), the inference is
+  checked when direct evidence is **missing** as well as when it is weak, **before** the
+  coverage step decides what the missing evidence means.
+- **Reason:** The proposal's inference is for "insufficient" direct evidence, and a single
+  camera often cannot see placement or button presses at all.
+- **Affects:** R3, R4; P-014, P-016.
 
 ### D-044 R7 and A6 are one check reported under two IDs
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
@@ -302,7 +332,7 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** For R7/A6 and A8, the "start compressions" anchor is the earliest start command
   after the shock. A start command at or before the shock does not count as the restart, and
   A7 reports it as a sequence problem (`start_command_before_shock`).
-- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Refined by:** D-053, for the
+- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Refined by:** D-053 and D-054, for the
   case where the shock time is not known exactly.
 
 ### D-053 A start command before the removal is timing-ambiguous, not a mistake
@@ -315,12 +345,26 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   - Rules that need the restart (R7/A6, A8) give **Unable to Verify, not Fail**, whenever the
     restart is ambiguous, even if a later start command exists.
   - A7 must **not** report it as a sequence error.
-  - The same applies when there is no shock time at all: start commands are then ambiguous,
-    not mistakes.
+  - Each start command is checked on its own, so a later start after the removal can still be
+    the restart.
 - **Reason:** D-004 (never blame the learner for missing data) and consistency with D-024.
+- **See also:** D-054 (the same principle when there is no shock time at all), and OQ-041
+  (planned R7/A6 and A8 behaviour under the fallback).
 - **Alternatives considered:** Treat it as a start before the shock, which does not count and
   is reported by A7 (the agent's A-014 proposal), rejected.
 - **Affects:** R7/A6, A7, A8; P-012, P-014. **Resolved:** OQ-039.
+
+### D-054 With no shock time, start commands are timing-ambiguous
+- **Date / by / status:** 2026-10-13 · agent proposal approved by Arnikan · approved
+- **Decision:** When there is no shock time at all (no shock and no removal, or multiple
+  shocks), every "start compressions" command is listed as ambiguous: not counted as the
+  restart, and **not** a mistake. A7 must not report it as a sequence error. Rules that need
+  the restart are "not evaluable because of R5".
+- **Reason:** The command's position relative to the shock is unknown, as in D-053. It was
+  first included in D-053 and recorded separately on Arnikan's request.
+- **Alternatives considered:** Listing them as ineligible, so A7 would report them (the
+  Increment 5 behaviour), rejected.
+- **Affects:** R7/A6, A7, A8; P-012.
 
 ---
 
