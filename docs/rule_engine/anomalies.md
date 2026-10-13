@@ -73,7 +73,9 @@ timing result built on a flagged anchor is flagged too. Rules copy them onto the
 | `multiple_shocks` | Shock anchor, and every elapsed time using it | The `multiple_shocks` anomaly is present | No shock time is chosen (**not guessed**, even if a removal exists). Candidates are listed |
 | `multiple_candidates` | Any anchor | More than one event could be the anchor (for example two `first_paddle_placed`) | The **earliest** is used, and all candidate IDs are recorded in `Anchor.candidates` |
 | `command_near_shock` | Command resolution | A `resume_compressions_command` starts within `simultaneous_window_seconds` of the shock time | Left **unresolved**: it cannot be classified as continue (before) or start (after) |
-| `no_shock_time` | Command resolution | A `resume_compressions_command` while there is no shock time (no shock, or multiple shocks) | Left **unresolved** |
+| `command_before_removal` | Command resolution | The shock time comes from removal, and a `resume_compressions_command` starts **before** the removal (D-024) | Left **unresolved**: the real shock was earlier than the removal, so "before removal" does not prove "before the shock" |
+| `start_command_before_shock` | Start anchor | A `start_compressions_command` starts at or before the shock time (D-025) | It does **not** count as the restart (it is listed in `Anchor.ineligible`). A7 reports it as a sequence problem |
+| `no_shock_time` | Command resolution, start anchor | A `resume_compressions_command` while there is no shock time (no shock, or multiple shocks); or the start anchor when there is no shock time | Left **unresolved**; the start anchor is absent, because "the earliest start after the shock" cannot be identified |
 | `unresolved_commands` | Continue and start anchors | At least one ambiguous command is unresolved | An unresolved command might have been the continue or start command, so these anchors may be incomplete |
 | `low_confidence_evidence` | Absent anchor | No confident event, but an excluded low-confidence event of the same name exists | The anchor is absent because of weak evidence, not because nothing happened |
 
@@ -83,8 +85,34 @@ flagged `low_confidence_evidence`.
 
 ## Planned flags (later increments)
 
+The decision points that will raise these are P-001, P-015 and P-018 in
+[decision_flow.yaml](decision_flow.yaml).
+
 | Code | Step | Meaning |
 |---|---|---|
 | `annotation_coverage_assumed` | Annotation adapter and report (Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
 | `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
+
+## Rule failure codes (planned, Increments 11 to 23)
+
+A Fail carries one of these codes; they come from the brief's rule table. They become code as
+each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
+
+| Rule | Failure codes |
+|---|---|
+| R1 Gel applied twice | `missing`, `applied_once`, `outside_time_period` |
+| R2 Second paddle after first placed | `simultaneous`, `taken_before_first_placed`, `first_missing` |
+| R8 Apical before sternal (P-015) | `wrong_order`, `simultaneous` |
+| R3 Paddles firmly on chest (P-016) | `not_in_zone`, `placed_after_shock` |
+| R4 Both discharge buttons pressed (P-016) | `before_placement`, `not_pressed` |
+| R5 Shock confirmed on screen | `missing`, `wrong_order` |
+| R6 Paddles removed after shock | `removed_before_shock`, `missing` |
+| A1 Oxygen away | `missing`, `after_shock` |
+| A2 Continue compressions | `missing`, `wrong_stage` |
+| A3 All stand clear | `missing`, `after_shock` |
+| A4 Stop compressions | `missing`, `after_shock`, `wrong_order` |
+| A5 Shock command | `missing` |
+| R7 / A6 Restart compressions promptly | `missing`, `before_shock`, `too_late` |
+| A7 Command sequence | `wrong_order` (a missing command is "not evaluable because of Ax", D-027) |
+| A8 Pre-shock pause | `pre_shock_pause` (mistake label "Pre-Shock Pause") |

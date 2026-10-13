@@ -1,0 +1,404 @@
+# Rule engine: decision log
+
+Every decision about how the rule engine assesses a recording, with its reason and status.
+Written for readers who do not read code; technical detail is in [methods.md](methods.md).
+
+- **Status:** `approved` (final), `interim` (in use until a final decision), `undecided`
+  (the system uses a safe interim behaviour, and the question is open in
+  [open_questions.md](open_questions.md)).
+- **Decided by:** Arnikan, team, supervisor, or "agent proposal approved by Arnikan".
+- **IDs are stable.** A decision that is changed gets a new entry that names the one it
+  replaces; old entries are not edited.
+
+Related registers: [open questions](open_questions.md) (OQ), [assumptions](assumptions.md) (A),
+decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md](pathways.md).
+
+---
+
+## Assessment policy
+
+### D-001 Any mistake fails the procedure; no severity levels
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** If any rule fails, the overall result is Fail. There are no severity levels, so
+  "Critical Error" is never used to grade a mistake.
+- **Reason:** Defibrillation is life-critical. A missed verbal safety command is as serious as a
+  missed physical step.
+- **Alternatives considered:** Severity levels and a "Critical Error" class (in an early AI
+  proposal), rejected.
+- **Affects:** all rules; overall policy P-017; Increment 8.
+
+### D-002 Every rule is always evaluated
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** All rules are checked, even after one fails.
+- **Reason:** Feedback needs a result for every step, not just the first mistake.
+- **Alternatives considered:** Stop at the first failure (rejected).
+- **Affects:** all rules; rule ladder P-014; Increment 7.
+
+### D-003 One mistake is reported once
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** If a rule cannot be judged because something it depends on is missing (for
+  example, no confirmed shock), it reports "not evaluable because of X" instead of a second
+  Fail.
+- **Reason:** Repeating one mistake as several failures would overstate it in the feedback.
+- **Affects:** all shock-dependent rules, A7; P-014; Increments 6–7.
+
+### D-004 Never blame the learner for missing data
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** A rule fails only when the evidence clearly shows the mistake. Missing or
+  unclear evidence gives "Unable to Verify".
+- **Reason:** A camera or microphone failure must not count against the learner.
+- **Affects:** all rules; P-008; D-007, D-008, D-010.
+
+### D-019 Verbal command failures fail the procedure
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** A missing or wrong verbal command (A1–A8, R7) fails the procedure exactly like a
+  missed physical step.
+- **Reason:** Follows from D-001; the commands are safety steps.
+- **Affects:** A1–A8, R7; P-017.
+
+### D-042 What "Unable to Verify" means overall is undecided
+- **Date / by / status:** 2026-10-10 · Arnikan · undecided
+- **Decision:** When no rule fails but at least one is Unable to Verify, the overall result is
+  either Fail or "faculty review". This is one setting (`unable_to_verify_outcome`), currently
+  unset.
+- **Reason:** It is a study-method decision for the supervisor.
+- **Affects:** P-017; Increment 8. **Open question:** OQ-002.
+
+### D-043 Rules not yet approved are reported but not counted
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** A rule whose definition is not approved appears in the report as "pending" and
+  does not affect the overall result.
+- **Affects:** all rules; P-014, P-017.
+
+### D-044 R7 and A6 are one check reported under two IDs
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** "Restart compressions promptly" is implemented once and reported as both R7
+  and A6.
+- **Affects:** R7, A6; Increments 2 and 21.
+
+---
+
+## Rule definitions
+
+### D-018 Gel: applied twice within the approved period; order versus placement not checked
+- **Date / by / status:** 2026-10-10 · Arnikan · approved (the period itself awaits OQ-016)
+- **Decision:** R1 passes when gel is applied twice, as two separate applications, within an
+  approved time period. Whether gel comes before paddle placement is **not** checked.
+- **Reason:** This is the procedure taught. It replaces the proposal document's "gel before
+  placement".
+- **Affects:** R1; Increment 17. **Open questions:** OQ-016 (the period), OQ-021 (more than
+  twice).
+
+### D-051 R2: second paddle taken only after the first is placed
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** R2 passes when the order is first paddle taken → first paddle placed firmly →
+  second paddle taken. "Taken" means the first frame where the paddle is clearly visible.
+- **Affects:** R2; Increment 11.
+
+### D-052 New rules R8 (apical before sternal) and A8 (pre-shock pause)
+- **Date / by / status:** 2026-10-10 · Arnikan · approved (the final IDs await OQ-015)
+- **Decision:** R8 and A8 are added to the rule set, and the proposal's R1 and R2 are
+  redefined (D-018, D-051).
+- **Affects:** R8, A8; Increments 2, 12, 23.
+
+### D-016 A8: the 5-second pre-shock pause limit is approved
+- **Date / by / status:** 2026-10-10 · supervisor (Dr. Senani Samarasinghe) · approved
+- **Decision:** The time from "Stop CPR" to "Start CPR" must be at most 5 seconds. The value
+  was provided by Arnikan on 2026-10-10 from team discussion; the approval date is still to be
+  confirmed (`date_pending: true`, see D-033).
+- **Affects:** A8; Increment 23. **Resolved:** OQ-014, OQ-033.
+
+### D-027 A7 checks command order only; A4 owns stop-before-continue
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** A7 checks the order of commands only. When a command is missing, A7 reports
+  "not evaluable because of Ax". A "stop" given before "continue" is A4's mistake; A2 does not
+  also fail for it.
+- **Reason:** One mistake is reported once (D-003).
+- **Affects:** A2, A4, A7; Increments 19 and 22. **Resolved:** OQ-011.
+
+### D-013 R8: one-visible-zone inference, owned by the rule engine
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:**
+  - **Both placement zones visible:** compare the apical and sternal placement times directly.
+  - **Only one zone visible:** compare that zone's placement time with the first placement time.
+    The same time (within a window) means that paddle was first; clearly later means the other
+    paddle was first. The result is recorded as inferred.
+  - **Not determinable:** Unable to Verify.
+  - **Who infers:** the rule engine; upstream only reports what is visible.
+- **Reason:** In some camera angles only one zone is annotated, and the zones are far apart.
+  The idea came from Arnikan.
+- **Alternatives considered:** No inferred result for R8 (the original brief), and inference
+  in video postprocessing.
+- **Affects:** R8; P-015; Increments 4, 5, 10, 12. **Related:** D-014, D-015, OQ-004, OQ-006.
+
+### D-014 "First paddle taken is apical" is an off-by-default fallback
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** The team's assumption that the first paddle taken is the apical one may be used
+  only as a configurable last resort, **off by default**. If it is used, R8 is not counted and
+  says "assumed apical first, to be checked by the evaluator".
+- **Affects:** R8; P-015; setting `assume_first_taken_is_apical`. **Open question:** OQ-006.
+
+### D-015 Whether an inferred Fail counts as Fail is undecided
+- **Date / by / status:** 2026-10-10 · Arnikan · undecided
+- **Decision:** One setting, `inferred_fail_outcome`. Until it is decided, an inferred Fail is
+  reported as Unable to Verify, flagged `inferred_fail_policy_undecided`.
+- **Affects:** R8; P-015. **Open question:** OQ-005.
+
+### D-017 Command names follow the proposal (A1–A6) and are provisional
+- **Date / by / status:** 2026-10-10 · Arnikan · interim
+- **Decision:** There are six action-specific command names: oxygen away, continue
+  compressions, stand clear, stop compressions, shock, start compressions. All names and phrases
+  are provisional until the medical-faculty supervisor confirms them.
+- **Alternatives considered:** One combined "compressions command" (AI proposal), rejected
+  because it does not say which action was meant.
+- **Affects:** A1–A8, R7; P-003, P-011. **Open question:** OQ-010. **Resolved:** OQ-032.
+
+### D-047 The real CVAT tag for "first paddle placed"
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** CVAT `first_paddle_firmly_on_the_chest` means `first_paddle_placed`. There are
+  no separate apical or sternal placement tags, so those names stay placeholders.
+- **Affects:** R2, R8; P-003. **Resolved:** OQ-003. **Open questions:** OQ-004, OQ-008.
+
+---
+
+## Evidence and coverage
+
+### D-007 Coverage policy for a missing event: covered → Fail, not covered → Unable to Verify
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** If a required event is missing and the area or audio was clearly observable, the
+  result is Fail. If it was not observable, the result is Unable to Verify. Rules never decide
+  this themselves; one configurable policy does.
+- **Affects:** all rules; P-008; Increment 4.
+
+### D-008 Coverage "unknown" is undecided (interim: Unable to Verify)
+- **Date / by / status:** 2026-10-10 · Arnikan · undecided
+- **Decision:** When nobody knows whether the event was observable, the interim result is
+  Unable to Verify, flagged `coverage_policy_undecided`. Changing the config is the only change
+  needed once this is decided.
+- **Affects:** all rules; P-008. **Open question:** OQ-001.
+
+### D-009 Coverage by region, source and modality, from a timeline header
+- **Date / by / status:** 2026-10-13 · Arnikan (agent proposal approved) · approved
+- **Decision:**
+  - **Where coverage comes from:** a header sent with each timeline (which analyses ran, and
+    explicit coverage per camera region, source or modality). The most specific information
+    wins.
+  - **No header:** coverage is unknown.
+  - **Outcome overrides:** each outcome can be overridden per region, source or modality.
+- **Reason:** Without it, "no audio events" cannot be told apart from "audio not analysed".
+- **Affects:** all rules; P-006, P-007, P-008; Increment 4. **Open question:** OQ-020.
+
+### D-010 Low confidence is never absence
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** If an event is missing but a low-confidence detection of it exists, the result
+  is Unable to Verify (`low_confidence_evidence`), **never Fail**. This is not configurable, and
+  it includes low-confidence ambiguous commands that could have been the event.
+- **Affects:** all rules; P-008, P-012, P-013; Increments 4, 5, 6.
+
+### D-011 Event time is the start time
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** All order and timing comparisons use when an event **starts**. (The check that
+  events fit inside the recording uses the end time; see D-034.)
+- **Affects:** all timing rules; P-002 to P-012.
+
+### D-012 Repeated events are kept
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Every occurrence of an event is kept in time order; none is merged or dropped.
+  Each rule decides which occurrence counts.
+- **Affects:** all rules; P-003, P-012. **Open questions:** OQ-021, OQ-022, OQ-023.
+
+### D-021 Duplicate merging and confidence thresholds belong upstream
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Video postprocessing and audio command detection merge duplicate detections and
+  choose their own thresholds. The rule engine keeps its own threshold check as a configurable
+  safety net (a threshold of 0 disables it).
+- **Affects:** P-004, P-005. **Open question:** OQ-019.
+
+### D-029 Unknown labels raise a warning
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Any label not in the vocabulary raises the `unknown_labels_present` anomaly, so
+  the report shows a possible naming mismatch instead of silently treating the event as
+  missing.
+- **Affects:** P-003, P-005.
+
+### D-030 Duplicate shocks are not merged
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Two shock indications are not merged. The `multiple_shocks` anomaly records
+  whether they fall within the simultaneous window ("possibly the same shock detected twice").
+- **Affects:** R5 and every shock-dependent rule; P-005, P-009. **Resolved:** OQ-024.
+
+### D-031 Human and model evidence for one event is flagged, not rejected
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** `mixed_evidence_sources` stays a flag.
+- **Affects:** P-005. **Resolved:** OQ-025.
+
+### D-032 One camera angle and one recording per timeline
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** A timeline mixing camera angles or recordings is rejected. Events with no camera
+  angle (such as audio) do not count as a second angle.
+- **Affects:** P-002. **Resolved:** OQ-026. **Open question:** OQ-038.
+
+### D-034 Duration tolerance for the timeline header
+- **Date / by / status:** 2026-10-13 · Arnikan · interim (placeholder value)
+- **Decision:** An event may end up to `duration_tolerance_seconds` (placeholder 0.5 s) after
+  the recording's stated duration. Beyond that, the header is rejected.
+- **Affects:** P-006. **Open question:** OQ-018.
+
+### D-035 Annotation timelines: video assumed covered, flagged
+- **Date / by / status:** 2026-10-13 · Arnikan · interim (development assumption A-001)
+- **Decision:** The annotation adapter declares `analyses_run: {video: true, audio: false}`.
+  Every result built on an annotation timeline carries `annotation_coverage_assumed`, so it is
+  never mistaken for a real assessment.
+- **Affects:** P-001; Increment 10. **Resolved:** OQ-028.
+
+### D-036 No time windows for coverage yet
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** Coverage applies to the whole recording. The engine already accepts an optional
+  time window per question, so windows can be added later without changing any rule.
+- **Affects:** P-007, P-008. **Resolved:** OQ-027.
+
+---
+
+## Shock time and command timing
+
+### D-023 Shock time falls back to paddle removal, flagged
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** If no shock is confirmed on screen, the shock time is taken from the first
+  paddle removal. Every timing result that uses it is flagged `shock_time_from_removal`.
+- **Reason:** Removal happens after the shock, so delays measured from it look shorter.
+- **Affects:** R6, R7/A6, A1–A5, A8; P-009, P-011, P-012.
+
+### D-039 Multiple shocks: no shock time is chosen
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** With more than one shock indication there is no shock time, not even from a
+  removal. Shock-dependent facts are absent and flagged, never guessed.
+- **Affects:** P-009 to P-012.
+
+### D-040 Several candidates: use the earliest, record them all
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** When a key time has several candidate events (for example two "first paddle
+  placed"), the earliest is used, and all candidates are recorded and flagged.
+- **Affects:** P-009, P-012. **Open question:** OQ-022.
+
+### D-041 Ambiguous commands near the shock, or with no shock time, stay unresolved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** A "resume compressions" command within the simultaneous window of the shock
+  (`command_near_shock`), or when there is no shock time (`no_shock_time`), is classified as
+  neither continue nor start.
+- **Affects:** A2, R7/A6, A7, A8; P-011.
+
+### D-024 Under the removal fallback, commands before the removal stay unresolved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** When the shock time comes from removal, every "resume compressions" command
+  before the removal time is left unresolved and flagged `command_before_removal`.
+- **Reason:** The real shock was earlier than the removal, so "before removal" does not prove
+  "before the shock".
+- **Alternatives considered:** Classify it as continue, with a flag (the Increment 5
+  behaviour).
+- **Affects:** A2, R7/A6, A7; P-011. **Resolved:** OQ-029.
+
+### D-025 The restart is the earliest start command after the shock
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** For R7/A6 and A8, the "start compressions" anchor is the earliest start command
+  after the shock. A start command at or before the shock does not count as the restart, and
+  A7 reports it as a sequence problem (`start_command_before_shock`).
+- **Affects:** R7/A6, A7, A8; P-012. **Resolved:** OQ-030. **Open question:** OQ-039.
+
+---
+
+## Engine design and configuration
+
+### D-005 Rules in Python; clinical values in config, with provenance
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:**
+  - Rules are written by developers in Python.
+  - Clinical values (time limits) live in `configs/rules.yaml` with who provided and approved
+    them, and when.
+  - Unapproved values stay empty (null). A rule with an empty limit checks presence and order
+    only, and says "timing not checked".
+- **Affects:** all rules; Increment 2. **Open question:** OQ-016.
+
+### D-006 Display order is separate from evaluation order
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** The order of rules in `rules.yaml` is the report and checklist order only. The
+  engine works out the evaluation order from which rules need other rules' results; only
+  circular dependencies are rejected.
+- **Alternatives considered:** Evaluation order fixed in config (rejected: it would have
+  refused valid configs).
+- **Affects:** all rules; Increments 2 and 7.
+
+### D-020 Canonical event names are emitted upstream
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Video postprocessing and audio command detection emit the agreed names directly.
+  `vocabulary.yaml` is a thin safety layer and the team's reference list of agreed names.
+- **Affects:** P-003; [upstream_requirements.md](upstream_requirements.md).
+
+### D-028 The rule engine does not change `configs/pipeline.yaml`
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Audio command gaps are raised with Sanjeevan, not changed by the rule engine.
+- **Affects:** OQ-009.
+
+### D-033 Approval date: structured `date_pending` flag
+- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Decision:** An approved value may have no approval date only when its record says
+  `date_pending: true`. Notes are human explanations only, and the system never reads them.
+- **Alternatives considered:** Approver and date always together (Increment 2); approver
+  without date allowed (`ddfa846`); a note-text check (Increment 4 draft). All replaced.
+- **Affects:** Increment 4; D-016.
+
+### D-037 Keep the new limit names and the unused limits
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** The new limit names are kept. `charge_to_shock_seconds` and every other unused
+  limit stay empty, each with a note that no rule uses it yet.
+- **Resolved:** OQ-034, OQ-035.
+
+### D-038 No shared schema changes
+- **Date / by / status:** 2026-10-10 · agent proposal approved by Arnikan · approved
+- **Decision:** The shared event and rule-result formats are not changed. Extra detail (failure
+  codes, flags, coverage) stays inside the rule engine.
+- **Reason:** Ananth and Sanjeevan depend on the shared formats.
+
+### D-045 Existing result statuses only
+- **Date / by / status:** 2026-10-10 · agent proposal approved by Arnikan · approved
+- **Decision:** Pass – Direct, Pass – Inferred and Fail use their existing statuses. Unable to
+  Verify, "not evaluable" and "pending" all use `unable_to_assess`, told apart by their reason
+  and flags.
+- **Affects:** all rules; P-014.
+
+### D-049 Missing settings are errors, not silent defaults
+- **Date / by / status:** 2026-10-10 · agent proposal approved by Arnikan · approved
+- **Decision:** Every engine setting must be present in config, and a missing or mistyped
+  setting stops the run with a clear message.
+- **Reason:** A silent default would change results without anyone noticing.
+
+### D-050 Rejections and anomalies have stable codes
+- **Date / by / status:** 2026-10-10 · agent proposal approved by Arnikan · approved
+- **Decision:** Every rejection, anomaly and flag has a stable code, listed in
+  [anomalies.md](anomalies.md) and in [decision_flow.yaml](decision_flow.yaml), and checked by
+  a test.
+
+---
+
+## Working method
+
+### D-022 The shared contract test is updated as rules change
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** The rule count in `tests/test_pipeline_contracts.py` was changed from 14 to 16.
+  It is updated whenever rules are added or removed, and every change is logged.
+- **Alternatives considered:** Generalising the test (AI recommendation), rejected.
+
+### D-026 No Claude attribution in commits
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** Commit messages carry no Co-Authored-By or other AI attribution. AI use is
+  disclosed in [ai_usage_log.md](ai_usage_log.md). Commit messages are shown before
+  committing.
+
+### D-046 Environment and dependencies
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** All commands run in `.venv` (Python 3.11). No new heavy dependencies. Work
+  happens on the `feature/rule-engine` branch.
+
+### D-048 Charging-sound packages are not installed locally
+- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Decision:** The one charging-sound test that is skipped locally is run by CI.
+- **Resolved:** OQ-031.

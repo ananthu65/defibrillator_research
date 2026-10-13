@@ -1,0 +1,37 @@
+# Rule engine: status of each rule
+
+One row per rule, in report (display) order. **Status:** `pending` (not built), `built` (code
+exists), `tested` (built and covered by the scenario tests). Every rule is also `pending` in
+`configs/rules.yaml` until the supervisor approves its definition, and it is not counted until
+then (D-043).
+
+Shared steps used by every rule: P-014 (rule decision ladder) and P-008 (what a missing event
+means). Failure codes are listed in [anomalies.md](anomalies.md).
+
+| Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
+|---|---|---|---|---|---|---|---|
+| **R1** Gel applied twice | Gel is applied twice, as two separate applications at least a minimum gap apart, within the approved period. Order versus paddle placement is not checked (D-018) | gel applied (every occurrence) | P-014, P-008 | `missing`, `applied_once`, `outside_time_period` | 17 | pending | OQ-016 (period), OQ-021 (more than twice), OQ-018 (gap) |
+| **R2** Second paddle taken after the first is placed | First paddle taken → first paddle placed firmly → second paddle taken (D-051) | first paddle taken, first placement, second paddle taken | P-014, P-012, P-008 | `simultaneous`, `taken_before_first_placed`, `first_missing` | 11 | pending | OQ-008 (tag dropped from timelines), OQ-022 |
+| **R8** Apical before sternal | Apical placed before sternal. With one zone visible, inferred from the first placement (D-013); inferred mistakes undecided (D-015) | apical and sternal placements, first placement, zone visibility | P-015, P-012, P-007 | `wrong_order`, `simultaneous` | 12 | pending | OQ-004, OQ-005, OQ-006, OQ-007, OQ-015 |
+| **R3** Paddles firmly on chest | Both paddles stable in their zones before the shock; otherwise Pass – Inferred if the shock on screen or the paddle removal is confirmed | paddles firmly on chest, shock time | P-016, P-009, P-008 | `not_in_zone`, `placed_after_shock` | 15 | pending | OQ-012, OQ-022 |
+| **R4** Both discharge buttons pressed | Both buttons pressed after placement and before the shock; otherwise inferred as for R3 | buttons pressed, placement, shock time | P-016, P-009, P-008 | `before_placement`, `not_pressed` | 16 | pending | OQ-023 |
+| **R5** Shock confirmed on screen | One new shock indication after the preceding steps | shock on screen | P-009, P-005, P-014 | `missing`, `wrong_order` | 13 | pending | OQ-013 |
+| **R6** Paddles removed after shock | Removal after the shock | paddle removal, shock time | P-009, P-014, P-008 | `removed_before_shock`, `missing` | 14 | pending | OQ-016 (limit, if any) |
+| **A1** Oxygen away | Command given before the shock | oxygen-away command, shock time | P-010, P-014, P-008 | `missing`, `after_shock` | 18 | pending | OQ-010 |
+| **A2** Continue compressions | Command given during preparation, before "stop" (A4 owns stop-before-continue, D-027) | continue command (including resolved "resume"), stop time | P-011, P-012, P-008 | `missing`, `wrong_stage` | 19 | pending | OQ-009, OQ-010 |
+| **A3** All stand clear | Command given before the shock | stand-clear command, shock time | P-010, P-014, P-008 | `missing`, `after_shock` | 18 | pending | OQ-010 |
+| **A4** Stop compressions | Command before the shock, after "continue" | stop command, continue time, shock time | P-012, P-010, P-008 | `missing`, `after_shock`, `wrong_order` | 19 | pending | OQ-009, OQ-010, OQ-016 |
+| **A5** Shock command | Verbal shock command before or at the shock | shock command, shock time | P-010, P-014, P-008 | `missing` | 20 | pending | OQ-009, OQ-010, OQ-016 |
+| **R7** Compressions restarted promptly | The restart command (the earliest start after the shock, D-025) within the approved delay | restart time, shock time | P-012, P-011, P-009, P-008 | `missing`, `before_shock`, `too_late` | 21 | pending | OQ-016, OQ-009, OQ-039 |
+| **A6** Start or resume compressions promptly | The same check as R7, reported under A6 (D-044) | as R7 | as R7 | as R7 | 21 | pending | as R7 |
+| **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before the shock is a sequence problem (D-025) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
+| **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015, OQ-039 |
+
+## What is built so far (Increments 0–5)
+
+Everything every rule will rely on is built and tested:
+- **Preparation:** P-002 to P-005.
+- **Coverage:** P-006 to P-008.
+- **Procedure context:** P-009 to P-013.
+
+No individual rule is built yet. The rule framework (P-014) comes next, in Increments 6–7.

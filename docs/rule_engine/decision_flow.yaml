@@ -1,0 +1,460 @@
+schema_version: 1
+# Machine-readable description of every decision point (P-xxx) in the rule engine, so diagrams
+# and reports can be generated from it. Readable version: pathways.md. Diagrams: diagrams.md.
+#
+# Each decision point:
+#   id, name, stage, status (built | planned), decides, inputs,
+#   branches: [{condition, outcome, next (optional P-ID), flags, anomalies, rejections, failure_codes}],
+#   config (settings that control it), code (where it lives),
+#   decisions (D-), assumptions (A-), open_questions (OQ-).
+# Every flag, anomaly, rejection and failure code listed here must exist in docs/rule_engine/anomalies.md,
+# and (for built points) in the code; tests/test_rule_engine_docs.py checks this.
+stages: [adapter, preparation, coverage, context, rule, overall_policy, renderer]
+
+decision_points:
+
+  - id: P-001
+    name: Annotation timeline adapter
+    stage: adapter
+    status: planned
+    decides: How a CVAT annotation record becomes a timeline, a header and coverage
+    inputs: [events.jsonl record, zone annotations (OQ-007)]
+    branches:
+      - condition: Record converted
+        outcome: Events plus header analyses_run {video true, audio false}; every result flagged
+        next: P-002
+        flags: [annotation_coverage_assumed]
+      - condition: Zone annotation information missing
+        outcome: Zone coverage left unknown
+        next: P-002
+    config: []
+    code: rules/adapters/annotation.py (Increment 10)
+    decisions: [D-035]
+    assumptions: [A-001, A-015]
+    open_questions: [OQ-007, OQ-037]
+
+  - id: P-002
+    name: Timeline validation
+    stage: preparation
+    status: built
+    decides: Whether the timeline can be assessed at all
+    inputs: [list of shared Event records]
+    branches:
+      - condition: Not a list (number, string, dict)
+        outcome: Rejected, no assessment
+        rejections: [not_a_list]
+      - condition: An item is not a shared Event
+        outcome: Rejected, no assessment
+        rejections: [not_an_event]
+      - condition: An event has no event ID
+        outcome: Rejected, no assessment
+        rejections: [missing_event_id]
+      - condition: Two events share an event ID
+        outcome: Rejected, no assessment
+        rejections: [duplicate_event_id]
+      - condition: More than one non-empty camera angle (events without an angle are ignored)
+        outcome: Rejected, no assessment
+        rejections: [multiple_camera_angles]
+      - condition: More than one recording (task ID)
+        outcome: Rejected, no assessment
+        rejections: [multiple_recordings]
+      - condition: Otherwise (an empty timeline is valid)
+        outcome: Timeline accepted
+        next: P-003
+    config: []
+    code: rules/prepare.py (_validated)
+    decisions: [D-032, D-050]
+    assumptions: [A-012, A-013]
+    open_questions: [OQ-038]
+
+  - id: P-003
+    name: Vocabulary mapping
+    stage: preparation
+    status: built
+    decides: Which canonical event each source label means
+    inputs: [event source, event label, vocabulary.yaml]
+    branches:
+      - condition: Label is mapped for its source
+        outcome: Renamed to the canonical name; original label kept
+        next: P-004
+      - condition: Label is ambiguous (resolve_by_shock), e.g. resume_compressions_command
+        outcome: Kept with its label, listed as unresolved; resolved later
+        next: P-011
+      - condition: Label is known but unused (e.g. object_visible:*)
+        outcome: Kept, not used by any rule, not flagged
+      - condition: Label is not in the vocabulary
+        outcome: Kept, cannot count as evidence, warning raised
+        anomalies: [unknown_labels_present]
+    config: [configs/rule_engine/vocabulary.yaml]
+    code: rules/vocabulary.py (Vocabulary.map_events)
+    decisions: [D-012, D-017, D-020, D-029, D-047]
+    assumptions: [A-003, A-004, A-005]
+    open_questions: [OQ-004, OQ-008, OQ-009, OQ-010]
+
+  - id: P-004
+    name: Confidence exclusion
+    stage: preparation
+    status: built
+    decides: Whether an event is used as evidence
+    inputs: [event confidence, event source, per-source threshold]
+    branches:
+      - condition: The event's source has no threshold
+        outcome: Rejected, no assessment
+        rejections: [no_confidence_threshold]
+      - condition: Confidence at or above the threshold (a threshold of 0 keeps everything)
+        outcome: Used as evidence
+        next: P-005
+      - condition: Confidence below the threshold
+        outcome: Excluded; recorded with its confidence and threshold; never used as evidence, but never absence either
+        next: P-008
+    config: [engine.yaml confidence_thresholds]
+    code: rules/prepare.py (prepare_timeline)
+    decisions: [D-010, D-021]
+    assumptions: [A-002, A-011]
+    open_questions: [OQ-018, OQ-019]
+
+  - id: P-005
+    name: Anomaly detection
+    stage: preparation
+    status: built
+    decides: Which data problems the report and rules must take into account
+    inputs: [confident events, unknown labels, simultaneous_window_seconds]
+    branches:
+      - condition: More than one confident shock indication
+        outcome: Anomaly; within the simultaneous window it is marked possibly the same shock detected twice; not merged
+        next: P-009
+        anomalies: [multiple_shocks]
+      - condition: The same canonical event comes from human annotation and a model
+        outcome: Anomaly (flag only)
+        anomalies: [mixed_evidence_sources]
+      - condition: Any unknown label
+        outcome: Anomaly listing the labels
+        anomalies: [unknown_labels_present]
+      - condition: None of the above
+        outcome: No anomaly
+    config: [engine.yaml simultaneous_window_seconds]
+    code: rules/prepare.py (_anomalies)
+    decisions: [D-029, D-030, D-031]
+    assumptions: [A-006]
+    open_questions: [OQ-019]
+
+  - id: P-006
+    name: Header validation
+    stage: coverage
+    status: built
+    decides: Whether the timeline header can be trusted
+    inputs: [timeline header, prepared events, duration_tolerance_seconds]
+    branches:
+      - condition: No header
+        outcome: Accepted; all coverage unknown
+        next: P-007
+      - condition: Header malformed (unknown keys, bad duration, bad analyses_run, unknown scope or status)
+        outcome: Rejected, no assessment
+        rejections: [invalid_header]
+      - condition: Header contradicts the events (camera, recording, an event ending after duration + tolerance, analysis said not to run but its events exist)
+        outcome: Rejected, no assessment
+        rejections: [header_mismatch]
+      - condition: Header valid and consistent
+        outcome: Accepted
+        next: P-007
+    config: [engine.yaml duration_tolerance_seconds, engine.yaml coverage_policy.regions]
+    code: rules/coverage.py (TimelineHeader.from_dict, _check_header)
+    decisions: [D-009, D-034]
+    assumptions: [A-002]
+    open_questions: [OQ-020]
+
+  - id: P-007
+    name: Coverage status lookup
+    stage: coverage
+    status: built
+    decides: Whether the evidence for an event could have been observed (covered, not covered, unknown)
+    inputs: [event name, header, camera region of the event, source of its modality, optional time window]
+    branches:
+      - condition: No header
+        outcome: unknown
+        next: P-008
+      - condition: Header states coverage for the event's region (most specific)
+        outcome: That status
+        next: P-008
+      - condition: Header states coverage for the single source of the event's modality
+        outcome: That status
+        next: P-008
+      - condition: Header states coverage for the modality, or analyses_run says whether it ran
+        outcome: covered if it ran, not covered if not, or the stated status
+        next: P-008
+      - condition: Nothing stated for this event
+        outcome: unknown
+        next: P-008
+    config: [engine.yaml coverage_policy.regions]
+    code: rules/coverage.py (Coverage.status)
+    decisions: [D-009, D-036]
+    assumptions: [A-007, A-008, A-009]
+    open_questions: [OQ-007, OQ-020]
+
+  - id: P-008
+    name: Missing-event outcome
+    stage: coverage
+    status: built
+    decides: What it means that a required event is absent from the usable evidence
+    inputs: [event name, coverage status, excluded low-confidence events, coverage policy]
+    branches:
+      - condition: A low-confidence event of the same name was excluded (or a low-confidence ambiguous command that could have been it, P-013)
+        outcome: Unable to Verify, never Fail (not configurable)
+        flags: [low_confidence_evidence]
+      - condition: Coverage covered
+        outcome: Fail (default; overridable per region, source or modality)
+      - condition: Coverage not covered
+        outcome: Unable to Verify (default; overridable)
+      - condition: Coverage unknown
+        outcome: Unable to Verify (interim, undecided)
+        flags: [coverage_policy_undecided]
+    config: [engine.yaml coverage_policy.outcomes, engine.yaml coverage_policy.by_region, engine.yaml coverage_policy.by_source, engine.yaml coverage_policy.by_modality]
+    code: rules/coverage.py (Coverage.missing)
+    decisions: [D-004, D-007, D-008, D-010]
+    assumptions: []
+    open_questions: [OQ-001]
+
+  - id: P-009
+    name: Shock time
+    stage: context
+    status: built
+    decides: When the shock happened, if that can be established
+    inputs: [multiple_shocks anomaly, confident shock indications, confident paddle removals]
+    branches:
+      - condition: multiple_shocks anomaly present
+        outcome: No shock time (not guessed, even if a removal exists); both shocks listed as candidates
+        flags: [multiple_shocks]
+      - condition: One confident shock on screen
+        outcome: Shock time is its start
+        next: P-010
+      - condition: No shock on screen, but a confident paddle removal
+        outcome: Shock time is the first removal; every timing result using it is flagged
+        next: P-010
+        flags: [shock_time_from_removal, multiple_candidates]
+      - condition: Neither
+        outcome: No shock time; shock-dependent rules report not evaluable because of R5
+        flags: [no_shock]
+    config: []
+    code: rules/context.py (_shock_anchor)
+    decisions: [D-023, D-030, D-039, D-040]
+    assumptions: [A-006]
+    open_questions: []
+
+  - id: P-010
+    name: Phase of a time
+    stage: context
+    status: built
+    decides: Whether a moment is before, at or after the shock
+    inputs: [time, shock time]
+    branches:
+      - condition: No shock time
+        outcome: No phase
+      - condition: Before the shock time
+        outcome: before_shock
+      - condition: Equal to the shock time
+        outcome: at_shock
+      - condition: After the shock time
+        outcome: after_shock
+    config: []
+    code: rules/context.py (ProcedureContext.phase_of)
+    decisions: [D-011]
+    assumptions: []
+    open_questions: []
+
+  - id: P-011
+    name: Command resolution
+    stage: context
+    status: built
+    decides: Whether an ambiguous command (resume compressions) means continue or start
+    inputs: [command start time, shock time and how it was established, simultaneous_window_seconds]
+    branches:
+      - condition: No shock time (no shock, or multiple shocks)
+        outcome: Unresolved
+        flags: [no_shock_time]
+      - condition: Shock time from removal and the command is before the removal
+        outcome: Unresolved
+        flags: [command_before_removal, shock_time_from_removal]
+      - condition: Within simultaneous_window_seconds of the shock time
+        outcome: Unresolved
+        flags: [command_near_shock]
+      - condition: Before the shock
+        outcome: continue_compressions_command
+        next: P-012
+      - condition: After the shock
+        outcome: start_compressions_command (carries shock_time_from_removal under the fallback)
+        next: P-012
+        flags: [shock_time_from_removal]
+    config: [vocabulary.yaml resolve_by_shock, engine.yaml simultaneous_window_seconds]
+    code: rules/context.py (_resolve)
+    decisions: [D-024, D-041, D-017]
+    assumptions: [A-010]
+    open_questions: [OQ-009]
+
+  - id: P-012
+    name: Anchor selection
+    stage: context
+    status: built
+    decides: Which event provides each key time (first placement, apical and sternal placement, continue, stop, start)
+    inputs: [confident events after command resolution, shock time, excluded events]
+    branches:
+      - condition: One candidate
+        outcome: That event's start time
+      - condition: Several candidates
+        outcome: The earliest; all candidates recorded
+        flags: [multiple_candidates]
+      - condition: No confident candidate, but a low-confidence one was excluded
+        outcome: Absent, because the evidence was weak
+        flags: [low_confidence_evidence]
+      - condition: No candidate at all
+        outcome: Absent, with a reason
+      - condition: Start command at or before the shock (start anchor only)
+        outcome: Does not count as the restart; listed as ineligible for A7 to report
+        flags: [start_command_before_shock]
+      - condition: No shock time (start anchor only)
+        outcome: Start anchor absent
+        flags: [no_shock_time]
+      - condition: An ambiguous command is unresolved (continue and start anchors)
+        outcome: Anchor may be incomplete
+        flags: [unresolved_commands]
+    config: []
+    code: rules/context.py (_earliest, _start_anchor)
+    decisions: [D-025, D-040, D-012]
+    assumptions: [A-014]
+    open_questions: [OQ-022, OQ-039]
+
+  - id: P-013
+    name: Low-confidence ambiguous command as evidence
+    stage: context
+    status: built
+    decides: Whether an excluded ambiguous command could have been the missing event
+    inputs: [excluded ambiguous commands, their resolution]
+    branches:
+      - condition: It would resolve to the missing event, or cannot be resolved
+        outcome: Missing event is Unable to Verify, never Fail
+        flags: [low_confidence_evidence]
+      - condition: It would resolve to the other meaning
+        outcome: Not evidence for this event
+        next: P-008
+    config: []
+    code: rules/context.py (ProcedureContext.missing)
+    decisions: [D-010]
+    assumptions: []
+    open_questions: []
+
+  - id: P-014
+    name: Rule decision ladder
+    stage: rule
+    status: planned
+    decides: The result of one rule (Increments 6, 7 and 11 to 23)
+    inputs: [rule definition and status, results of rules it depends on, context]
+    branches:
+      - condition: Rule not approved (pending)
+        outcome: Reported as pending, not counted
+      - condition: A rule-result dependency failed or could not be evaluated
+        outcome: Not evaluable because of that rule (one mistake reported once)
+      - condition: Required facts absent (e.g. no shock time)
+        outcome: Not evaluable because of the step that provides them, with its flags
+      - condition: Direct evidence present, in order and in time
+        outcome: Pass – Direct
+      - condition: Direct evidence shows the mistake clearly
+        outcome: Fail with the rule's failure code
+      - condition: Direct evidence weak but an approved inference applies
+        outcome: Inference
+        next: P-015
+      - condition: Required event missing
+        outcome: Missing-event outcome
+        next: P-008
+    config: [configs/rules.yaml rules]
+    code: rules/checks.py, rules/registry.py, rules/engine.py (Increments 6 and 7)
+    decisions: [D-001, D-002, D-003, D-043, D-045]
+    assumptions: [A-016]
+    open_questions: []
+
+  - id: P-015
+    name: R8 apical-before-sternal inference
+    stage: rule
+    status: planned
+    decides: Which paddle was placed first (Increment 12)
+    inputs: [apical and sternal placement times, first placement time, zone visibility]
+    branches:
+      - condition: Both zones visible
+        outcome: Compare the placement times; Pass – Direct, or Fail
+        failure_codes: [wrong_order, simultaneous]
+      - condition: One zone visible and its placement matches the first placement
+        outcome: That paddle was first (apical → Pass – Inferred; sternal → inferred mistake)
+        flags: [inferred_fail_policy_undecided]
+      - condition: One zone visible and its placement is clearly after the first placement
+        outcome: The other paddle was first (inferred)
+        flags: [inferred_fail_policy_undecided]
+      - condition: The visible paddle is placed clearly before the first placement
+        outcome: Unable to Verify
+        flags: [contradictory]
+      - condition: Not determinable, fallback off
+        outcome: Unable to Verify
+      - condition: Not determinable, fallback on
+        outcome: Assumed apical first; not counted; to be checked by the evaluator
+    config: [engine.yaml placement_match_window_seconds, engine.yaml assume_first_taken_is_apical, engine.yaml inferred_fail_outcome]
+    code: rules/video_rules.py (Increment 12)
+    decisions: [D-013, D-014, D-015]
+    assumptions: [A-009]
+    open_questions: [OQ-004, OQ-005, OQ-006]
+
+  - id: P-016
+    name: R3/R4 inferred pass from shock or removal
+    stage: rule
+    status: planned
+    decides: Whether placement (R3) or button pressing (R4) can pass by inference (Increments 15 and 16)
+    inputs: [direct placement or button evidence, confident shock or removal]
+    branches:
+      - condition: Direct evidence in time
+        outcome: Pass – Direct
+      - condition: Direct evidence shows the mistake
+        outcome: Fail
+        failure_codes: [not_in_zone, placed_after_shock, before_placement, not_pressed]
+      - condition: Direct evidence weak, shock on screen or removal confidently confirmed
+        outcome: Pass – Inferred, naming the supporting event
+      - condition: Neither
+        outcome: Missing-event outcome
+        next: P-008
+    config: []
+    code: rules/video_rules.py (Increments 15 and 16)
+    decisions: [D-004]
+    assumptions: []
+    open_questions: [OQ-012]
+
+  - id: P-017
+    name: Overall result policy
+    stage: overall_policy
+    status: planned
+    decides: The overall Pass or Fail of the procedure (Increment 8)
+    inputs: [counted rule results]
+    branches:
+      - condition: Any counted rule failed
+        outcome: Fail
+      - condition: No Fail, at least one Unable to Verify
+        outcome: Fail or faculty review (setting unable_to_verify_outcome, undecided)
+      - condition: All counted rules pass (direct or inferred)
+        outcome: Pass
+    config: [engine.yaml unable_to_verify_outcome]
+    code: rules/policy.py (Increment 8)
+    decisions: [D-001, D-019, D-042, D-043]
+    assumptions: []
+    open_questions: [OQ-002]
+
+  - id: P-018
+    name: Report and checklist rendering
+    stage: renderer
+    status: planned
+    decides: How results are presented (JSON report, evaluator checklist, feedback handover; Increments 9 and 25)
+    inputs: [rule results, overall result, anomalies, checklist mapping]
+    branches:
+      - condition: Annotation timeline
+        outcome: Report and every result carry the development flag
+        flags: [annotation_coverage_assumed]
+      - condition: Model timeline
+        outcome: Report without the development flag
+    config: [configs/rule_engine/checklist.yaml (planned)]
+    code: rules/render.py (Increments 9 and 25)
+    decisions: [D-035]
+    assumptions: [A-001]
+    open_questions: [OQ-017, OQ-036]

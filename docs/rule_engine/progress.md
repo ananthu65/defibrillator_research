@@ -1657,3 +1657,83 @@ Expected output:
 presence, count, order, time limit, simultaneity, inference and dependency helpers. These use
 `ctx.missing()`, copy anchor and `Elapsed` flags onto results, and report "timing not checked"
 for null limits.
+
+---
+
+## Answers to OQ-029/OQ-030, and the project documentation set (2026-10-13)
+
+From this entry on, progress.md is the chronological log. It links to register IDs (D, A, OQ, P)
+instead of repeating their content.
+
+### A. Context changes (answers to plan questions 18 and 19)
+- **OQ-029 (was E-18) → D-024:** when the shock time comes from removal, every "resume
+  compressions" before the removal stays unresolved, flagged `command_before_removal` (P-011).
+  `rules/context.py` `_resolve` now checks this before the near-shock window.
+- **OQ-030 (was E-19) → D-025:** the start anchor is the earliest start command **after** the
+  shock (P-012, new `_start_anchor`).
+  - **At or before the shock:** a start command does not count. It is listed in the new
+    `Anchor.ineligible`, and the anchor is flagged `start_command_before_shock`, for A7 to
+    report.
+  - **No shock time:** the start anchor is absent (`no_shock_time`, plus the shock flags).
+  - **Under the removal fallback:** the start anchor carries `shock_time_from_removal`.
+- **Consequence:** under the removal fallback, the stop → start interval (A8) is now flagged
+  `shock_time_from_removal` too, because which start counts depends on the shock time. One
+  Increment 5 test asserted the opposite, and was updated with that reason.
+- **Agent choice to confirm (A-014, new OQ-039):** under the fallback, an explicit start
+  command before the removal is treated as before the shock, so it does not count. It is
+  flagged.
+- **Code:** `context.FLAGS` and `coverage.FLAGS` now list every flag, for the documentation
+  test.
+- **Tests:** `tests/test_rule_engine_context.py` 29 → 39.
+  - 3 tests for D-024: before removal → unresolved; just after removal → near shock; a real
+    shock is unaffected.
+  - 7 tests for D-025: the earliest after the shock; a start before the shock doesn't count; a
+    start only before the shock; a start exactly at the shock; no shock time (no shock, and
+    multiple shocks); the fallback flag; a weak start.
+
+### B. Documentation set (backfilled from Step 0 to Increment 5)
+
+| Document | Contents |
+|---|---|
+| [decisions.md](decisions.md) | D-001 to D-052: every decision so far, with date, decider, status, reason, alternatives, what it affects, and the question it resolved |
+| [assumptions.md](assumptions.md) | A-001 to A-016, including A-001 (annotation covers video, development only), A-002 (placeholder values), A-003 (provisional command names) |
+| [open_questions.md](open_questions.md) | OQ-001 to OQ-039: the single register, migrated from plan section E (`E-1`…`E-19`), the increment reports (`IncN-Qn`) and the brief's §9. It has a summary table, owner sections with **For the supervisor** first, and answered questions kept with their decision |
+| [decision_flow.yaml](decision_flow.yaml) | P-001 to P-018: 13 built decision points (P-002 to P-013) and 5 planned (P-001, P-014 to P-018) |
+| [pathways.md](pathways.md) | The readable version of every decision point, plus 13 worked pathways (W-1 to W-13) |
+| [rules_status.md](rules_status.md) | All 16 rules: logic, events, decision points, failure codes, increment, status (all pending), and the questions each is waiting on |
+| [methods.md](methods.md) | Architecture, techniques and why, how-tos, and the definition of done |
+| [diagrams.md](diagrams.md) | Seven Mermaid diagrams (a) to (g), labelled with P-IDs, with planned parts dashed |
+
+- **New test:** `tests/test_rule_engine_docs.py`, 11 tests.
+  - Every flag, anomaly and rejection code raised in code is in `decision_flow.yaml`, and the
+    reverse (planned points excepted).
+  - Every listed code is in `anomalies.md`.
+  - Every D/A/OQ/P ID referenced in the docs, `rules/` or the rule-engine tests exists exactly
+    once.
+  - The summary table matches the entries, and every answered question names its decision.
+  - **Checked by breaking it on purpose:** dropping a code from the YAML, or referencing an
+    unknown OQ, makes it fail.
+- **`implementation_plan.md`:**
+  - Section E now points to `open_questions.md`; the old numbers survive in its "Old no."
+    column.
+  - Section C has the new definition of done (full text in `methods.md` §4).
+- **`anomalies.md`:** the new flags `command_before_removal` and `start_command_before_shock`;
+  the updated `no_shock_time`; a new section of planned rule failure codes (from the brief); and
+  links to the P-IDs.
+
+### Open questions in this step
+- **New:** OQ-039 (start command before the removal under the fallback). Newly registered from
+  the brief §9 list, which was not in plan section E: OQ-036 (checklist format), OQ-037 (model
+  output formats), OQ-038 (final camera angle).
+- **Answered:** OQ-029 → D-024, OQ-030 → D-025.
+
+### Documents updated
+`rules/context.py`, `rules/coverage.py`, `tests/test_rule_engine_context.py`,
+`tests/test_rule_engine_docs.py` (new); `decisions.md`, `assumptions.md`,
+`open_questions.md`, `decision_flow.yaml`, `pathways.md`, `rules_status.md`, `methods.md`,
+`diagrams.md` (all new); `anomalies.md`, `implementation_plan.md`, `progress.md`,
+`ai_usage_log.md`.
+
+### Tests
+Full suite: **248 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.

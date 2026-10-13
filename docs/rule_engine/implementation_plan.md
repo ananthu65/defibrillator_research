@@ -221,6 +221,11 @@ stops until Arnikan says "continue". **Commits (updated 2026-10-10):** the agent
 line or any other Claude attribution. AI use is disclosed in `docs/rule_engine/ai_usage_log.md`
 instead. Each increment also adds a short row to the coding-agent table of that log: what the
 agent produced, and what Arnikan decided, changed or rejected.
+**Definition of done (from 2026-10-13):** see [methods.md §4](methods.md#4-definition-of-done-for-every-increment).
+In short: decision points in `decision_flow.yaml` and `pathways.md`, decisions, assumptions and
+open questions in their registers (answered ones closed with their decision ID), rule status,
+diagrams and `anomalies.md` all kept current. Each report lists the documents updated and every
+new OQ-ID.
 Rule-engine tests go in flat files `tests/test_rule_engine_*.py` (matching the existing layout);
 fixtures go in `tests/fixtures/rule_engine/`.
 
@@ -274,76 +279,16 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 
 ## E. Open questions
 
-1. Final coverage policy for `unknown` (interim: Unable to Verify, flagged
-   `coverage_policy_undecided`, kept as a config value).
-2. Unable to Verify overall: Fail or faculty review.
-3. *(Partly resolved)* "First paddle placed" is CVAT `first_paddle_firmly_on_the_chest`. CVAT
-   has no separate apical or sternal placement tags, so `apical_paddle_placed` and
-   `sternal_paddle_placed` stay placeholders. *(Resolved: which paddle was first)* R8 uses
-   direct comparison or the one-visible-zone inference (section B, R8 logic). Still open:
-   which source emits per-paddle placement events (see `upstream_requirements.md`).
-3a. **Does an inferred Fail count as Fail?** One setting, `inferred_fail_outcome`, currently
-   undecided (interim: Unable to Verify, flagged `inferred_fail_policy_undecided`).
-3b. Placement-match window value for R8 (placeholder 0.5 s), and whether the
-   "first paddle taken is apical" fallback should ever be switched on.
-3c. Where per-recording zone visibility comes from for annotation timelines: `events.jsonl`
-   has no zone tracks. Options: add zone-annotated flags to `events.jsonl` in
-   `annotation/build_yolo_video_dataset.py` (Arnikan's annotation area), or a separate
-   per-task manifest. Until then, zone coverage is `unknown`.
-3d. `EVENT_LABELS` must include `first_paddle_firmly_on_the_chest` in
-   `build_yolo_video_dataset.py` (and `create_grouped_video_split.py`), not only the audit
-   list, or `events.jsonl` drops it.
-4. Missing audio command events (continue, stop, shock, start). `pipeline.yaml` maps "continue
-   compressions" to `resume_compressions_command`. We do not change `configs/pipeline.yaml`;
-   Arnikan raises this with Sanjeevan.
-4a. All command names and phrases are provisional until the medical-faculty supervisor
-   confirms them (marked `provisional: true` in `vocabulary.yaml`).
-5. *(Resolved)* A7 checks order only; A4 owns stop-before-continue.
-6. R3 `not_in_zone`: no event currently signals wrong placement. Which evidence should be used?
-7. R5 "after the preceding steps": which steps (placement only, or placement + buttons)?
-8. *(Resolved 2026-10-10)* A8 5 s limit ("Stop CPR" → "Start CPR") is **approved** by the
-   supervisor, Dr. Senani Samarasinghe (approval date not recorded); provided by Arnikan on
-   2026-10-10, source: team discussion. A8's result will not call the limit unapproved.
-   Still open: final IDs for R8 and A8.
-9. Clinical limits still null: R1 period, R7/A6, A4, A5 tolerance, R6 removal limit.
-10. The pipeline report will not show the overall result or checklist unless `pipeline/run.py`
-    calls `rules.engine.assess()`. This needs Ananth.
-11. Engineering placeholder values (section D).
-12. **Confidence thresholds:** which side applies them, upstream or the rule engine, so they
-    are not applied twice with different values? (The rule engine's check is a safety net, and
-    a threshold of 0 disables it.)
-13. **Timeline header:** can upstream provide `recording_id`, `camera_angle`,
-    `duration_seconds` and `analyses_run` with each timeline, and in what format? Without it,
-    "no audio events" cannot be told apart from "audio analysis didn't run".
-14. **Supervisor: repeated actions.**
-    - 14a. Gel applied **more than twice**: Fail, or "at least twice" passes?
-    - 14b. Paddles **lifted and placed again** before the shock: acceptable, or a mistake? Which
-      placement counts for R2, R3 and R8?
-    - 14c. Discharge buttons **pressed more than once**: acceptable, or a mistake? Which press
-      counts for R4?
-15. *(Decided, Increment 3)* Duplicate shocks are not merged; `multiple_shocks` records whether
-    they fall within `simultaneous_window_seconds`. `mixed_evidence_sources` stays a flag. One
-    camera angle and one task ID per timeline stays a hard error (events with no angle do not
-    count as a second angle).
-16. *(Decided 2026-10-13: no time windows now)* Coverage stays per recording. `status()` and
-    `missing()` take an optional `window=(start, end)`, so windows can be added later inside
-    `coverage.py` without changing rules. Revisit if upstream starts sending intervals (for
-    example "audio unclear from 40 s to 55 s").
-17. *(Decided 2026-10-13)* The annotation adapter declares
-    `analyses_run: {video: true, audio: false}`. `video: true` is a **development assumption**:
-    annotators tag only what is visible from that angle, so a missing tag may mean "not
-    visible". Every report built from an annotation timeline carries the flag
-    `annotation_coverage_assumed`, so its results are never mistaken for real assessments
-    (Increment 10).
-18. **Command between shock and removal under the fallback:** when the shock time comes from
-    paddle removal, a `resume_compressions_command` said after the real shock but before the
-    removal is classified as *continue*, because it is before the removal time. The resolution
-    carries `shock_time_from_removal`, so the rule can report it. Should such commands stay
-    unresolved instead?
-19. **Which start command counts for R7/A8?** The `start_compressions` anchor is the earliest
-    start command overall, even one said before the shock. Rules R7/A6 and A8 will decide which
-    occurrence counts (for example, the first one after the shock). Confirm when those rules are
-    built.
+Open questions are kept in a single register: **[open_questions.md](open_questions.md)**
+(OQ-001 onwards), grouped by owner with a "For the supervisor" section first. The register keeps
+each question's former number from this section (`E-1` to `E-19`, including the lettered
+sub-items) in its "Old no." column, so earlier references in [progress.md](progress.md) can still
+be followed. Answered questions stay in the register, linked to their decision in
+[decisions.md](decisions.md).
+
+Other registers: [decisions.md](decisions.md) (D), [assumptions.md](assumptions.md) (A),
+[decision_flow.yaml](decision_flow.yaml) and [pathways.md](pathways.md) (decision points, P),
+[rules_status.md](rules_status.md), [methods.md](methods.md), [diagrams.md](diagrams.md).
 
 ---
 
