@@ -485,19 +485,19 @@ decision_points:
     open_questions: [OQ-002]
 
   - id: P-018
-    name: Report and checklist rendering
+    name: Checklist rendering and feedback handover
     stage: renderer
     status: planned
-    decides: How results are presented (JSON report, evaluator checklist, feedback handover; Increments 9 and 25)
+    decides: How results are presented to the evaluator (checklist) and handed to the feedback module (Increment 25); the JSON report is P-027
     inputs: [rule results, overall result, anomalies, checklist mapping]
     branches:
       - condition: Annotation timeline
-        outcome: Report and every result carry the development flag
+        outcome: Checklist and every result carry the development flag
         flags: [annotation_coverage_assumed]
       - condition: Model timeline
-        outcome: Report without the development flag
+        outcome: Checklist without the development flag
     config: [configs/rule_engine/checklist.yaml (planned)]
-    code: rules/render.py (Increments 9 and 25)
+    code: rules/render.py (Increment 25)
     decisions: [D-035]
     assumptions: [A-001]
     open_questions: [OQ-017, OQ-036]
@@ -683,6 +683,9 @@ decision_points:
         next: P-020
       - condition: The registered rule raises, or returns something invalid
         outcome: engine_error with the error message; every other rule still runs; dependents not evaluable; overall incomplete
+      - condition: A shared-contract path rule (module:function) reports Fail (the shared RuleResult has no failure code)
+        outcome: Fail with failure code unspecified
+        failure_codes: [unspecified]
       - condition: A shared-contract path rule (module:function) breaks the contract
         outcome: The run stops (shared contract, docs/contracts.md)
     config: [configs/rules.yaml rules]
@@ -690,3 +693,26 @@ decision_points:
     decisions: [D-002, D-003, D-006, D-043, D-044, D-063, D-064]
     assumptions: [A-016]
     open_questions: []
+
+  - id: P-027
+    name: JSON report rendering
+    stage: renderer
+    status: built
+    decides: What the JSON report contains; its structure is the versioned output contract (output_contract.md)
+    inputs: [Assessment (rule outcomes, overall result, prepared timeline, procedure context, config)]
+    branches:
+      - condition: An assessment was produced
+        outcome: Report with report_version, overall result, every enabled rule in display order, timeline, context and configuration
+      - condition: The overall result carries development_data
+        outcome: The report's top-level development_data is true (not a real assessment, D-066)
+      - condition: No assessment (configuration or timeline rejected, or an unreadable file)
+        outcome: No report; rules.run prints the error and exits with code 2
+      - condition: A report field or code is added, removed or renamed, or its meaning changes
+        outcome: report_version and output_contract.md change together, with a changelog line (D-070)
+      - condition: A code listed as planned becomes built
+        outcome: Version unchanged; its status in output_contract.md becomes built
+    config: []
+    code: rules/render.py (report), rules/run.py (command line)
+    decisions: [D-066, D-070]
+    assumptions: []
+    open_questions: [OQ-017, OQ-045]

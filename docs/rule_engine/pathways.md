@@ -250,7 +250,7 @@ elapsed times and checks it used.
 | Direct evidence weak **or missing**; shock on screen or removal confirmed | Pass – Inferred (D-057) | — |
 | Neither | → P-008 | — |
 
-### Stage: overall policy (planned)
+### Stage: overall policy
 
 #### P-017 Overall result (built, Increment 8)
 Applied in this order:
@@ -268,12 +268,24 @@ Applied in this order:
 The result explains itself (D-067): the rules that decided it, every named mistake, and the step
 or setting that decided it.
 
-### Stage: renderer (planned)
+### Stage: renderer
 
-#### P-018 Report and checklist (planned, Increments 9 and 25)
+#### P-027 JSON report (built, Increment 9)
+The report's structure, and every result, flag and code in it, is the versioned contract in
+[output_contract.md](output_contract.md) (D-070).
+
 | Condition | Outcome | Flags |
 |---|---|---|
-| Annotation timeline | Development flag on the report and every result | `annotation_coverage_assumed` |
+| An assessment was produced | Report: `report_version`, overall result and explanation, every enabled rule in display order, timeline, context, configuration | — |
+| The overall result is development data | Top-level `development_data: true` (D-066) | `development_data` |
+| No assessment (rejected configuration or timeline, unreadable file) | No report; `rules.run` prints the error and exits with code 2 | — |
+| A report field or code is added, removed or renamed, or its meaning changes | `report_version` and output_contract.md change together, with a changelog line (D-070; OQ-045) | — |
+| A planned code becomes built | Version unchanged; its status in the contract becomes built | — |
+
+#### P-018 Checklist and feedback handover (planned, Increment 25)
+| Condition | Outcome | Flags |
+|---|---|---|
+| Annotation timeline | Development flag on the checklist and every result | `annotation_coverage_assumed` |
 | Model timeline | No development flag | — |
 
 ---
@@ -515,3 +527,13 @@ illustration only.)*
    (Increment 10).
 2. P-017: the result is computed as usual, but marked **development data**, not a real
    assessment (D-066).
+
+### W-34 The command line on a timeline file → JSON report
+*(Built in Increment 9.)*
+1. `python -m rules.run --events timeline.json`. The file is a list of events, or
+   `{"header": {...}, "events": [...]}`. Events without an ID get `event_000001`, … in file order.
+2. P-002 to P-017 run as usual. P-027: the report is written (by default to
+   `data/outputs/rule_engine_report.json`) and the overall result and each rule are printed.
+3. With every rule pending today: **Incomplete**, "rules not yet approved for R1, R2, …".
+4. Had the file held two events with the same ID: P-002 rejects it (`duplicate_event_id`), the
+   error is printed, **no report** is written, and the exit code is 2.

@@ -39,6 +39,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-017 | E-10 | Ananth | Arnikan | open | Pipeline to call the full rule-engine assessment |
 | OQ-020 | E-13 | Ananth | Sanjeevan, Arnikan | open | Timeline header: can it be provided, in what format? |
 | OQ-009 | E-4 | Sanjeevan | Arnikan | open | Missing audio command events |
+| OQ-045 | new (2026-10-14) | Sanjeevan | Arnikan | open | Confirm the output contract's versioning rule |
 | OQ-015 | E-8 | team | supervisor | open | Final IDs for R8 and A8 |
 | OQ-018 | E-11 | team | Ananth, Sanjeevan, Arnikan | open | Engineering placeholder values |
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
@@ -226,6 +227,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   that function exists (Increment 9)?
 - **Affects:** all rules; P-017, P-018.
 - **Interim behaviour:** The pipeline report lists the individual rule results only.
+- **Update 2026-10-14:** The function exists (Increment 9). The call is
+  `rules.render.report(rules.engine.assess(events, config))`, which returns the report described
+  in [output_contract.md](output_contract.md) (P-027). Until the pipeline calls it,
+  `python -m rules.run` produces the same report.
 
 ### OQ-020 Timeline header: can it be provided, and in what format?
 - **Old no.:** E-13 · **Owner:** Ananth · **Also involves:** Sanjeevan (whether audio analysis
@@ -240,7 +245,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ---
 
-## For Sanjeevan (audio)
+## For Sanjeevan (audio and feedback)
 
 ### OQ-009 Missing audio command events
 - **Old no.:** E-4 · **Owner:** Sanjeevan · **Also involves:** Arnikan (vocabulary). The
@@ -251,6 +256,16 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** A2, A4, A5, R7/A6, A7, A8; P-003, P-011.
 - **Interim behaviour:** Placeholder names are ready in the vocabulary. Ambiguous "resume"
   commands are resolved by their position relative to the shock (P-011).
+
+### OQ-045 Confirm the output contract's versioning rule
+- **Old no.:** new (2026-10-14) · **Owner:** Sanjeevan · **Also involves:** Arnikan (rule
+  engine) · **Raised:** 2026-10-14 · **Status:** open
+- **Question:** The feedback module is built against [output_contract.md](output_contract.md).
+  Is this versioning rule what Sanjeevan needs? The version goes up whenever a report field or
+  code is added, removed or renamed, or its meaning changes. A code already listed as planned
+  becoming built does not change the version.
+- **Affects:** P-027; the feedback module and app.
+- **Interim behaviour:** D-070 is applied as written and stays interim until Sanjeevan confirms.
 
 ---
 

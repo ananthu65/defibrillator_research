@@ -542,6 +542,28 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   [anomalies.md](anomalies.md) and in [decision_flow.yaml](decision_flow.yaml), and checked by
   a test.
 
+### D-070 The JSON report is a versioned contract with the feedback module
+- **Date / by / status:** 2026-10-14 · Arnikan; the version triggers are set by Arnikan · interim
+  until Sanjeevan confirms (OQ-045)
+- **Decision:** The report from `rules/render.py` carries `report_version` (now 1).
+  [output_contract.md](output_contract.md) documents its structure and every result, flag and
+  code that the feedback module may receive, with each code's status (built, planned, interim,
+  undecided).
+- **Version triggers:**
+  - The version goes up whenever a report field or a code (overall result, rule kind, flag,
+    anomaly, failure code or rejection) is **added, removed or renamed**, or its **meaning
+    changes**.
+  - A code already listed as planned **becoming built does not** change the version; only its
+    status in the contract changes.
+  - Every version change updates the contract and adds a changelog line.
+- **Reason:** Sanjeevan builds the feedback module against this output. A versioned contract
+  makes every change visible to him instead of silently breaking his code.
+- **How it is kept true:** a test checks that the contract's version equals `report_version`,
+  that its top-level keys and example match a real report, that its result tables match the
+  code, and that it lists every code in [decision_flow.yaml](decision_flow.yaml) and every code
+  the engine raises.
+- **Affects:** P-027; Increment 9 onward. **Open question:** OQ-045.
+
 ---
 
 ## Working method

@@ -2444,3 +2444,145 @@ with 0, and its output still matches the reference. `rules/` imports nothing fro
     Incomplete, not Fail.
   - Updated: the config and policy tests that checked "undecided".
 - **Docs:** D-065, D-069, OQ-044, P-017, `anomalies.md`, `pathways.md`.
+
+---
+
+## Increment 9: JSON report, command line and output contract (2026-10-14)
+
+### What was done
+- **JSON report (P-027):** `rules/render.py` `report(assessment)` turns a whole `Assessment` into
+  plain JSON:
+  - `report_version` (1), `kind`, `development_data`;
+  - `overall`: the result, summary, `decided_by`, flags, timeline anomalies, and the deciding,
+    mistake, incomplete and unverified lists (R7/A6 once);
+  - `rules`: every enabled rule in display order, with title, kind, shared status, reason,
+    failure code, evidence, timestamps, flags, `blocked_by` and `timing_checked`;
+  - `timeline`: events used, excluded low-confidence events, anomalies, and unknown, unused and
+    unresolved labels;
+  - `context`: header, key times (anchors with candidates and flags), command resolutions, zone
+    visibility;
+  - `configuration`: placeholder and undecided settings, time limits with their approval, rule
+    statuses.
+- **Command line:** `python -m rules.run --events <file> [--header file] [--config path]
+  [--output path]`:
+  - Writes the report (default `data/outputs/rule_engine_report.json`) and prints the overall
+    result and one line per rule.
+  - The file can be a list of events or `{"header": ..., "events": [...]}`. Events without an
+    ID get `event_000001`, … in file order.
+  - A rejected configuration or timeline, or an unreadable file: the error is printed, no report
+    is written, and the exit code is 2.
+- **Output contract for Sanjeevan:** [output_contract.md](output_contract.md), version 1. It
+  covers:
+  - the structure, with an example from a real engine run;
+  - every overall result and rule result kind;
+  - every flag, anomaly, failure code and rejection, each with its meaning and status (built,
+    planned, interim, undecided);
+  - a changelog.
+
+  Changes to the output raise the version together with the document (D-070, interim until
+  you review it).
+- **Vocabulary fix (found while building the example):** the 10 canonical video events were not
+  accepted under their own names from source `video`, so a model timeline using the agreed names
+  (D-020) would have shown them as unknown labels. `vocabulary.yaml` now maps them to
+  themselves, and a test checks that every canonical event is accepted from its own modality's
+  source.
+- **`unspecified` failure code made explicit:** a Fail from a shared-contract path rule
+  (`implementation: module:function`) has no failure code. This code already existed inline in
+  the engine. It is now a named constant (`engine.FAILURE_CODES`), listed in P-026 and
+  `anomalies.md`, and checked like the other codes.
+
+### How it was done
+- **Rendering:** the renderer only reads the `Assessment`. It converts dataclasses with
+  `asdict`, and tuples to lists, so the report equals its own JSON round trip. Nothing is
+  recomputed, so the report cannot disagree with the engine.
+- **The command line** reuses `assess()` and `report()`. It applies no source offsets
+  (`pipeline.run` does that); timelines are expected to be already aligned.
+
+### Methods and design choices
+- **One report, the whole assessment:** the report includes context and configuration, not only
+  results. A reviewer or Sanjeevan can then see why, for example, a time was flagged, and which
+  settings were still undecided when the report was produced.
+- **Version number plus a contract checked by tests:** the alternative, a JSON Schema file, was
+  rejected because it adds a dependency or a hand-maintained schema. It would also not explain
+  what each code means. The test keeps the document honest instead.
+
+### Assumptions
+- No new register entries. Two behaviours belong to the command line only: IDs are assigned in
+  file order, and no offsets are applied.
+
+### How it stays adaptable
+- **New code (flag, failure code):** add it to `decision_flow.yaml`, `anomalies.md` and
+  `output_contract.md`. The tests fail until all three agree with the code.
+- **New field or changed meaning:** raise `REPORT_VERSION` and add a changelog line. The test
+  fails if the version and the document disagree.
+- **Checklist and feedback handover (P-018, Increment 25):** they will be built from the same
+  `Assessment`.
+
+### Tests
+- **`tests/test_rule_engine_render.py`, 19 tests:**
+  - **Report (8):** keys and version; JSON round trip; every enabled rule in display order with
+    its title; pending → shared status `unable_to_assess`; mistake listed with its title, and A6
+    reusing R7; context and configuration; development data at the top; header.
+  - **Command line (11):** the sample timeline writes the same report as `assess()` +
+    `report()`; ID assignment, including no clash with given IDs; header inside the file;
+    `--header` overriding it; and no report with exit code 2 for each of: a duplicate ID, not a
+    list, not an event, a header contradicting the events, a bad config, and invalid or missing
+    JSON.
+- **`tests/test_rule_engine_docs.py`, +11 tests (output contract):**
+  - The version equals `REPORT_VERSION` and the changelog.
+  - The structure table and the example match a real report's keys.
+  - The overall results equal `policy.RESULTS`.
+  - The rule kinds equal `outcome.KINDS`, with their shared status computed by the code.
+  - Every code has a status.
+  - Every code in `decision_flow.yaml` and every code raised in code is in the contract.
+  - Every failure code in `anomalies.md` is in the contract.
+  - Every contract code is in `anomalies.md`.
+  - "built" matches what the code raises.
+  - A guard that the tables are found.
+
+  The existing flow test now also compares built failure codes with the code.
+- **`tests/test_rule_engine_vocabulary.py`, +1 test:** canonical names are accepted from their
+  own source.
+
+Full suite: **380 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output still matches the reference. `python -m rules.run` on the sample
+timeline exits with 0: Incomplete, every rule pending.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m rules.run --events tests/fixtures/sample_timeline.json
+.venv\Scripts\python -m unittest tests.test_rule_engine_render tests.test_rule_engine_docs -v
+```
+
+### Documents updated
+- **Code and tests:** `rules/render.py` and `rules/run.py` (new); `rules/engine.py`
+  (`FAILURE_CODES`); `configs/rule_engine/vocabulary.yaml`; `tests/test_rule_engine_render.py`
+  (new); `tests/test_rule_engine_docs.py`; `tests/test_rule_engine_vocabulary.py`.
+- **`output_contract.md`** (new).
+- **`decision_flow.yaml`:** P-027 new (built); P-018 renamed to checklist and feedback handover
+  (still planned); P-026 gained the `unspecified` branch.
+- **`pathways.md`:** P-027, and W-34.
+- **`diagrams.md`:** (a) and (b). P-017 and P-027 are shown as built; (b) also marked P-017 as
+  planned before this fix.
+- **Registers:** `decisions.md` (D-070); `open_questions.md` (OQ-045 new; OQ-017 update: the
+  function the pipeline should call now exists).
+- **Other docs:** `anomalies.md`, `methods.md`, `rules_status.md`, `implementation_plan.md`
+  (row 9), `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **New:** **OQ-045** (owner Sanjeevan). Confirm the versioning rule, since the contract is for
+  his module.
+- **Still open:** OQ-017 (the pipeline calling `assess()`) is still Ananth's. Until then,
+  `rules.run` produces the report.
+
+### Review (Arnikan, 2026-10-14)
+- **Approved,** with the commit prefix `feat(rules):`.
+- **D-070 now states the version triggers:** the version goes up whenever a report field or
+  code is added, removed or renamed, or its meaning changes. A planned code becoming built
+  does not change it. Updated in D-070, `output_contract.md`, P-027 and `pathways.md`.
+- **D-070 stays interim** until Sanjeevan confirms it (OQ-045, new).
+
+### Next increment
+**Increment 10: annotation input adapter.** It turns a CVAT record into mapped events and a
+header, with `analyses_run: {video: true, audio: false}`, and marks every result
+`annotation_coverage_assumed`, so the report shows `development_data: true`.

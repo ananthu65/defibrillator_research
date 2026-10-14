@@ -156,3 +156,10 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | R7 / A6 Restart compressions promptly | `missing`, `before_shock`, `too_late` |
 | A7 Command sequence | `wrong_order` (a missing command is "not evaluable because of Ax", D-027) |
 | A8 Pre-shock pause | `pre_shock_pause` (mistake label "Pre-Shock Pause") |
+
+**Built (Increment 7, P-026):** `unspecified` is the failure code of a Fail from a rule plugged
+in through the shared-contract `implementation: module:function` path. The shared `RuleResult`
+has no failure code, so the engine cannot name the mistake. No catalogued rule uses that path.
+
+The codes the feedback module may receive, with their status, are listed in
+[output_contract.md](output_contract.md) (D-070).

@@ -19,7 +19,7 @@ flowchart LR
         app["App: report viewer"]
     end
     subgraph arnikan["Arnikan: rule engine"]
-        eng["Rule engine<br/>P-001 to P-018"]
+        eng["Rule engine<br/>P-001 to P-027"]
         ann["Annotation timelines<br/>(development data)"]
     end
     rec --> vid --> merge
@@ -43,14 +43,16 @@ flowchart TD
     G["P-007 Coverage status<br/>P-008 What missing means"]
     H["P-009 Shock time · P-010 Phases<br/>P-011 Resolve commands · P-012 Key times<br/>P-013 Weak ambiguous commands"]
     I["P-026 Rule runner + P-019 to P-025 checks built<br/>P-014 individual rules planned<br/>P-015 R8, P-016 R3/R4 planned"]:::planned
-    J["P-017 Overall result"]:::planned
-    K["P-018 Report and checklist"]:::planned
-    X["Rejected: no assessment"]
+    J["P-017 Overall result"]
+    K["P-027 JSON report<br/>(versioned output contract)"]
+    L["P-018 Checklist and<br/>feedback handover"]:::planned
+    X["Rejected: no assessment, no report<br/>(rules.run exits with code 2)"]
     A --> B
     B -->|malformed| X
     B --> C --> D --> E --> F
     F -->|invalid or contradicts events| X
     F --> G --> H --> I --> J --> K
+    J --> L
     classDef planned stroke-dasharray: 5 5
 ```
 

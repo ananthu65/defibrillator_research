@@ -24,6 +24,8 @@ from rules.prepare import prepare_timeline
 from schemas.rule_result import RuleResult, RuleStatus
 
 DISABLED_REASON = "Disabled in configuration"
+UNSPECIFIED_FAILURE = "unspecified"   # a shared-contract path rule's Fail carries no failure code
+FAILURE_CODES = (UNSPECIFIED_FAILURE,)
 
 
 @dataclass(frozen=True)
@@ -109,7 +111,7 @@ def _path_rule(function, definition, events, event_ids, config):
         raise ValueError(f"Rule {definition.id} references evidence outside the supplied timeline")
     kind = {RuleStatus.PASS_DIRECT: PASS_DIRECT, RuleStatus.PASS_INFERRED: PASS_INFERRED,
             RuleStatus.FAIL: FAIL}.get(result.status, UNABLE)
-    return RuleOutcome(definition.id, kind, result.reason, "unspecified" if kind == FAIL else None,
+    return RuleOutcome(definition.id, kind, result.reason, UNSPECIFIED_FAILURE if kind == FAIL else None,
                        tuple(result.supporting_events), dict(result.timestamps), original=result)
 
 

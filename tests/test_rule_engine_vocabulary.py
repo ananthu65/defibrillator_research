@@ -67,6 +67,12 @@ class RepositoryVocabulary(unittest.TestCase):
             ("audio", "continue_compressions_command"), ("audio", "stop_compressions_command"),
             ("audio", "shock_command"), ("audio", "start_compressions_command")})
 
+    def test_every_canonical_event_is_accepted_under_its_own_name_from_its_model_source(self):
+        # D-020: upstream emits the agreed names directly, so they must never be "unknown"
+        missing = [(event.modality, name) for name, event in self.vocabulary.events.items()
+                   if self.vocabulary.canonical(event.modality, name) != name]
+        self.assertEqual(missing, [])
+
     def test_modality_belongs_to_the_event_not_the_source(self):
         self.assertEqual(self.vocabulary.modality("gel_applied"), "video")
         self.assertEqual(self.vocabulary.modality("start_compressions_command"), "audio")
