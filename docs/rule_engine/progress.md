@@ -2430,3 +2430,17 @@ with 0, and its output still matches the reference. `rules/` imports nothing fro
 - the context (shock time and key times);
 - every rule outcome, with its flags;
 - the overall result and its explanation.
+
+---
+
+## OQ-044 answered → D-069 (2026-10-14)
+
+- **(a)** `review_anomalies` contains all three timeline anomalies. **(b)** The anomaly step stays
+  before the Unable-to-Verify setting. The reason, recorded in D-069: otherwise, if that setting
+  is later decided as Fail, a data problem such as two shocks could fail a learner.
+- **Config:** `engine.yaml: review_anomalies` is no longer marked undecided.
+- **Tests (348 → 349):**
+  - New: with `unable_to_verify_outcome: fail` and `multiple_shocks`, the overall result is
+    Incomplete, not Fail.
+  - Updated: the config and policy tests that checked "undecided".
+- **Docs:** D-065, D-069, OQ-044, P-017, `anomalies.md`, `pathways.md`.

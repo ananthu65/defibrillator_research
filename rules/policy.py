@@ -5,7 +5,7 @@ Applied in this order:
   2. otherwise anything incomplete: a pending rule (D-055), an assumed
      result (D-060), timing not checked or limit not approved (D-062),
      an engine error (D-063), a timeline anomaly needing review
-     (review_anomalies, OQ-044), or no rule evaluated at all          -> incomplete
+     (review_anomalies, D-069), or no rule evaluated at all           -> incomplete
   3. otherwise any Unable to Verify or Not evaluable (D-056)          -> the unable_to_verify_outcome
      setting: fail | faculty_review; while undecided, unable_to_verify (OQ-002)
   4. otherwise                                                        -> pass

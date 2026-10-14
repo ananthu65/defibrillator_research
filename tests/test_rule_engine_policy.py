@@ -89,6 +89,13 @@ class IncompleteRow(unittest.TestCase):
     def test_incomplete_beats_unable_to_verify(self):
         self.check([unable("A1", "u"), pending("R8")], "rules not yet approved")
 
+    def test_a_data_problem_never_fails_a_learner_even_if_unable_to_verify_becomes_fail(self):
+        # D-069: the anomaly is checked before the Unable-to-Verify setting
+        overall = decide([ok("R1"), unable("A1", "u")], with_engine(unable_to_verify_outcome="fail"),
+                         anomalies=["multiple_shocks"])
+        self.assertEqual(overall.result, INCOMPLETE)
+        self.assertIn(TIMELINE_NEEDS_REVIEW, overall.flags)
+
     def test_no_rules_to_evaluate(self):
         overall = decide([], CONFIG)
         self.assertEqual((overall.result, overall.flags), (INCOMPLETE, (NO_RULES_EVALUATED,)))
@@ -174,9 +181,9 @@ class ReviewAnomalySetting(unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ConfigError, "distinct anomaly codes"):
                 with_engine(review_anomalies={"value": value})
 
-    def test_proposed_list_is_marked_undecided(self):
+    def test_decided_list_d069(self):
         setting = CONFIG.engine.settings["review_anomalies"]
-        self.assertTrue(setting.undecided)
+        self.assertFalse(setting.undecided)
         self.assertEqual(setting.value, ["unknown_labels_present", "multiple_shocks", "mixed_evidence_sources"])
 
 

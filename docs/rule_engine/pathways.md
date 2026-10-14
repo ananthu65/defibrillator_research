@@ -260,7 +260,7 @@ Applied in this order:
 | 1 | Any evaluated rule fails | **Fail** (D-001), listing every Fail and its code; R7/A6 once | `timeline_needs_review` if the timeline has a review anomaly (the Fail stays Fail) |
 | 2 | No rule evaluated at all | **Incomplete** (D-068) | `no_rules_evaluated` |
 | 2 | A rule is pending, assumed (R8 fallback), hit an engine error, or has timing not checked / limit not approved | **Incomplete**, listing each such rule and why (D-055, D-060, D-062, D-063) | — |
-| 2 | The timeline has a review anomaly | **Incomplete**: "the timeline needs review (…)" (D-065, OQ-044) | `timeline_needs_review` |
+| 2 | The timeline has a review anomaly | **Incomplete**: "the timeline needs review (…)" (D-065), checked before the Unable-to-Verify setting so a data problem never fails a learner (D-069) | `timeline_needs_review` |
 | 3 | Any Unable to Verify or Not evaluable | The `unable_to_verify_outcome` setting: **Fail** or **faculty review**; while undecided, **unable_to_verify** (OQ-002, D-056) | `overall_policy_undecided` while undecided |
 | 4 | Every rule evaluated and passed, timing checked | **Pass** | — |
 | any | A result carries `annotation_coverage_assumed` | Marked as **development data**, not a real assessment (D-066) | `development_data` |

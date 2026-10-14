@@ -117,7 +117,7 @@ Flags on the overall result (P-017), not on rule results.
 
 | Code | When | Meaning |
 |---|---|---|
-| `timeline_needs_review` | The timeline has an anomaly listed in `review_anomalies` (proposed: `unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`; OQ-044) | The result can never be Pass. A Fail stays Fail with this flag; otherwise the result is Incomplete. The anomalies are listed (D-065) |
+| `timeline_needs_review` | The timeline has an anomaly listed in `review_anomalies` (`unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`; D-069) | The result can never be Pass. A Fail stays Fail with this flag; otherwise the result is Incomplete. The anomalies are listed (D-065) |
 | `development_data` | Any rule result carries `annotation_coverage_assumed` | The result comes from annotation data and is not a real assessment (D-066) |
 | `overall_policy_undecided` | No Fail and nothing incomplete, but something is unverified, while `unable_to_verify_outcome` is undecided | The result is `unable_to_verify`, naming the undecided setting (OQ-002) |
 | `no_rules_evaluated` | No rule was evaluated (e.g. every rule disabled) | Incomplete, never Pass (D-068) |

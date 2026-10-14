@@ -93,14 +93,26 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-017, P-024; Increment 8.
 
 ### D-065 Timeline anomalies prevent an overall Pass
-- **Date / by / status:** 2026-10-14 · Arnikan · approved (the list of anomalies is OQ-044)
+- **Date / by / status:** 2026-10-14 · Arnikan · approved (the list and its place: D-069)
 - **Decision:** When the timeline has a timeline-level anomaly from the review list
   (`review_anomalies` in `engine.yaml`), the overall result can never be Pass:
   - **a Fail stays Fail**, but is flagged `timeline_needs_review`, with the anomalies listed;
   - **otherwise the result is Incomplete**, "the timeline needs review (…)".
-- **Proposed list (agent, undecided):** `unknown_labels_present`, `multiple_shocks` and
-  `mixed_evidence_sources`. All three mean the evidence itself may be wrong, not just a step.
-- **Affects:** P-017; Increment 8. **Open question:** OQ-044.
+- **The list:** `unknown_labels_present`, `multiple_shocks` and `mixed_evidence_sources` (D-069).
+- **Affects:** P-017; Increment 8. **See also:** D-069.
+
+### D-069 Review anomalies: all three, checked before the Unable-to-Verify setting
+- **Date / by / status:** 2026-10-14 · agent proposal approved by Arnikan · approved
+- **Decision:**
+  - **(a) The list:** `review_anomalies` contains all three timeline anomalies:
+    `unknown_labels_present`, `multiple_shocks` and `mixed_evidence_sources`.
+  - **(b) The order:** with no Fail, a review anomaly makes the overall result Incomplete. It is
+    checked **before** the Unable-to-Verify setting.
+- **Reason:** If `unable_to_verify_outcome` is later decided as Fail, and the anomaly were
+  checked after it, a data problem such as two shocks could fail a learner. Placing it in the
+  Incomplete step means a data problem never becomes the learner's Fail (D-004).
+- **Affects:** P-017; `engine.yaml: review_anomalies` (no longer undecided). **Resolved:**
+  OQ-044.
 
 ### D-066 Results from annotation data are marked as development data
 - **Date / by / status:** 2026-10-14 · Arnikan · approved

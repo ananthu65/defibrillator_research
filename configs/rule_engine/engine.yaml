@@ -39,9 +39,8 @@ inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagg
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}
 
 # Timeline-level anomalies that prevent an overall Pass (P-017). With one of these, a Fail stays
-# Fail but is flagged timeline_needs_review; any other result is Incomplete. Proposed list,
-# awaiting Arnikan's confirmation (OQ-044).
+# Fail but is flagged timeline_needs_review; any other result is Incomplete, checked before the
+# Unable-to-Verify setting (D-069).
 review_anomalies:
   value: [unknown_labels_present, multiple_shocks, mixed_evidence_sources]
-  undecided: true
-  note: proposed list (OQ-044)
+  note: decided 2026-10-14 (D-069)

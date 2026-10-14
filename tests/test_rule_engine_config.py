@@ -64,7 +64,7 @@ class RepositoryConfig(unittest.TestCase):
         self.assertIn("simultaneous_window_seconds", self.config.engine.placeholders)
         self.assertIn("placement_match_window_seconds", self.config.engine.placeholders)
         self.assertEqual(self.config.engine.undecided, ["coverage_policy.outcomes.unknown",
-                                                        "inferred_fail_outcome", "review_anomalies", "unable_to_verify_outcome"])
+                                                        "inferred_fail_outcome", "unable_to_verify_outcome"])
         self.assertIs(self.config.engine.value("assume_first_taken_is_apical"), False)
         self.assertIsNone(self.config.engine.value("unable_to_verify_outcome"))
         self.assertEqual(self.config.engine.coverage_outcomes["covered"].value, "fail")
