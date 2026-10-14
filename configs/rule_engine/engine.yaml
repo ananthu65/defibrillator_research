@@ -43,8 +43,7 @@ unable_to_verify_outcome: {value: null, undecided: true, note: "overall result w
 # Unable-to-Verify setting (D-069).
 review_anomalies:
   value: [unknown_labels_present, multiple_shocks, mixed_evidence_sources, count_violation, paddle_identity_conflict]
-  undecided: true
-  note: the first three decided 2026-10-14 (D-069); count_violation and paddle_identity_conflict proposed (OQ-046)
+  note: decided 2026-10-14 (D-069; count_violation and paddle_identity_conflict D-072)
 
 # Expected number of CONFIDENT events per canonical event (P-005). Every canonical event in the
 # vocabulary must be listed. value: {exactly: n} | {at_least: n} | {at_most: n} | unlimited, or

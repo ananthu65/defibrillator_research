@@ -148,9 +148,9 @@ decision_points:
         outcome: No anomaly
     config: [engine.yaml simultaneous_window_seconds, engine.yaml expected_counts]
     code: rules/prepare.py (_anomalies, _count_anomalies)
-    decisions: [D-029, D-030, D-031, D-071]
+    decisions: [D-029, D-030, D-031, D-071, D-072]
     assumptions: [A-006, A-018]
-    open_questions: [OQ-019, OQ-046, OQ-021, OQ-022, OQ-023]
+    open_questions: [OQ-019, OQ-021, OQ-022, OQ-023]
 
   - id: P-006
     name: Header validation
@@ -479,7 +479,7 @@ decision_points:
       - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved
         outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved); never Pass
         flags: [timing_not_checked, limit_not_approved]
-      - condition: No Fail, and the timeline has a review anomaly (review_anomalies, D-069; checked before the Unable-to-Verify setting)
+      - condition: No Fail, and the timeline has a review anomaly (review_anomalies, D-069, D-072; checked before the Unable-to-Verify setting)
         outcome: Incomplete, the timeline needs review, anomalies listed; never Pass
         flags: [timeline_needs_review]
       - condition: No Fail, nothing incomplete, at least one Unable to Verify or Not evaluable, setting decided
@@ -494,7 +494,7 @@ decision_points:
         flags: [development_data]
     config: [engine.yaml unable_to_verify_outcome, engine.yaml review_anomalies]
     code: rules/policy.py (decide)
-    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063, D-065, D-066, D-067, D-068, D-069]
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063, D-065, D-066, D-067, D-068, D-069, D-072]
     assumptions: [A-001]
     open_questions: [OQ-002]
 

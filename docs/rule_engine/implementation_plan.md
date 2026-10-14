@@ -280,8 +280,8 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
   taken, first placement, apical and sternal placements, removal and shock on screen; unlimited
   for commands; `undecided: true` (not checked) for gel, buttons pressed and paddles firmly on
   chest (OQ-021–023).
-- `review_anomalies`: the D-069 list plus `count_violation` and `paddle_identity_conflict`,
-  `undecided: true` (OQ-046).
+- `review_anomalies` (decided, not a placeholder): the D-069 list plus `count_violation` and
+  `paddle_identity_conflict` (D-072).
 
 ---
 

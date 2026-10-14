@@ -2739,3 +2739,18 @@ still gives Incomplete with no anomalies.
 ### Next
 **Step 9b** (annotation task, awaiting approval), then **Increment 10** (annotation input
 adapter).
+
+---
+
+## OQ-046 answered → D-072 (2026-10-14)
+
+- **(a)** `count_violation` and `paddle_identity_conflict` block an overall Pass. **(b)** A-018 is
+  right: no confident event at all is a missing event, not a count violation.
+- **Config:** `engine.yaml: review_anomalies` is no longer marked undecided.
+- **Tests (406, unchanged count):** the policy test now checks that the review list is decided;
+  the config test's list of undecided settings no longer contains `review_anomalies`.
+- **Docs:**
+  - registers: D-072, A-018 (confirmed), OQ-046 (answered);
+  - P-005, P-017, `anomalies.md`, `pathways.md` (P-005 note, W-35, W-36);
+  - `output_contract.md`: wording only, the version stays 2;
+  - `implementation_plan.md` section D.

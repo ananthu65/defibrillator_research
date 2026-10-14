@@ -182,11 +182,11 @@ class ReviewAnomalySetting(unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ConfigError, "distinct anomaly codes"):
                 with_engine(review_anomalies={"value": value})
 
-    def test_decided_list_d069_plus_proposed_count_anomalies(self):
+    def test_decided_list_d069_and_d072(self):
         setting = CONFIG.engine.settings["review_anomalies"]
         self.assertEqual(setting.value, ["unknown_labels_present", "multiple_shocks", "mixed_evidence_sources",
                                          "count_violation", "paddle_identity_conflict"])
-        self.assertTrue(setting.undecided)  # the two count anomalies are proposed (OQ-046)
+        self.assertFalse(setting.undecided)
 
     def test_count_violation_alone_makes_the_result_incomplete_never_fail(self):
         takes = [Event("first_paddle_taken", t, t, "annotation", 1.0, event_id=f"t{t}") for t in (5, 9)]

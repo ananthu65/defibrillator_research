@@ -45,9 +45,9 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
-| OQ-046 | new (2026-10-14) | Arnikan | — | open | Do count anomalies block an overall Pass? Zero found = missing? |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
+| OQ-046 | new (2026-10-14) | Arnikan | — | answered | Do count anomalies block an overall Pass? Zero found = missing? |
 | OQ-044 | new (2026-10-14) | Arnikan | — | answered | Which timeline anomalies block an overall Pass, and where in the order? |
 | OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
@@ -322,20 +322,6 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ## For Arnikan (rule engine and annotation)
 
-### OQ-046 Do count anomalies block an overall Pass?
-- **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
-  2026-10-14 · **Status:** open
-- **Question:**
-  - **(a)** Should `count_violation` and `paddle_identity_conflict` be review anomalies, so the
-    overall result is Incomplete instead of Pass (a Fail stays Fail, flagged
-    `timeline_needs_review`)? This is the proposal.
-  - **(b)** Is A-018 right: zero confident events is a missing event, decided by the coverage
-    step and the rules, and never a count violation?
-- **Affects:** P-005, P-017; `engine.yaml` `review_anomalies` and `expected_counts`.
-- **Interim behaviour:** Both codes are in `review_anomalies`, and the setting is marked
-  undecided. Two shocks raise both `multiple_shocks` and `count_violation`; they are listed once
-  each.
-
 ### OQ-007 Zone visibility for annotation timelines
 - **Old no.:** E-3c · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
   **Status:** open
@@ -353,6 +339,18 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R2, R8; P-003.
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
+
+### OQ-046 Do count anomalies block an overall Pass? — *answered*
+- **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Raised:** 2026-10-14 · **Status:**
+  answered
+- **Question:**
+  - **(a)** Should `count_violation` and `paddle_identity_conflict` be review anomalies, so the
+    overall result is Incomplete instead of Pass (a Fail stays Fail, flagged
+    `timeline_needs_review`)?
+  - **(b)** Is A-018 right: zero confident events is a missing event, decided by the coverage
+    step and the rules, and never a count violation?
+- **Answer:** (a) Yes, both codes block an overall Pass. (b) A-018 is right.
+- **Answered:** 2026-10-14 → **D-072**.
 
 ### OQ-044 Which timeline anomalies block an overall Pass, and where in the order? — *answered*
 - **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Raised:** 2026-10-14 · **Status:**

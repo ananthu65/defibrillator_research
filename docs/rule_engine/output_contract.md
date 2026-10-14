@@ -27,7 +27,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-14 | First version (Increment 9) |
-| 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (proposed, OQ-046). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
+| 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (D-072). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
 
 ## How to get the report
 
@@ -210,8 +210,8 @@ the restart command at 33 s, and there was no "oxygen away" command.
 |---|---|---|
 | `mixed_evidence_sources` | built | One event comes from both human annotation and a model |
 | `unknown_labels_present` | built | Some labels are not recognised (a possible naming mismatch) |
-| `count_violation` | built (v2) | An event appeared more (or fewer) times than expected, for example two paddle removals. `details` gives the `event`, `expected` and `found` counts. For events expected once, `possible_duplicates` lists pairs "possibly the same incident detected twice". **Not a learner mistake**: no rule fails because of it. Whether it blocks an overall Pass is proposed (OQ-046) |
-| `paddle_identity_conflict` | built (v2) | Two or more placements of one paddle and none of the other: the paddle identity was probably swapped or lost. Not a learner mistake. Whether it blocks an overall Pass is proposed (OQ-046) |
+| `count_violation` | built (v2) | An event appeared more (or fewer) times than expected, for example two paddle removals. `details` gives the `event`, `expected` and `found` counts. For events expected once, `possible_duplicates` lists pairs "possibly the same incident detected twice". **Not a learner mistake**: no rule fails because of it. It blocks an overall Pass (`timeline_needs_review`, D-072) |
+| `paddle_identity_conflict` | built (v2) | Two or more placements of one paddle and none of the other: the paddle identity was probably swapped or lost. Not a learner mistake. It blocks an overall Pass (`timeline_needs_review`, D-072) |
 
 (`multiple_shocks` is listed above.)
 

@@ -166,6 +166,6 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   - A count anomaly for every missing step would mark every Fail for a skipped step as
     "timeline needs review", and turn every Unable to Verify into Incomplete.
   - "Too few but not zero" is still checked, for example `at_least: 2` with one found.
-- **Status:** active; open as OQ-046 (b).
+- **Status:** confirmed by D-072 (2026-10-14).
 - **If wrong:** Remove the `not same` condition in `rules/prepare.py` (`_count_anomalies`).
-- **Related:** D-071, OQ-046.
+- **Related:** D-071, D-072, OQ-046.

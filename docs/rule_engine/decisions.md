@@ -143,6 +143,21 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** P-005, P-017; Increment 9a. **Assumption:** A-018. **Open questions:** OQ-046,
   OQ-021, OQ-022, OQ-023.
 
+### D-072 Count anomalies block an overall Pass; no events at all is a missing event
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:**
+  - `count_violation` and `paddle_identity_conflict` are review anomalies (`review_anomalies`,
+    now decided). With either, the overall result is never Pass: a Fail stays Fail, flagged
+    `timeline_needs_review`, and any other result is Incomplete, checked before the
+    Unable-to-Verify setting, as for the other review anomalies (D-069).
+  - A-018 is confirmed: no confident event at all is a missing event, decided by the coverage
+    step and the rules, and never a count violation.
+- **Reason:** A repeated one-off event or a swapped paddle identity means the evidence may be
+  wrong. The result must then be reviewed rather than passed, but a data problem must never
+  fail a learner.
+- **Affects:** P-005, P-017; `engine.yaml` `review_anomalies`. Extends D-069 and D-071.
+  **Resolved:** OQ-046.
+
 ### D-066 Results from annotation data are marked as development data
 - **Date / by / status:** 2026-10-14 · Arnikan · approved
 - **Decision:** When any rule result carries `annotation_coverage_assumed` (an annotation

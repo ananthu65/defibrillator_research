@@ -59,8 +59,8 @@ Checked when the engine loads, before any timeline is read (D-064). `RegistryErr
 | `count_violation` *(Increment 9a, D-071)* | At least one confident event of a canonical event, and the count is outside its `engine.yaml` `expected_counts` range. One anomaly per event. Not raised for unlimited or undecided counts, or when there is no confident event at all (that is a missing event, A-018) | A one-off event seen twice usually means a detection or annotation problem. **Never a Fail by itself**; nothing is merged. A rule may fail on a repeated action only once the supervisor decides it is a mistake. Two shocks raise both this and `multiple_shocks` | `event`, `expected` (for example `{exactly: 1}`), `found`; for events limited to one: `possible_duplicates` (pairs of event IDs within the window, "possibly the same incident detected twice") and `simultaneous_window_seconds` |
 | `paddle_identity_conflict` *(Increment 9a, D-071)* | Two or more confident `apical_paddle_placed` and no `sternal_paddle_placed`, or the reverse | The paddle identity was probably swapped or lost (detection or annotation), so placement order cannot be trusted. Never a Fail by itself | `apical_paddle_placed`, `sternal_paddle_placed` (the counts) |
 
-Whether `count_violation` and `paddle_identity_conflict` block an overall Pass is proposed
-(they are in `review_anomalies`, marked undecided) and open as OQ-046.
+`count_violation` and `paddle_identity_conflict` are review anomalies: with either, the overall
+result is never Pass (D-072).
 
 Low-confidence events are not anomalies. They are listed in `PreparedTimeline.excluded`
 (`ExcludedEvent`, reason `below_confidence_threshold`) and can be looked up with
@@ -122,7 +122,7 @@ Flags on the overall result (P-017), not on rule results.
 
 | Code | When | Meaning |
 |---|---|---|
-| `timeline_needs_review` | The timeline has an anomaly listed in `review_anomalies` (`unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`; D-069) | The result can never be Pass. A Fail stays Fail with this flag; otherwise the result is Incomplete. The anomalies are listed (D-065) |
+| `timeline_needs_review` | The timeline has an anomaly listed in `review_anomalies` (`unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`, D-069; `count_violation`, `paddle_identity_conflict`, D-072) | The result can never be Pass. A Fail stays Fail with this flag; otherwise the result is Incomplete. The anomalies are listed (D-065) |
 | `development_data` | Any rule result carries `annotation_coverage_assumed` | The result comes from annotation data and is not a real assessment (D-066) |
 | `overall_policy_undecided` | No Fail and nothing incomplete, but something is unverified, while `unable_to_verify_outcome` is undecided | The result is `unable_to_verify`, naming the undecided setting (OQ-002) |
 | `no_rules_evaluated` | No rule was evaluated (e.g. every rule disabled) | Incomplete, never Pass (D-068) |

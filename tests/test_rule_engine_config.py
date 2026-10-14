@@ -66,7 +66,7 @@ class RepositoryConfig(unittest.TestCase):
         self.assertEqual(self.config.engine.undecided, [
             "coverage_policy.outcomes.unknown", "expected_counts.both_paddle_buttons_pressed",
             "expected_counts.gel_applied", "expected_counts.paddles_firmly_on_chest", "inferred_fail_outcome",
-            "review_anomalies", "unable_to_verify_outcome"])
+            "unable_to_verify_outcome"])
         self.assertIs(self.config.engine.value("assume_first_taken_is_apical"), False)
         self.assertIsNone(self.config.engine.value("unable_to_verify_outcome"))
         self.assertEqual(self.config.engine.coverage_outcomes["covered"].value, "fail")
