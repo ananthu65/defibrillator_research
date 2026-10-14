@@ -90,8 +90,8 @@ flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`
 
 | Code | On | When | Meaning |
 |---|---|---|---|
-| `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005) |
-| `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (A-017, OQ-042). Timing is not checked |
+| `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005). It stays a Pass at rule level, but the overall result cannot be Pass (D-062) |
+| `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
 
 Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
 `pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`. The last

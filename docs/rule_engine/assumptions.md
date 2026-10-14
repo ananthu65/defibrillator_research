@@ -150,7 +150,7 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Why:** D-005 says unapproved values stay empty, and the brief says clinical values are never
   invented. A value that is present but unapproved is treated as if it were empty, rather than
   silently used. No current limit is in this state (A8's 5 s is approved, D-016).
-- **Status:** active, to be confirmed (OQ-042).
+- **Status:** confirmed by D-061 (2026-10-14).
 - **If wrong:** A provided value would be used, flagged instead. That is one line in
   `rules/checks.py` (`time_limit`).
-- **Related:** D-005, OQ-042.
+- **Related:** D-005, D-061, D-062, OQ-042.

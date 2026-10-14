@@ -83,6 +83,15 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   be Pass (D-043 as first written), rejected.
 - **Affects:** all rules; P-017; Increment 8.
 
+### D-062 Unchecked timing prevents an overall Pass
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** A rule result flagged `timing_not_checked` or `limit_not_approved` stays a Pass
+  at rule level. The overall result, however, cannot be Pass: it is **incomplete** ("timing not
+  checked for R7"), the same as a pending rule (D-055).
+- **Reason:** A Pass must mean every step was fully checked. A missing clinical limit means one
+  part of a step was never assessed.
+- **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-017, P-024; Increment 8.
+
 ### D-056 "Not evaluable" counts like Unable to Verify in the overall result
 - **Date / by / status:** 2026-10-13 · Arnikan · approved
 - **Decision:** A rule result "not evaluable because of X" is treated like Unable to Verify by
@@ -438,6 +447,14 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
 - **Decision:** Audio command gaps are raised with Sanjeevan, not changed by the rule engine.
 - **Affects:** OQ-009.
+
+### D-061 A time limit with a value but no approver is ignored
+- **Date / by / status:** 2026-10-14 · agent proposal approved by Arnikan · approved
+- **Decision:** A clinical limit that has a value but no `approved_by` is not used. Timing is not
+  checked, and the result is flagged `timing_not_checked` and `limit_not_approved`.
+- **Reason:** D-005; clinical values are never invented or used before approval.
+- **Affects:** every timed rule; P-024. **Resolved:** OQ-042. **See also:** D-062 (unchecked
+  timing prevents an overall Pass).
 
 ### D-033 Approval date: structured `date_pending` flag
 - **Date / by / status:** 2026-10-13 · Arnikan · approved

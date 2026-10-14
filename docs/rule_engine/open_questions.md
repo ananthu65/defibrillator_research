@@ -46,7 +46,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
-| OQ-042 | new (2026-10-13) | Arnikan | — | open | Is a provided but unapproved time limit ignored or used? |
+| OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
 | OQ-040 | new (2026-10-13) | Arnikan | — | answered | R8 when a placement event is missing |
 | OQ-041 | new (2026-10-13) | Arnikan | — | answered | R7/A6 and A8 under the removal fallback |
 | OQ-003 | E-3 | Arnikan | — | answered | Real CVAT tag for "first paddle placed" |
@@ -315,15 +315,14 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
 
-### OQ-042 Is a provided but unapproved time limit ignored or used?
-- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
-  2026-10-13 · **Status:** open
+### OQ-042 Is a provided but unapproved time limit ignored or used? — *answered*
+- **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**
+  answered
 - **Question:** If a time limit in `rules.yaml` has a value but no approver, should rules
   ignore it (timing not checked) or use it with a flag?
-- **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-024.
-- **Why it matters:** It decides whether a value still under discussion can change a result.
-- **Interim behaviour:** Ignored, flagged `timing_not_checked` and `limit_not_approved`
-  (A-017). No current limit is in this state.
+- **Answer:** Ignore it, flagged `limit_not_approved` (as built). Unchecked timing then makes
+  the overall result incomplete (D-062).
+- **Answered:** 2026-10-14 → **D-061**.
 
 ### OQ-040 R8 when a placement event is missing — *answered*
 - **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**

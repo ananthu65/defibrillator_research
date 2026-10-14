@@ -164,11 +164,11 @@ flowchart TD
 ```mermaid
 flowchart TD
     A{"Any evaluated rule Fail?"} -->|yes| F["Overall Fail<br/>(any mistake fails, D-001)"]
-    A -->|no| PD{"Any rule pending, or<br/>a result assumed (R8 fallback)?"}
-    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>or assumed result to be checked<br/>never Pass (D-055, D-060)"]
+    A -->|no| PD{"Any rule pending, a result assumed<br/>(R8 fallback), or timing not checked?"}
+    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>assumed result, or timing not checked<br/>never Pass (D-055, D-060, D-062)"]
     PD -->|no| B{"Any Unable to Verify<br/>or Not evaluable? (D-056)"}
     B -->|yes| U["Fail or faculty review<br/>(undecided, OQ-002)"]
-    B -->|no| P["Overall Pass<br/>every rule evaluated and passed"]
+    B -->|no| P["Overall Pass<br/>every rule evaluated and passed,<br/>timing checked"]
     classDef planned stroke-dasharray: 5 5
     class A,PD,INC,B,F,U,P planned
 ```

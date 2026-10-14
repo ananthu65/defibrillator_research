@@ -2065,3 +2065,19 @@ with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline
 - Discover the rules.
 - Run the ladder in evaluation order, so pending rules become `pending` and A6 reuses R7.
 - Keep `evaluate()` unchanged for the pipeline.
+
+---
+
+## Answers: OQ-042 and unchecked timing (2026-10-14)
+
+- **OQ-042 → D-061:** a time limit with a value but no approver is ignored and flagged
+  `limit_not_approved` (as built in Increment 6). A-017 is marked confirmed.
+- **D-062:** a rule result flagged `timing_not_checked` or `limit_not_approved` stays a Pass at
+  rule level, but the overall result is **incomplete** ("timing not checked for R7"), never Pass,
+  like a pending rule (D-055).
+- **Updated:**
+  - `decision_flow.yaml`: P-017 (incomplete branch), P-024.
+  - `pathways.md`: the P-017 and P-024 rows, and new worked pathway W-27.
+  - `diagrams.md`: (g).
+  - `anomalies.md`, `assumptions.md`, `open_questions.md`, `decisions.md`.
+- **Open questions:** OQ-042 answered; no new questions.

@@ -178,7 +178,7 @@ elapsed times and checks it used.
 | Condition | Outcome | Flags |
 |---|---|---|
 | No approved limit (null) | **Timing not checked**: presence and order only | `timing_not_checked` |
-| A value without an approver | Not used; timing not checked (A-017, OQ-042) | `timing_not_checked`, `limit_not_approved` |
+| A value without an approver | Not used; timing not checked (D-061) | `timing_not_checked`, `limit_not_approved` |
 | The interval cannot be measured | Timing not checked | `timing_not_checked` |
 | Within the limit (boundary included) | Pass | the elapsed time's flags |
 | Over the limit | **Fail** with the rule's code (`too_late`, `pre_shock_pause`) | the elapsed time's flags |
@@ -234,9 +234,9 @@ elapsed times and checks it used.
 | Condition | Overall result |
 |---|---|
 | Any evaluated rule fails | **Fail** (any mistake fails, D-001), even if other rules are pending |
-| No Fail, but any rule is pending, or a result is assumed (R8 fallback) | **Incomplete** ("rules not yet approved" / "assumed result, to be checked by the evaluator"), never Pass (D-055, D-060) |
-| No Fail, nothing pending or assumed, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
-| Every rule evaluated and passed (direct or inferred) | **Pass** |
+| No Fail, but any rule is pending, a result is assumed (R8 fallback), or a result's timing was not checked | **Incomplete** ("rules not yet approved" / "assumed result, to be checked by the evaluator" / "timing not checked for R7"), never Pass (D-055, D-060, D-062) |
+| No Fail, nothing pending, assumed or timing-unchecked, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
+| Every rule evaluated and passed (direct or inferred), with its timing checked | **Pass** |
 
 ### Stage: renderer (planned)
 
@@ -437,3 +437,13 @@ illustration only.)*
    not checked" and the flag `timing_not_checked`.
 3. Once the supervisor approves a limit, the same timeline is judged against it, with no code
    change.
+
+### W-27 Every rule passes, but R7's limit is not approved → Incomplete
+*(Planned overall policy, D-062.)*
+1. Every rule is approved and passes. R7's limit (`shock_to_compressions_seconds`) is still
+   null (OQ-016).
+2. P-024: R7 checks presence and order only. Its result is **Pass**, flagged
+   `timing_not_checked` (D-005).
+3. P-017: no Fail and nothing pending, but R7's timing was not checked → **Incomplete: "timing
+   not checked for R7"**, never Pass. The same happens for a limit with a value but no
+   approver (`limit_not_approved`, D-061).

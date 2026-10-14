@@ -456,15 +456,16 @@ decision_points:
     branches:
       - condition: Any evaluated rule failed
         outcome: Fail (any mistake fails, even if other rules are pending)
-      - condition: No Fail, and any rule is pending (not yet approved) or its result is assumed (R8 fallback)
-        outcome: Incomplete (rules not yet approved, or an assumed result to be checked by the evaluator); never Pass
-      - condition: No Fail, nothing pending or assumed, at least one Unable to Verify or Not evaluable
+      - condition: No Fail, and any rule is pending (not yet approved), its result is assumed (R8 fallback), or its timing was not checked
+        outcome: Incomplete (rules not yet approved; an assumed result to be checked by the evaluator; or timing not checked for that rule); never Pass
+        flags: [timing_not_checked, limit_not_approved]
+      - condition: No Fail, nothing pending, assumed or timing-unchecked, at least one Unable to Verify or Not evaluable
         outcome: Fail or faculty review (setting unable_to_verify_outcome, undecided)
-      - condition: Every rule evaluated and passed (direct or inferred)
+      - condition: Every rule evaluated and passed (direct or inferred), with its timing checked
         outcome: Pass
     config: [engine.yaml unable_to_verify_outcome]
     code: rules/policy.py (Increment 8)
-    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060]
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062]
     assumptions: []
     open_questions: [OQ-002]
 
@@ -592,10 +593,10 @@ decision_points:
     inputs: [interval in seconds (Elapsed), clinical value record]
     branches:
       - condition: No limit (null)
-        outcome: Timing not checked; the rule judges presence and order only
+        outcome: Timing not checked; the rule judges presence and order only; the overall result cannot be Pass (D-062)
         flags: [timing_not_checked]
       - condition: A value that is not approved
-        outcome: Not used; timing not checked
+        outcome: Not used; timing not checked (D-061); the overall result cannot be Pass (D-062)
         flags: [timing_not_checked, limit_not_approved]
       - condition: The interval cannot be measured
         outcome: Timing not checked
@@ -607,9 +608,9 @@ decision_points:
         failure_codes: []
     config: [configs/rules.yaml timing_limits]
     code: rules/checks.py (time_limit, timed)
-    decisions: [D-005, D-016]
+    decisions: [D-005, D-016, D-061, D-062]
     assumptions: [A-017]
-    open_questions: [OQ-016, OQ-042]
+    open_questions: [OQ-016]
 
   - id: P-025
     name: Order of two times
