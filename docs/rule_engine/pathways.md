@@ -252,13 +252,21 @@ elapsed times and checks it used.
 
 ### Stage: overall policy (planned)
 
-#### P-017 Overall result (planned, Increment 8)
-| Condition | Overall result |
-|---|---|
-| Any evaluated rule fails | **Fail** (any mistake fails, D-001), even if other rules are pending |
-| No Fail, but any rule is pending, a result is assumed (R8 fallback), a rule hit an engine error, or a result's timing was not checked | **Incomplete** ("rules not yet approved" / "assumed result, to be checked by the evaluator" / "engine error in R2" / "timing not checked for R7"), never Pass (D-055, D-060, D-062, D-063) |
-| No Fail, nothing pending, assumed, errored or timing-unchecked, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
-| Every rule evaluated and passed (direct or inferred), with its timing checked | **Pass** |
+#### P-017 Overall result (built, Increment 8)
+Applied in this order:
+
+| Step | Condition | Overall result | Flags |
+|---|---|---|---|
+| 1 | Any evaluated rule fails | **Fail** (D-001), listing every Fail and its code; R7/A6 once | `timeline_needs_review` if the timeline has a review anomaly (the Fail stays Fail) |
+| 2 | No rule evaluated at all | **Incomplete** (D-068) | `no_rules_evaluated` |
+| 2 | A rule is pending, assumed (R8 fallback), hit an engine error, or has timing not checked / limit not approved | **Incomplete**, listing each such rule and why (D-055, D-060, D-062, D-063) | — |
+| 2 | The timeline has a review anomaly | **Incomplete**: "the timeline needs review (…)" (D-065, OQ-044) | `timeline_needs_review` |
+| 3 | Any Unable to Verify or Not evaluable | The `unable_to_verify_outcome` setting: **Fail** or **faculty review**; while undecided, **unable_to_verify** (OQ-002, D-056) | `overall_policy_undecided` while undecided |
+| 4 | Every rule evaluated and passed, timing checked | **Pass** | — |
+| any | A result carries `annotation_coverage_assumed` | Marked as **development data**, not a real assessment (D-066) | `development_data` |
+
+The result explains itself (D-067): the rules that decided it, every named mistake, and the step
+or setting that decided it.
 
 ### Stage: renderer (planned)
 
@@ -478,3 +486,32 @@ illustration only.)*
 3. Any rule that depends on R2 is **not evaluable because of R2**.
 4. P-017: no Fail elsewhere → **Incomplete** ("engine error in R2"), never Pass (D-063). The
    report shows the error, so it is fixed rather than hidden.
+
+### W-29 A Fail on a timeline with two shocks → Fail, flagged for review
+*(Overall policy built in Increment 8.)*
+1. R1 fails (`applied_once`). The timeline has two shock indications (`multiple_shocks`).
+2. P-017 step 1: **Fail**, listing R1 `applied_once` as the mistake. Because `multiple_shocks` is
+   a review anomaly, the Fail is flagged `timeline_needs_review`, with the anomaly listed (D-065).
+
+### W-30 No Fail, but an unknown label in the timeline → Incomplete
+1. Every approved rule passes. The timeline contains "gel applied" (lower case):
+   `unknown_labels_present`.
+2. P-017 step 2: **Incomplete**, "the timeline needs review (unknown_labels_present)", never Pass.
+   A naming mismatch may have hidden evidence.
+
+### W-31 Some steps unverified, setting undecided → unable_to_verify
+1. No Fail, nothing pending; A1 is Unable to Verify (audio unclear), and A7 is not evaluable
+   because of A1.
+2. P-017 step 3: `unable_to_verify_outcome` is undecided → **unable_to_verify**, flagged
+   `overall_policy_undecided`. The explanation names A1 and A7 and the undecided setting
+   (OQ-002). Once the supervisor decides, the same timeline gives Fail or faculty review.
+
+### W-32 R7 too late → one mistake, not two
+1. R7 fails `too_late`; A6 (the same check, D-044) therefore fails too.
+2. P-017: **Fail**, with one mistake entry for **R7/A6** `too_late`, not two.
+
+### W-33 An annotation timeline → development data
+1. A timeline built from CVAT annotations: every result carries `annotation_coverage_assumed`
+   (Increment 10).
+2. P-017: the result is computed as usual, but marked **development data**, not a real
+   assessment (D-066).

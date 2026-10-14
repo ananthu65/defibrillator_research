@@ -82,6 +82,7 @@ falls within Level 3 for this project.*
 | Increment 7: wrote `rules/registry.py` and the new `rules/engine.py` (P-026), the `engine_error` outcome, 25 tests including a reference-output test captured before the engine changed; recorded D-063 and D-064 | Required that a crashing rule is recorded as `engine_error` (others still run, dependents not evaluable, overall incomplete) and that a test proves the pipeline output is unchanged while all rules are pending |
 | Added load-time registry checks with codes (`RegistryError`), tests and docs; raised OQ-043 (the "not in config" check versus minimal test configs) | Accepted the D-063 exception for the shared-contract path; required that an approved rule without an implementation, a duplicate registration (naming both locations) and a registered ID missing from rules.yaml are errors at load |
 | Changed the catalogue check and added 2 tests | Answered OQ-043, replacing the agent's proposal: always check registered IDs against the full catalogue `configs/rules.yaml`, whatever config is assessed; a smaller config only decides which rules run |
+| Increment 8: wrote `rules/policy.py` (P-017), the `review_anomalies` setting, 24 tests and the docs; proposed the review-anomaly list and its place in the order (OQ-044) | Specified the order of the overall policy, that timeline anomalies block a Pass (a Fail stays Fail, flagged), development-data marking, what the explanation lists, and that no evaluated rule is Incomplete; OQ-044 awaiting my review |
 
 ## How I evaluated the AI's work
 

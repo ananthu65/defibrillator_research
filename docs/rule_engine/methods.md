@@ -22,7 +22,7 @@ A stable core between two adaptable edges, with every changeable value in config
 | Shared checks | `rules/checks.py` | P-019 to P-025 | The ladder steps every rule uses: dependency, required facts, restart ambiguity, occurrences, weak or missing evidence (inference before coverage), time limits, order | built (Increment 6) |
 | Registry and runner | `rules/registry.py`, `rules/engine.py` | P-026 | `@rule` registration and discovery of `*_rules` modules; `assess()` runs every rule in evaluation order (pending, same_as, dependencies, engine errors) and reports in display order; `evaluate()` keeps the pipeline contract | built (Increment 7) |
 | Rules | `rules/video_rules.py`, `rules/audio_rules.py` | P-014 to P-016 | One small registered function per rule, built from the shared checks | planned (Increments 11–23) |
-| Overall policy | `rules/policy.py` | P-017 | Overall Pass / Fail / faculty review | planned (Increment 8) |
+| Overall policy | `rules/policy.py` | P-017 | `decide()`: Fail → Incomplete → the Unable-to-Verify setting → Pass, with its explanation (deciding rules, named mistakes, R7/A6 once, the deciding setting), timeline-review and development-data marks; `Assessment.overall` | built (Increment 8) |
 | Renderers | `rules/render.py` | P-018 | JSON report, evaluator checklist, feedback handover | planned (Increments 9, 25) |
 
 Config files: `configs/rules.yaml` (rules in display order, clinical values with provenance),

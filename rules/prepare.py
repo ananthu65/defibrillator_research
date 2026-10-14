@@ -13,6 +13,7 @@ from rules.vocabulary import LabelIssue
 
 SHOCK_EVENT = "shock_delivered_on_screen"
 MODEL_SOURCES = ("video", "audio")
+ANOMALY_CODES = ("multiple_shocks", "mixed_evidence_sources", "unknown_labels_present")
 
 
 @dataclass(frozen=True)

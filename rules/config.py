@@ -83,7 +83,7 @@ class EngineSettings:
         expected = {"schema_version", "confidence_thresholds", "simultaneous_window_seconds",
                     "gel_minimum_gap_seconds", "placement_match_window_seconds", "assume_first_taken_is_apical",
                     "duration_tolerance_seconds", "coverage_policy", "inferred_fail_outcome",
-                    "unable_to_verify_outcome"}
+                    "unable_to_verify_outcome", "review_anomalies"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
@@ -96,6 +96,7 @@ class EngineSettings:
             "inferred_fail_outcome", data["inferred_fail_outcome"], where, _choice(MISSING_OUTCOMES))
         settings["unable_to_verify_outcome"] = _setting(
             "unable_to_verify_outcome", data["unable_to_verify_outcome"], where, _choice(OVERALL_UNABLE_OUTCOMES))
+        settings["review_anomalies"] = _setting("review_anomalies", data["review_anomalies"], where, _anomaly_list)
         policy = _exact_keys(data["coverage_policy"], {"outcomes", "by_modality", "by_source", "by_region", "regions"},
                              f"{where} coverage_policy")
         outcomes = _exact_keys(policy["outcomes"], set(COVERAGE_STATUSES), f"{where} coverage_policy.outcomes")
@@ -327,6 +328,12 @@ def _probability(value, at):
 def _nonnegative(value, at):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
         raise ConfigError(f"{at}: must be a nonnegative number")
+
+
+def _anomaly_list(value, at):
+    from rules.prepare import ANOMALY_CODES
+    if not isinstance(value, list) or not all(v in ANOMALY_CODES for v in value) or len(set(value)) != len(value):
+        raise ConfigError(f"{at}: must be a list of distinct anomaly codes from {list(ANOMALY_CODES)}")
 
 
 def _boolean(value, at):

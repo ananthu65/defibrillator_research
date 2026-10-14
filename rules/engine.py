@@ -19,6 +19,7 @@ from rules.config import DEFAULT_PATH as CATALOGUE_PATH, RuleEngineConfig, load_
 from rules.context import build_context
 from rules.errors import RegistryError
 from rules.outcome import FAIL, PASS_DIRECT, PASS_INFERRED, UNABLE, RuleOutcome, engine_error, pending
+from rules.policy import decide
 from rules.prepare import prepare_timeline
 from schemas.rule_result import RuleResult, RuleStatus
 
@@ -31,6 +32,7 @@ class Assessment:
     prepared: object
     context: object
     config: RuleEngineConfig
+    overall: object = None              # OverallResult (P-017)
 
     def outcome(self, rule_id):
         return next(o for o in self.outcomes if o.rule_id == rule_id)
@@ -50,7 +52,8 @@ def assess(events, config, header=None, registry=None):
     for rule_id in config.evaluation_order():
         results[rule_id] = _evaluate(definitions[rule_id], context, results, registry, events, event_ids, config)
     outcomes = tuple(results[r.id] for r in config.rules if r.enabled)
-    return Assessment(outcomes, prepared, context, config)
+    overall = decide(outcomes, config, anomalies=[a.code for a in prepared.anomalies])
+    return Assessment(outcomes, prepared, context, config, overall)
 
 
 def evaluate(events, config):

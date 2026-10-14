@@ -2299,3 +2299,134 @@ load-time checks before committing. All are recorded under D-064.
       `registered_rule_not_in_config`.
   - **Docs:** D-064, OQ-043, `anomalies.md`, P-026, `pathways.md`.
   - **Result:** full suite **324 tests, all pass, 1 skipped**.
+
+---
+
+## Increment 8: Overall result policy (2026-10-14)
+
+### What was done
+`rules/policy.py` `decide(outcomes, config, anomalies)` gives one overall result per assessment
+(P-017, now built). `assess()` attaches it as `Assessment.overall`. The rules are applied in
+this order:
+1. **Fail**, if any evaluated rule fails (D-001). On a timeline with a review anomaly, the Fail
+   stays Fail but is flagged `timeline_needs_review`, with the anomalies listed.
+2. Otherwise **Incomplete**, if:
+   - no rule was evaluated (D-068);
+   - a rule is pending (D-055), assumed (D-060), has timing not checked or limit not approved
+     (D-062), or hit an engine error (D-063);
+   - or the timeline has a review anomaly (D-065, proposed list OQ-044).
+3. Otherwise, if any rule is Unable to Verify or Not evaluable (D-056), the
+   **`unable_to_verify_outcome` setting**: Fail or faculty review. While it is undecided, the
+   result is **`unable_to_verify`**, flagged `overall_policy_undecided` (OQ-002).
+4. Otherwise **Pass**.
+
+On top of the steps:
+- **Development data:** any result carrying `annotation_coverage_assumed` marks the overall
+  result as development data (D-066).
+- **Explanation (D-067):**
+  - `deciding`: the rules that decided it;
+  - `mistakes`: every Fail, with its failure code and rule title;
+  - `incomplete`: each rule with why;
+  - `unverified`;
+  - `decided_by`: the step or setting, including any undecided setting;
+  - `timeline_anomalies`;
+  - a one-line `summary`.
+- **R7 and A6 as one entry:** a `same_as` rule is merged into the rule it reuses.
+
+With every rule pending today, the overall result is "Incomplete: rules not yet approved for
+R1, R2, R8, R3, R4, R5, R6, A1, A2, A3, A4, A5, R7/A6, A7, A8". The pipeline's output is
+unchanged, because it does not show the overall result yet (OQ-017).
+
+### How it was done
+- **Grouping and classification:** `_grouped()` builds one `Contribution` per outcome, folding
+  a `same_as` rule into its target. `_incomplete()` classifies each group by kind (pending,
+  assumed, engine error) or by its flags (`timing_not_checked`, `limit_not_approved`).
+- **The four steps** are four `if` blocks in the order above. The first match returns, so the
+  order in the code is the order of the decision.
+- **Review list in config:** the list of review anomalies is `engine.yaml: review_anomalies`,
+  validated against the anomaly codes that exist, and marked `undecided: true`. Changing the
+  list is a config change.
+- **Undecided case named after the setting:** the undecided result is named
+  `unable_to_verify`, after the setting, rather than chosen silently. The explanation states
+  `unable_to_verify_outcome = None (undecided, OQ-002; D-042, D-056)`.
+
+### Methods and design choices
+- **Overall result separate from rule results:** `OverallResult` is its own type. The shared
+  `RuleResult` and the pipeline report are unchanged.
+- **Every list is computed every time:** `incomplete` and `unverified` are filled in even when
+  the result is Fail, so a reviewer sees everything that was not checked, not only what
+  decided the result.
+
+### Assumptions
+- **Anomaly placement:** a review anomaly with no Fail is handled in the Incomplete step, so it
+  wins over the undecided Unable-to-Verify setting. This is part of OQ-044.
+
+### How it stays adaptable
+- **Policy decided (OQ-002):** set `unable_to_verify_outcome` in `engine.yaml`.
+- **Review list confirmed (OQ-044):** edit `review_anomalies`.
+- **Report:** the JSON report (Increment 9) renders `OverallResult` as is.
+
+### Tests
+`tests/test_rule_engine_policy.py`, 24 tests:
+- **Fail row (3):**
+  - Every Fail is listed with its code and title.
+  - Fail beats pending, engine error, unable and assumed (those are still listed).
+  - A Fail with a timeline anomaly stays Fail, flagged.
+- **Incomplete row (10):**
+  - Pending.
+  - Assumed R8.
+  - Timing not checked (R7/A6 once).
+  - Limit not approved.
+  - An engine error keeps its message.
+  - A timeline anomaly alone.
+  - Incomplete beats Unable to Verify.
+  - No rules.
+  - Every rule disabled, through the engine.
+  - An anomaly outside a configured list is ignored.
+- **Unverified row (3):** the undecided setting; each decided setting (fail, faculty_review);
+  Not evaluable counts like Unable to Verify, and is not a named mistake.
+- **Pass row (1).**
+- **R7/A6 reported once (1).**
+- **Development data (2):** on a Pass and on a Fail; model results are not marked.
+- **Through the engine (2):** the real catalogue gives Incomplete with 15 entries and R7/A6
+  once; timeline anomalies reach the policy.
+- **Setting validation (2).**
+
+The consistency test now also reads `policy.FLAGS`, and caught the four new flags before they
+were documented.
+
+Full suite: **348 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output still matches the reference. `rules/` imports nothing from `video/`,
+`audio/`, `legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m unittest tests.test_rule_engine_policy -v
+.venv\Scripts\python -c "import json, yaml; from rules.engine import assess; from schemas.event import Event; from pipeline.merge_timeline import merge_timeline; ev = merge_timeline([Event.from_dict(e) for e in json.load(open('tests/fixtures/sample_timeline.json'))]); o = assess(ev, yaml.safe_load(open('configs/rules.yaml'))).overall; print(o.result); print(o.summary); print(o.decided_by)"
+```
+
+### Documents updated
+- **Code and tests:** `rules/policy.py` (new), `rules/engine.py`, `rules/config.py`,
+  `rules/prepare.py` (`ANOMALY_CODES`), `configs/rule_engine/engine.yaml` (`review_anomalies`),
+  `tests/test_rule_engine_policy.py` (new), `tests/test_rule_engine_config.py`,
+  `tests/test_rule_engine_docs.py`.
+- **`decision_flow.yaml`:** P-017 is now built.
+- **`pathways.md`:** the P-017 table, and W-29 to W-33.
+- **`diagrams.md`:** (g).
+- **Registers:** `decisions.md` (D-065 to D-068); `open_questions.md` (OQ-044 new, and OQ-002's
+  interim behaviour updated).
+- **Other docs:** `anomalies.md`, `methods.md`, `rules_status.md`, `progress.md`,
+  `ai_usage_log.md`.
+
+### Open questions
+- **New:** **OQ-044**. Which timeline anomalies block an overall Pass? The proposal is all
+  three: `unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`. And is placing
+  the anomaly in the Incomplete step right?
+- **Answered:** none.
+
+### Next increment
+**Increment 9: JSON report renderer and `python -m rules.run`.** The report will contain:
+- the timeline, with excluded events and anomalies;
+- the context (shock time and key times);
+- every rule outcome, with its flags;
+- the overall result and its explanation.

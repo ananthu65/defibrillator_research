@@ -111,6 +111,17 @@ Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_
 `assumed` and `engine_error` prevent an overall Pass (D-055, D-060, D-063). An `engine_error`
 result names the exception in its reason (P-026).
 
+## Overall-result flags (`rules/policy.py`, Increment 8)
+
+Flags on the overall result (P-017), not on rule results.
+
+| Code | When | Meaning |
+|---|---|---|
+| `timeline_needs_review` | The timeline has an anomaly listed in `review_anomalies` (proposed: `unknown_labels_present`, `multiple_shocks`, `mixed_evidence_sources`; OQ-044) | The result can never be Pass. A Fail stays Fail with this flag; otherwise the result is Incomplete. The anomalies are listed (D-065) |
+| `development_data` | Any rule result carries `annotation_coverage_assumed` | The result comes from annotation data and is not a real assessment (D-066) |
+| `overall_policy_undecided` | No Fail and nothing incomplete, but something is unverified, while `unable_to_verify_outcome` is undecided | The result is `unable_to_verify`, naming the undecided setting (OQ-002) |
+| `no_rules_evaluated` | No rule was evaluated (e.g. every rule disabled) | Incomplete, never Pass (D-068) |
+
 ## Planned flags (later increments)
 
 The decision points that will raise these are P-001, P-015 and P-018 in
@@ -118,7 +129,7 @@ The decision points that will raise these are P-001, P-015 and P-018 in
 
 | Code | Step | Meaning |
 |---|---|---|
-| `annotation_coverage_assumed` | Annotation adapter and report (Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
+| `annotation_coverage_assumed` | Annotation adapter (Increment 10); read by the overall policy (Increment 8, D-066) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
 | `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
 | `placement_missing` | R8 (Increment 12; D-058) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |

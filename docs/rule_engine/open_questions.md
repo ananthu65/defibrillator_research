@@ -46,6 +46,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
+| OQ-044 | new (2026-10-14) | Arnikan | — | open | Which timeline anomalies block an overall Pass, and where in the order? |
 | OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
 | OQ-040 | new (2026-10-13) | Arnikan | — | answered | R8 when a placement event is missing |
@@ -81,8 +82,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** overall result (all rules); P-017.
 - **Why it matters:** It decides whether gaps in the evidence ever fail a learner. It is a
   study-method decision.
-- **Interim behaviour:** The overall policy is not built yet (Increment 8). The setting
-  `unable_to_verify_outcome` is empty and marked undecided (D-042).
+- **Interim behaviour:** The overall policy is built (Increment 8). While
+  `unable_to_verify_outcome` is undecided (D-042), such a case is reported as
+  **`unable_to_verify`**, flagged `overall_policy_undecided`, and the explanation names the
+  undecided setting. It is never reported as Pass.
 
 ### OQ-005 Does an inferred Fail count as Fail?
 - **Old no.:** E-3a · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
@@ -315,6 +318,23 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R2, R8; P-003.
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
+
+### OQ-044 Which timeline anomalies block an overall Pass, and where in the order?
+- **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
+  2026-10-14 · **Status:** open
+- **Question:**
+  - **(a) The list:** which timeline-level anomalies should prevent an overall Pass (D-065)?
+    Proposed: all three current ones.
+    - `unknown_labels_present`: a naming mismatch may hide evidence.
+    - `multiple_shocks`: no shock time can be trusted.
+    - `mixed_evidence_sources`: human and model evidence mixed for one event.
+  - **(b) The order:** with no Fail, the anomaly is placed with the incomplete step, so
+    Incomplete wins over the undecided Unable-to-Verify setting. Is that right, or should an
+    anomaly only stop a Pass at the very end?
+- **Affects:** P-017; `engine.yaml: review_anomalies`.
+- **Interim behaviour:** The proposed list, in `engine.yaml` as `review_anomalies`, marked
+  `undecided: true`, so changing it is a config change only. The anomaly is placed with the
+  incomplete step.
 
 ### OQ-043 Registry check versus minimal test configs — *answered*
 - **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Also involves:** Ananth, Sanjeevan ·

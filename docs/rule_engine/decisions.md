@@ -92,6 +92,41 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   part of a step was never assessed.
 - **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-017, P-024; Increment 8.
 
+### D-065 Timeline anomalies prevent an overall Pass
+- **Date / by / status:** 2026-10-14 · Arnikan · approved (the list of anomalies is OQ-044)
+- **Decision:** When the timeline has a timeline-level anomaly from the review list
+  (`review_anomalies` in `engine.yaml`), the overall result can never be Pass:
+  - **a Fail stays Fail**, but is flagged `timeline_needs_review`, with the anomalies listed;
+  - **otherwise the result is Incomplete**, "the timeline needs review (…)".
+- **Proposed list (agent, undecided):** `unknown_labels_present`, `multiple_shocks` and
+  `mixed_evidence_sources`. All three mean the evidence itself may be wrong, not just a step.
+- **Affects:** P-017; Increment 8. **Open question:** OQ-044.
+
+### D-066 Results from annotation data are marked as development data
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** When any rule result carries `annotation_coverage_assumed` (an annotation
+  timeline, A-001, D-035), the overall result is marked as development data, not a real
+  assessment (`development_data`). The result itself is still computed, so the rules can be
+  tested.
+- **Affects:** P-017, P-018; Increments 8 and 10.
+
+### D-067 The overall result explains itself
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** The overall result lists:
+  - the rules that decided it: every Fail, or every incomplete rule with its reason, or every
+    unverified rule;
+  - every named mistake (each Fail with its failure code and rule title);
+  - R7 and A6 as one entry (D-044);
+  - the policy step or setting that decided it, including any undecided setting (for example
+    `unable_to_verify_outcome = None (undecided, OQ-002)`).
+- **Affects:** P-017, P-018.
+
+### D-068 No rule evaluated is Incomplete
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** A config with no rules to evaluate (for example every rule disabled) gives
+  **Incomplete**, flagged `no_rules_evaluated`, never Pass.
+- **Affects:** P-017.
+
 ### D-056 "Not evaluable" counts like Unable to Verify in the overall result
 - **Date / by / status:** 2026-10-13 · Arnikan · approved
 - **Decision:** A rule result "not evaluable because of X" is treated like Unable to Verify by

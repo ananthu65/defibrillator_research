@@ -158,16 +158,21 @@ flowchart TD
     class Z,B2,PM1,D1,P,F,FS,V,PM2,I,W1,W2,C,O,PI,IF,N,U,AS planned
 ```
 
-## (g) Overall result (P-017, planned)
+## (g) Overall result (P-017, built)
 
 ```mermaid
 flowchart TD
-    A{"Any evaluated rule Fail?"} -->|yes| F["Overall Fail<br/>(any mistake fails, D-001)"]
-    A -->|no| PD{"Any rule pending, assumed (R8 fallback),<br/>engine error, or timing not checked?"}
-    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>assumed result, engine error,<br/>or timing not checked<br/>never Pass (D-055, D-060, D-062, D-063)"]
-    PD -->|no| B{"Any Unable to Verify<br/>or Not evaluable? (D-056)"}
-    B -->|yes| U["Fail or faculty review<br/>(undecided, OQ-002)"]
-    B -->|no| P["Overall Pass<br/>every rule evaluated and passed,<br/>timing checked"]
-    classDef planned stroke-dasharray: 5 5
-    class A,PD,INC,B,F,U,P planned
+    A{"1. Any evaluated rule Fail?"} -->|yes| AN{"Review anomaly in<br/>the timeline?"}
+    AN -->|no| F["Overall Fail<br/>every Fail listed, R7/A6 once (D-001)"]
+    AN -->|yes| FR["Overall Fail<br/>timeline_needs_review, anomalies listed"]
+    A -->|no| N0{"2. Any rule evaluated?"}
+    N0 -->|no| INC0["Incomplete<br/>no_rules_evaluated (D-068)"]
+    N0 -->|yes| PD{"Pending, assumed (R8),<br/>engine error, timing not checked,<br/>or a review anomaly?"}
+    PD -->|yes| INC["Incomplete: each rule and why<br/>or timeline needs review<br/>never Pass (D-055, D-060, D-062, D-063, D-065)"]
+    PD -->|no| B{"3. Any Unable to Verify<br/>or Not evaluable? (D-056)"}
+    B -->|yes| U{"unable_to_verify_outcome<br/>decided?"}
+    U -->|yes| UD["Fail or faculty review<br/>as set"]
+    U -->|no| UU["unable_to_verify<br/>overall_policy_undecided (OQ-002)"]
+    B -->|no| P["4. Overall Pass<br/>every rule evaluated and passed,<br/>timing checked"]
+    DEV["Any result from annotation data:<br/>marked development data (D-066)"] -.-> A
 ```

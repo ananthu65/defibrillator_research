@@ -450,24 +450,39 @@ decision_points:
   - id: P-017
     name: Overall result policy
     stage: overall_policy
-    status: planned
-    decides: The overall result of the procedure (Increment 8)
-    inputs: [every rule result]
+    status: built
+    decides: The overall result of the procedure, with the rules and settings that decided it
+    inputs: [every enabled rule's outcome, timeline anomalies, review_anomalies, unable_to_verify_outcome]
     branches:
       - condition: Any evaluated rule failed
-        outcome: Fail (any mistake fails, even if other rules are pending)
-      - condition: No Fail, and any rule is pending (not yet approved), its result is assumed (R8 fallback), it hit an engine error, or its timing was not checked
-        outcome: Incomplete (rules not yet approved; an assumed result to be checked by the evaluator; an engine error; or timing not checked for that rule); never Pass
+        outcome: Fail, listing every Fail and its failure code (R7/A6 once), even if other rules are pending
+      - condition: Any evaluated rule failed, and the timeline has a review anomaly
+        outcome: Fail stays Fail, flagged, with the anomalies listed
+        flags: [timeline_needs_review]
+      - condition: No rule was evaluated (e.g. every rule disabled)
+        outcome: Incomplete, never Pass
+        flags: [no_rules_evaluated]
+      - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved
+        outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved); never Pass
         flags: [timing_not_checked, limit_not_approved]
-      - condition: No Fail, nothing pending, assumed, errored or timing-unchecked, at least one Unable to Verify or Not evaluable
-        outcome: Fail or faculty review (setting unable_to_verify_outcome, undecided)
-      - condition: Every rule evaluated and passed (direct or inferred), with its timing checked
+      - condition: No Fail, and the timeline has a review anomaly (review_anomalies, proposed list, OQ-044)
+        outcome: Incomplete, the timeline needs review, anomalies listed; never Pass
+        flags: [timeline_needs_review]
+      - condition: No Fail, nothing incomplete, at least one Unable to Verify or Not evaluable, setting decided
+        outcome: The unable_to_verify_outcome setting (fail or faculty_review), naming the setting
+      - condition: Same, setting undecided
+        outcome: unable_to_verify, naming the undecided setting (OQ-002)
+        flags: [overall_policy_undecided]
+      - condition: Every rule evaluated and passed (direct or inferred), timing checked, no review anomaly
         outcome: Pass
-    config: [engine.yaml unable_to_verify_outcome]
-    code: rules/policy.py (Increment 8)
-    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063]
-    assumptions: []
-    open_questions: [OQ-002]
+      - condition: Any result carries annotation_coverage_assumed (annotation timeline)
+        outcome: The overall result is marked as development data, not a real assessment
+        flags: [development_data]
+    config: [engine.yaml unable_to_verify_outcome, engine.yaml review_anomalies]
+    code: rules/policy.py (decide)
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063, D-065, D-066, D-067, D-068]
+    assumptions: [A-001]
+    open_questions: [OQ-002, OQ-044]
 
   - id: P-018
     name: Report and checklist rendering
