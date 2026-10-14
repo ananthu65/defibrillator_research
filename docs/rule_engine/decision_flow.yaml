@@ -456,16 +456,16 @@ decision_points:
     branches:
       - condition: Any evaluated rule failed
         outcome: Fail (any mistake fails, even if other rules are pending)
-      - condition: No Fail, and any rule is pending (not yet approved), its result is assumed (R8 fallback), or its timing was not checked
-        outcome: Incomplete (rules not yet approved; an assumed result to be checked by the evaluator; or timing not checked for that rule); never Pass
+      - condition: No Fail, and any rule is pending (not yet approved), its result is assumed (R8 fallback), it hit an engine error, or its timing was not checked
+        outcome: Incomplete (rules not yet approved; an assumed result to be checked by the evaluator; an engine error; or timing not checked for that rule); never Pass
         flags: [timing_not_checked, limit_not_approved]
-      - condition: No Fail, nothing pending, assumed or timing-unchecked, at least one Unable to Verify or Not evaluable
+      - condition: No Fail, nothing pending, assumed, errored or timing-unchecked, at least one Unable to Verify or Not evaluable
         outcome: Fail or faculty review (setting unable_to_verify_outcome, undecided)
       - condition: Every rule evaluated and passed (direct or inferred), with its timing checked
         outcome: Pass
     config: [engine.yaml unable_to_verify_outcome]
     code: rules/policy.py (Increment 8)
-    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062]
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063]
     assumptions: []
     open_questions: [OQ-002]
 
@@ -632,3 +632,46 @@ decision_points:
     decisions: [D-011]
     assumptions: [A-002]
     open_questions: [OQ-018]
+
+  - id: P-026
+    name: Rule runner
+    stage: rule
+    status: built
+    decides: How the engine evaluates each rule, in evaluation order, before its ladder (P-019 onward) runs
+    inputs: [rule definition from rules.yaml, rule registry, results of rules already evaluated]
+    branches:
+      - condition: (At load) a rule is approved in rules.yaml but has no registered implementation and no implementation path
+        outcome: Rejected, no assessment (not reported as pending)
+        rejections: [approved_rule_not_registered]
+      - condition: (At load) a registered rule ID is not in the full catalogue configs/rules.yaml, whatever config is assessed (probably a typo in the ID)
+        outcome: Rejected, no assessment
+        rejections: [registered_rule_not_in_config]
+      - condition: (At load) two different functions are registered for one rule ID
+        outcome: Rejected, naming both locations (module, function, file and line)
+        rejections: [duplicate_rule_registration]
+      - condition: (At load) a registered rule requires an event that is not in the vocabulary
+        outcome: Rejected, no assessment
+        rejections: [unknown_required_event]
+      - condition: A registered rule that the assessed config leaves out (e.g. a one-rule test config)
+        outcome: Not run, not reported, not an error
+      - condition: Rule disabled in configuration
+        outcome: Not reported
+      - condition: Rule not approved (pending)
+        outcome: Pending, reported with its reason; the overall result cannot be Pass
+      - condition: Rule reuses another rule's check (same_as)
+        outcome: That rule's outcome, reported under this rule's ID
+      - condition: A rule it depends on did not pass
+        outcome: Not evaluable because of that rule
+        next: P-019
+      - condition: The registered rule returns a valid outcome
+        outcome: That outcome
+        next: P-020
+      - condition: The registered rule raises, or returns something invalid
+        outcome: engine_error with the error message; every other rule still runs; dependents not evaluable; overall incomplete
+      - condition: A shared-contract path rule (module:function) breaks the contract
+        outcome: The run stops (shared contract, docs/contracts.md)
+    config: [configs/rules.yaml rules]
+    code: rules/engine.py (assess, evaluate), rules/registry.py
+    decisions: [D-002, D-003, D-006, D-043, D-044, D-063, D-064]
+    assumptions: [A-016]
+    open_questions: []

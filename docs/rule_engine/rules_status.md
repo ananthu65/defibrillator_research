@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–6)
+## What is built so far (Increments 0–7)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -35,6 +35,9 @@ Everything every rule will rely on is built and tested:
 - **Procedure context:** P-009 to P-013.
 - **Rule outcome and shared checks:** `RuleOutcome`, plus P-019 to P-025 (the steps of the rule
   ladder, Increment 6).
+- **Rule registry and runner:** P-026 (Increment 7). Every rule is evaluated in dependency order;
+  pending rules are reported as pending, A6 reuses R7, and a crashing rule is recorded as
+  `engine_error` (D-063).
 
-No individual rule is built yet. Next is the rule registry and the engine that runs the ladder
-for each rule (Increment 7).
+No individual rule is built yet, so all 16 still report "pending". Next is the overall result
+policy (Increment 8).

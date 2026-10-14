@@ -2081,3 +2081,221 @@ with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline
   - `diagrams.md`: (g).
   - `anomalies.md`, `assumptions.md`, `open_questions.md`, `decisions.md`.
 - **Open questions:** OQ-042 answered; no new questions.
+
+---
+
+## Increment 7: Rule registry and engine wiring (2026-10-14)
+
+### What was done
+The engine now runs every rule through the new pieces, instead of the Increment 0 scaffold.
+`assess(events, config, header=None)` does the following:
+1. Prepares the timeline (P-002 to P-005).
+2. Builds the procedure context (P-006 to P-013).
+3. Evaluates **every** rule in evaluation order (dependencies first), and reports in display order
+   (P-026).
+
+Each rule's result is one of:
+- **pending**, if the rule is not approved;
+- **the reused outcome**, under its own ID, if it is `same_as` another rule (A6 = R7);
+- **not evaluable**, if a rule it depends on did not pass;
+- **its own outcome**, from its registered function;
+- **`engine_error`**, if that function crashes (D-063).
+
+`evaluate(events, config)` keeps its signature and returns the shared `RuleResult` list for
+`pipeline/run.py`.
+
+**Your two additions:**
+1. **A crashing rule is recorded (D-063).**
+   - A registered rule that raises, or returns something invalid (not an outcome, the wrong rule
+     ID, or evidence outside the timeline), gets `engine_error`, with the message in its reason
+     (for example "ZeroDivisionError: division by zero in R2").
+   - Every other rule still runs, and dependents are "not evaluable because of R2". A6 reusing
+     an errored R7 reports the error too.
+   - `engine_error` counts as not evaluated, so the overall result will be incomplete (P-017,
+     Increment 8).
+2. **The pipeline output is unchanged while all rules are pending.**
+   - Before changing the engine, I saved the pipeline's output for the sample timeline to
+     `tests/fixtures/rule_engine/pipeline_all_pending.json` (the events, the 16 rule results with
+     their exact pending text, and the feedback).
+   - A test compares the current pipeline report with it, field by field. It passes, so the new
+     engine produces identical output.
+
+### How it was done
+- **`rules/registry.py`** (new): `@rule("A3", requires=(...), description=...)` registers a rule
+  function `(ctx, definition, results) -> RuleOutcome` next to its logic. `discover()` imports
+  every `*_rules` module in `rules/`, so a new rule module needs no engine change (D-064).
+  Registering two different functions under one ID is an error.
+- **`rules/engine.py`** (rewritten): `assess()` and `Assessment` (outcomes, prepared timeline,
+  context, config). `_evaluate()` follows P-026:
+
+```python
+if not definition.enabled:            return pending(rule_id, DISABLED_REASON)   # not reported
+if definition.status != "approved":   return pending(rule_id)
+if definition.same_as:                return results[definition.same_as].as_rule(rule_id)
+blocked = checks.depends(rule_id, definition.depends_on, results)
+if blocked is not None:               return blocked
+...
+try:
+    outcome = function(context, definition, results)
+    _check_outcome(outcome, rule_id, event_ids)
+except Exception as error:            # D-063: recorded, never stops the assessment
+    return engine_error(rule_id, error)
+```
+
+  How it works:
+  - **Order:** rules are visited in `config.evaluation_order()`, the topological order from
+    Increment 2, so a dependency's result always exists when needed. `results` collects them, and
+    the final tuple is rebuilt in display order.
+  - **Errors:** the `try` covers the rule's own code and the validation of what it returned, so a
+    wrong return is caught as an engine error too.
+- **The `implementation: module:function` path** (the shared contract test) still works, in two
+  ways:
+  - If it points at a registered function, that function is run like any registered rule.
+  - Otherwise it is called the old way, `(timeline, settings) -> RuleResult`, and its
+    `RuleResult` is reported **exactly as returned** (new `RuleOutcome.original`).
+  - Its contract violations still stop the run, as `test_rule_cannot_cite_nonexistent_evidence`
+    requires. This is noted in D-063.
+- **`rules/outcome.py`:** a new kind, `ENGINE_ERROR` (not evaluated, so the overall result
+  cannot be Pass), and `engine_error()`. `pending()` now uses the original pending text, and its
+  RuleResult reason gets no "[pending]" suffix, which keeps the pipeline output identical.
+- **`rules/base.py`:** documents both rule kinds.
+- **Startup check:** the events a rule declares in `requires=` must exist in the vocabulary,
+  otherwise `ConfigError` stops the run, so a typo cannot silently make a rule Unable to Verify.
+
+### Methods and design choices
+- **Decorator registry over listing implementations in YAML.** The rule's ID and the events it
+  needs sit next to its code (brief §3). The YAML keeps what the team and the supervisor
+  decide: order, status, dependencies and limits.
+- **Catch at the boundary of each rule, not inside the checks.** One `try` per rule is the only
+  place an error can be turned into a result. Errors inside a rule are never swallowed elsewhere.
+- **Malformed input and invalid config still stop the run.** Those mean no assessment can be
+  trusted at all (P-002, D-049), while a crashing rule affects only itself and its dependents.
+
+### Assumptions
+- **Disabled rules:** a rule disabled in config is still recorded internally as pending (so its
+  dependents are not evaluable) but is not reported, as before.
+
+### How it stays adaptable
+- **New rule:** a decorated function in a `*_rules` module, plus a line in `rules.yaml`.
+- **New rule module:** name it `*_rules.py`.
+- **Report and overall policy:** they read `Assessment` (Increments 8 and 9). `pipeline/run.py`
+  can switch from `evaluate()` to `assess()` when Ananth is ready (OQ-017).
+
+### Tests
+`tests/test_rule_engine_engine.py`, 25 tests:
+- **Ordering (2):** dependencies are evaluated first and reported in display order; every rule
+  is evaluated after a failure.
+- **Status and reuse (5):**
+  - Pending rules are not called, and keep the original reason.
+  - Approved but unregistered → pending.
+  - Disabled rules are not reported.
+  - same_as copies the outcome.
+  - same_as a pending rule is pending.
+- **Dependencies (2):** failed or unable dependency → not evaluable; pending dependency →
+  blocks.
+- **Engine errors (5):**
+  - The exception is recorded with its message, the others still run, and it is not evaluated.
+  - Dependents are not evaluable.
+  - same_as reports the error.
+  - Invalid returns (None, the wrong ID, evidence outside the timeline) are engine errors.
+  - Malformed input still stops the run.
+- **Rules use the context (3):**
+  - A rule built from the shared checks passes.
+  - Required events are checked against the vocabulary.
+  - The header reaches coverage.
+- **Registry (4):** the decorator registers; two functions for one ID are rejected; discovery
+  imports the rule modules; an implementation path can point at a registered rule.
+- **Shared contract (2):** a path rule's result is reported exactly as returned; it receives
+  the settings.
+- **Pipeline (2):** the output matches the pre-Increment 7 reference; the real config gives 16
+  pending rules.
+
+The existing shared contract tests (`tests/test_pipeline_contracts.py`) pass unchanged.
+
+Full suite: **317 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0. `rules/` imports nothing from `video/`, `audio/`, `legacy/` or `pipeline/`.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m unittest tests.test_rule_engine_engine -v
+.venv\Scripts\python -c "from rules.engine import assess; import json, yaml; from schemas.event import Event; from pipeline.merge_timeline import merge_timeline; ev = merge_timeline([Event.from_dict(e) for e in json.load(open('tests/fixtures/sample_timeline.json'))]); a = assess(ev, yaml.safe_load(open('configs/rules.yaml'))); print([(o.rule_id, o.kind) for o in a.outcomes][:4])"
+```
+
+### Documents updated
+- **Code and tests:** `rules/engine.py`, `rules/registry.py` (new), `rules/outcome.py`,
+  `rules/base.py`, `tests/test_rule_engine_engine.py` (new),
+  `tests/fixtures/rule_engine/pipeline_all_pending.json` (new).
+- **`decision_flow.yaml`:** P-026 is new and built; P-017 now includes engine errors.
+- **`pathways.md`:** a P-026 table, the P-017 rows, and W-28.
+- **`diagrams.md`:** (b), (c) (P-026, with an engine-error branch), (g).
+- **Other docs:** `decisions.md` (D-063, D-064), `anomalies.md`, `methods.md`,
+  `rules_status.md`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **New:** none.
+- **Answered:** none.
+
+### Next increment
+**Increment 8: overall result policy** (`rules/policy.py`, P-017):
+- Fail if any evaluated rule failed.
+- Otherwise incomplete if anything is pending, assumed, errored or timing-unchecked
+  (D-055, D-060, D-062, D-063).
+- Otherwise the undecided Unable-to-Verify setting if anything is unverified or not evaluable
+  (D-042, D-056).
+- Otherwise Pass.
+
+### Increment 7 review: registry checks at load (2026-10-14)
+
+Arnikan agreed with the D-063 exception for the shared-contract path, and asked for three
+load-time checks before committing. All are recorded under D-064.
+
+- **New `RegistryError(ConfigError)`** in `rules/errors.py`, with a stable `.code`. When the
+  engine loads, before any timeline is read, `rules/engine.py` `_check_registry` raises:
+  - **`approved_rule_not_registered`:** a rule approved (and enabled, without `same_as`) in
+    `rules.yaml` with no `@rule` function and no `implementation` path. This is now an error,
+    not a pending result; the `NOT_REGISTERED_REASON` path is removed.
+  - **`registered_rule_not_in_config`:** a `@rule` registered under an ID that is not in
+    `rules.yaml` (probably a typo). The message names the function's module, name, file and
+    line.
+  - **`unknown_required_event`:** the existing `requires=` check, now with a code.
+- **In `rules/registry.py`:** `duplicate_rule_registration` is raised when two different
+  functions are registered under one ID. The message names **both** locations (module.function,
+  file:line). The same function imported twice is not a duplicate.
+- **Docs:**
+  - `anomalies.md`: a new section for the four codes.
+  - `decision_flow.yaml`: P-026 gains four load-time branches; the old "pending if not
+    registered" branch is removed.
+  - `pathways.md`: the P-026 table.
+  - `decisions.md`: D-064 extended.
+  - `tests/test_rule_engine_docs.py`: now also reads `RegistryError` codes. It failed until the
+    four were documented.
+- **New question, OQ-043 (for Arnikan):** once the real rules are registered (Increment 11), the
+  "not in config" check would fail every test that assesses with a small custom config,
+  including the shared contract tests. The proposal is to apply that one check only when the
+  config **is** `configs/rules.yaml`. Nothing fails today, because no real rule is registered.
+- **Tests:** `tests/test_rule_engine_engine.py` 25 → 30.
+  - **New:** approved but unregistered → error, not pending; registered but not in
+    `rules.yaml` → error naming the location; allowed without a registration (pending, disabled,
+    same_as); a shared-contract path rule needs no registration; the repository's rule modules
+    match `rules.yaml`; the same function registered twice is fine.
+  - **Changed:** a duplicate registration names both locations (checked to the file); unknown
+    required event carries its code.
+  - **Removed:** "approved without registration is pending".
+- **Documents updated:** `rules/errors.py`, `rules/registry.py`, `rules/engine.py`,
+  `tests/test_rule_engine_engine.py`, `tests/test_rule_engine_docs.py`, `anomalies.md`,
+  `decision_flow.yaml`, `pathways.md`, `decisions.md`, `open_questions.md`, `progress.md`,
+  `ai_usage_log.md`.
+- **Result:** full suite **322 tests run, all pass, 1 skipped**. The pipeline command exits
+  with 0, and its output still matches the pre-Increment 7 reference.
+
+- **OQ-043 answered (2026-10-14) → D-064:**
+  - **The answer:** registered rule IDs are always checked against the full catalogue in
+    `configs/rules.yaml`, whatever config is being assessed. A smaller config only decides which
+    rules are evaluated; registered rules outside it are simply not run.
+  - **Code:** `_check_registry` loads the catalogue itself.
+  - **Tests (30 → 32):**
+    - A one-rule config works with other rules registered (only that rule runs).
+    - A copied config at a different path, even one listing the unknown ID, still fails with
+      `registered_rule_not_in_config`.
+  - **Docs:** D-064, OQ-043, `anomalies.md`, P-026, `pathways.md`.
+  - **Result:** full suite **324 tests, all pass, 1 skipped**.

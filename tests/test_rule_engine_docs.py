@@ -27,7 +27,7 @@ def code_sources():
 
 def raised_in_code():
     source = code_sources()
-    return {"rejections": set(re.findall(r'TimelineError\(\s*"([a-z_]+)"', source)),
+    return {"rejections": set(re.findall(r'(?:TimelineError|RegistryError)\(\s*"([a-z_]+)"', source)),
             "anomalies": set(re.findall(r'Anomaly\(\s*"([a-z_]+)"', source)),
             "flags": set(coverage.FLAGS) | set(context.FLAGS) | set(checks.FLAGS)}
 

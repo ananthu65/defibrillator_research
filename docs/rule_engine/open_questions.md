@@ -46,6 +46,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
+| OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
 | OQ-040 | new (2026-10-13) | Arnikan | — | answered | R8 when a placement event is missing |
 | OQ-041 | new (2026-10-13) | Arnikan | — | answered | R7/A6 and A8 under the removal fallback |
@@ -314,6 +315,19 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R2, R8; P-003.
 - **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
   key time is absent.
+
+### OQ-043 Registry check versus minimal test configs — *answered*
+- **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Also involves:** Ananth, Sanjeevan ·
+  **Raised:** 2026-10-14 · **Status:** answered
+- **Question:** Once the real rules are registered, the check "a registered rule ID must be in
+  `rules.yaml`" would fail every test that assesses with a small custom config. How should it
+  work?
+- **Answer:** Always check registered rule IDs against the full catalogue in
+  `configs/rules.yaml`, whatever config is being assessed. A smaller config only decides which
+  rules are evaluated; registered rules outside it are simply not run, and that is not an error.
+  (The agent's proposal, to check only when the config path is `configs/rules.yaml`, was
+  replaced by this.)
+- **Answered:** 2026-10-14 → **D-064**.
 
 ### OQ-042 Is a provided but unapproved time limit ignored or used? — *answered*
 - **Old no.:** new (2026-10-13) · **Owner:** Arnikan · **Raised:** 2026-10-13 · **Status:**

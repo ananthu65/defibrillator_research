@@ -3,7 +3,7 @@
 Kinds, and how the overall policy (P-017) treats them:
   pass_direct, pass_inferred, fail  -> evaluated
   unable_to_verify, not_evaluable   -> evaluated but not verified; count like Unable to Verify (D-056)
-  pending, assumed                  -> not evaluated; the overall result cannot be Pass (D-055, D-060)
+  pending, assumed, engine_error    -> not evaluated; the overall result cannot be Pass (D-055, D-060, D-063)
 They map onto the existing shared statuses only (D-045, D-038): passes and fail keep their status,
 everything else becomes unable_to_assess, told apart by the reason text.
 """
@@ -13,9 +13,11 @@ from schemas.rule_result import RuleResult, RuleStatus
 
 PASS_DIRECT, PASS_INFERRED, FAIL = "pass_direct", "pass_inferred", "fail"
 UNABLE, NOT_EVALUABLE, PENDING, ASSUMED = "unable_to_verify", "not_evaluable", "pending", "assumed"
-KINDS = (PASS_DIRECT, PASS_INFERRED, FAIL, UNABLE, NOT_EVALUABLE, PENDING, ASSUMED)
+ENGINE_ERROR = "engine_error"
+KINDS = (PASS_DIRECT, PASS_INFERRED, FAIL, UNABLE, NOT_EVALUABLE, PENDING, ASSUMED, ENGINE_ERROR)
 PASSES = (PASS_DIRECT, PASS_INFERRED)
-NOT_EVALUATED = (PENDING, ASSUMED)
+NOT_EVALUATED = (PENDING, ASSUMED, ENGINE_ERROR)
+PENDING_REASON = "Pending supervisor-approved definition and new rule implementation"
 _STATUS = {PASS_DIRECT: RuleStatus.PASS_DIRECT, PASS_INFERRED: RuleStatus.PASS_INFERRED, FAIL: RuleStatus.FAIL}
 
 
@@ -30,6 +32,7 @@ class RuleOutcome:
     flags: tuple[str, ...] = ()                 # carried from every anchor, elapsed time and check used
     blocked_by: str | None = None               # not_evaluable: the rule or step it depends on
     timing_checked: bool | None = None          # None when the rule has no time limit
+    original: object = field(default=None, compare=False)  # a path rule's own RuleResult, reported as is
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -60,10 +63,12 @@ class RuleOutcome:
         return replace(self, rule_id=rule_id)
 
     def to_rule_result(self):
+        if self.original is not None and self.original.rule_id == self.rule_id:
+            return self.original
         details = []
         if self.failure_code:
             details.append(f"failure code: {self.failure_code}")
-        if self.kind in (UNABLE, NOT_EVALUABLE, PENDING, ASSUMED):
+        if self.kind in (UNABLE, NOT_EVALUABLE, ASSUMED, ENGINE_ERROR):  # pending says so in its reason
             details.append(self.kind.replace("_", " "))
         if self.timing_checked is False:
             details.append("timing not checked")
@@ -102,8 +107,14 @@ def not_evaluable(rule_id, blocked_by, reason, *, uses=(), flags=()):
     return RuleOutcome(rule_id, NOT_EVALUABLE, reason, flags=flags_of(*uses, flags), blocked_by=blocked_by)
 
 
-def pending(rule_id, reason="pending supervisor-approved definition"):
+def pending(rule_id, reason=PENDING_REASON):
     return RuleOutcome(rule_id, PENDING, reason)
+
+
+def engine_error(rule_id, error):
+    """D-063: a rule that raised (or returned something invalid) is recorded, never skipped."""
+    message = f"{type(error).__name__}: {error}" if isinstance(error, BaseException) else str(error)
+    return RuleOutcome(rule_id, ENGINE_ERROR, f"rule could not be evaluated because of an engine error ({message})")
 
 
 def assumed(rule_id, reason, *, evidence=(), uses=(), flags=()):

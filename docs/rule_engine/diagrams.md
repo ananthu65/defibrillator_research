@@ -42,7 +42,7 @@ flowchart TD
     F["P-006 Check header"]
     G["P-007 Coverage status<br/>P-008 What missing means"]
     H["P-009 Shock time · P-010 Phases<br/>P-011 Resolve commands · P-012 Key times<br/>P-013 Weak ambiguous commands"]
-    I["P-014 Each rule (planned)<br/>shared checks P-019 to P-025 built<br/>P-015 R8, P-016 R3/R4 planned"]:::planned
+    I["P-026 Rule runner + P-019 to P-025 checks built<br/>P-014 individual rules planned<br/>P-015 R8, P-016 R3/R4 planned"]:::planned
     J["P-017 Overall result"]:::planned
     K["P-018 Report and checklist"]:::planned
     X["Rejected: no assessment"]
@@ -54,15 +54,15 @@ flowchart TD
     classDef planned stroke-dasharray: 5 5
 ```
 
-## (c) The decision ladder every rule follows (P-014)
+## (c) The decision ladder every rule follows (P-026, P-014)
 
-The shared checks (P-019 to P-025) are **built** (Increment 6). The engine that runs the ladder
-for each rule, including the approval check, is planned for Increment 7. Times on the ladder are
+The rule runner (P-026, Increment 7) and the shared checks (P-019 to P-025, Increment 6) are
+**built**; the individual rules that use them come in Increments 11 to 23. Times on the ladder are
 compared with P-025, and time limits with P-024 (timing not checked when there is no limit).
 
 ```mermaid
 flowchart TD
-    S["Rule"] --> P1{"Approved?"}
+    S["Rule"] --> P1{"P-026 Approved?"}
     P1 -->|no| R0["Pending<br/>overall cannot be Pass"]
     P1 -->|yes| P2{"P-019 Rules it depends on<br/>evaluable and passed?"}
     P2 -->|no| R1["Not evaluable<br/>because of that rule"]
@@ -76,8 +76,7 @@ flowchart TD
     P4 -->|weak or missing| P5{"P-023 Approved inference?<br/>P-015 / P-016 (D-057)"}
     P5 -->|yes, it applies| R5["Pass – Inferred"]
     P5 -->|no, or it does not apply| M["What missing means<br/>P-013 / P-008 coverage step"]
-    classDef planned stroke-dasharray: 5 5
-    class S,P1,R0 planned
+    S -.->|"the rule raises an error<br/>at any step (D-063)"| EE["engine_error<br/>others still run<br/>overall incomplete"]
 ```
 
 ## (d) What a missing event means (P-007, P-008, P-013)
@@ -164,8 +163,8 @@ flowchart TD
 ```mermaid
 flowchart TD
     A{"Any evaluated rule Fail?"} -->|yes| F["Overall Fail<br/>(any mistake fails, D-001)"]
-    A -->|no| PD{"Any rule pending, a result assumed<br/>(R8 fallback), or timing not checked?"}
-    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>assumed result, or timing not checked<br/>never Pass (D-055, D-060, D-062)"]
+    A -->|no| PD{"Any rule pending, assumed (R8 fallback),<br/>engine error, or timing not checked?"}
+    PD -->|yes| INC["Incomplete: rules not yet approved,<br/>assumed result, engine error,<br/>or timing not checked<br/>never Pass (D-055, D-060, D-062, D-063)"]
     PD -->|no| B{"Any Unable to Verify<br/>or Not evaluable? (D-056)"}
     B -->|yes| U["Fail or faculty review<br/>(undecided, OQ-002)"]
     B -->|no| P["Overall Pass<br/>every rule evaluated and passed,<br/>timing checked"]

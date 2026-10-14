@@ -37,6 +37,18 @@ increment that adds a code.**
 | `invalid_header` | The timeline header is not a mapping, has unknown keys, a non-positive `duration_seconds`, `analyses_run` values other than true/false, or an unknown coverage scope or status | Coverage is decided from the header, so a malformed header cannot be trusted |
 | `header_mismatch` | The header contradicts its events: a different camera angle or recording ID; an event (kept or excluded) that **ends** more than `duration_tolerance_seconds` (placeholder 0.5 s) after `duration_seconds`; or `analyses_run` says a modality did not run although events of that modality exist | Contradictory input: assessing it would give coverage that conflicts with the evidence. The tolerance absorbs rounding at the end of a recording |
 
+## Rejections (`RegistryError`, raised by `rules/engine.py` and `rules/registry.py`, Increment 7)
+
+Checked when the engine loads, before any timeline is read (D-064). `RegistryError` is a kind of
+`ConfigError` with a stable `.code`; no assessment is produced.
+
+| Code | When | Why |
+|---|---|---|
+| `approved_rule_not_registered` | A rule is `approved` (and enabled, without `same_as`) in `rules.yaml`, but has neither a registered `@rule` function nor an `implementation` path | An approved rule must be evaluated. Reporting it as "pending" would hide a missing implementation |
+| `registered_rule_not_in_config` | A `@rule` function is registered under an ID that is not in the full catalogue `configs/rules.yaml` (checked against the catalogue whatever config is being assessed) | Probably a typo in the ID. The rule would otherwise never run. The message names the function's location. A smaller config that leaves a catalogued rule out is **not** an error; that rule is simply not run |
+| `duplicate_rule_registration` | Two different functions are registered under one rule ID | Which one runs would be ambiguous. The message names both locations (module, function, file and line). The same function imported twice is not a duplicate |
+| `unknown_required_event` | A rule's `requires=` names an event that is not in the vocabulary | A typo would otherwise make the rule silently find nothing |
+
 ## Anomalies (`rules/prepare.py`, Increment 3)
 
 | Code | When | Why | Details |
@@ -94,9 +106,10 @@ flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`
 | `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
 
 Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
-`pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`. The last
-four map to the shared status `unable_to_assess` (D-045). `pending` and `assumed` prevent an
-overall Pass (D-055, D-060).
+`pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`,
+`engine_error`. The last five map to the shared status `unable_to_assess` (D-045). `pending`,
+`assumed` and `engine_error` prevent an overall Pass (D-055, D-060, D-063). An `engine_error`
+result names the exception in its reason (P-026).
 
 ## Planned flags (later increments)
 

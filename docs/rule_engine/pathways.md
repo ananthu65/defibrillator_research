@@ -136,6 +136,28 @@ earlier one does not count.
 | A weak "resume compressions" would mean this event, or cannot be resolved | The missing event is Unable to Verify | `low_confidence_evidence` |
 | It would mean the other command | Not evidence → P-008 | — |
 
+### Stage: rule — runner (built, Increment 7)
+
+#### P-026 Rule runner
+Runs every rule in evaluation order (dependencies first) and reports in display order. When the
+engine loads, it first checks that the registered rules match `rules.yaml`. Any mismatch stops the
+run with a clear error, and no assessment is produced (D-064).
+
+| Condition | Outcome |
+|---|---|
+| (At load) a rule is approved but has no implementation | **Rejected**: `approved_rule_not_registered` (an error, not "pending") |
+| (At load) a registered rule ID is not in the full catalogue `configs/rules.yaml` (whatever config is assessed) | **Rejected**: `registered_rule_not_in_config` (probably a typo in the ID) |
+| A registered rule the assessed config leaves out (e.g. a one-rule test config) | Not run; not an error |
+| (At load) two different functions registered for one rule ID | **Rejected**: `duplicate_rule_registration`, naming both locations |
+| (At load) a rule requires an event that is not in the vocabulary | **Rejected**: `unknown_required_event` |
+| Rule disabled in configuration | Not reported |
+| Rule not approved | **Pending** (reported; the overall result cannot be Pass) |
+| Rule reuses another's check (A6 = R7) | That rule's outcome, under this ID |
+| A rule it depends on did not pass | **Not evaluable because of** that rule (P-019) |
+| The rule returns a valid outcome | That outcome (its ladder starts at P-020) |
+| The rule **raises an error** or returns something invalid | **`engine_error`** with the message; every other rule still runs; dependents not evaluable; overall incomplete (D-063) |
+| A shared-contract rule (`module:function`) breaks the contract | The run stops (shared contract) |
+
 ### Stage: rule — shared checks (built, Increment 6)
 
 The building blocks every rule uses, in the order of the ladder (P-014, diagram c). Each one
@@ -234,8 +256,8 @@ elapsed times and checks it used.
 | Condition | Overall result |
 |---|---|
 | Any evaluated rule fails | **Fail** (any mistake fails, D-001), even if other rules are pending |
-| No Fail, but any rule is pending, a result is assumed (R8 fallback), or a result's timing was not checked | **Incomplete** ("rules not yet approved" / "assumed result, to be checked by the evaluator" / "timing not checked for R7"), never Pass (D-055, D-060, D-062) |
-| No Fail, nothing pending, assumed or timing-unchecked, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
+| No Fail, but any rule is pending, a result is assumed (R8 fallback), a rule hit an engine error, or a result's timing was not checked | **Incomplete** ("rules not yet approved" / "assumed result, to be checked by the evaluator" / "engine error in R2" / "timing not checked for R7"), never Pass (D-055, D-060, D-062, D-063) |
+| No Fail, nothing pending, assumed, errored or timing-unchecked, any Unable to Verify **or Not evaluable** | Fail or faculty review (undecided, OQ-002; "not evaluable" counts as Unable to Verify, D-056) |
 | Every rule evaluated and passed (direct or inferred), with its timing checked | **Pass** |
 
 ### Stage: renderer (planned)
@@ -447,3 +469,12 @@ illustration only.)*
 3. P-017: no Fail and nothing pending, but R7's timing was not checked → **Incomplete: "timing
    not checked for R7"**, never Pass. The same happens for a limit with a value but no
    approver (`limit_not_approved`, D-061).
+
+### W-28 A rule crashes → recorded, the others still run, overall Incomplete
+*(Runner built in Increment 7; overall policy in Increment 8.)*
+1. R2's code raises an error, for example a division by zero, while evaluating a timeline.
+2. P-026: R2's result is **`engine_error`**, with the message
+   ("ZeroDivisionError: division by zero"). R1, R8 and every other rule are still evaluated.
+3. Any rule that depends on R2 is **not evaluable because of R2**.
+4. P-017: no Fail elsewhere → **Incomplete** ("engine error in R2"), never Pass (D-063). The
+   report shows the error, so it is fixed rather than hidden.

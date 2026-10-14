@@ -20,7 +20,8 @@ A stable core between two adaptable edges, with every changeable value in config
 | Context | `rules/context.py` | P-009 to P-013 | Shock time, phases, command resolution, key times (anchors), computed once → `ProcedureContext` | built |
 | Rule outcome | `rules/outcome.py` | (all rule results) | `RuleOutcome`: kind, reason, failure code, evidence, flags, `blocked_by`, `timing_checked`; maps onto the shared `RuleResult` | built (Increment 6) |
 | Shared checks | `rules/checks.py` | P-019 to P-025 | The ladder steps every rule uses: dependency, required facts, restart ambiguity, occurrences, weak or missing evidence (inference before coverage), time limits, order | built (Increment 6) |
-| Rules | `rules/video_rules.py`, `rules/audio_rules.py`, `rules/registry.py` | P-014 to P-016 | One small unit per rule, built from the shared checks | planned (Increments 7–23) |
+| Registry and runner | `rules/registry.py`, `rules/engine.py` | P-026 | `@rule` registration and discovery of `*_rules` modules; `assess()` runs every rule in evaluation order (pending, same_as, dependencies, engine errors) and reports in display order; `evaluate()` keeps the pipeline contract | built (Increment 7) |
+| Rules | `rules/video_rules.py`, `rules/audio_rules.py` | P-014 to P-016 | One small registered function per rule, built from the shared checks | planned (Increments 11–23) |
 | Overall policy | `rules/policy.py` | P-017 | Overall Pass / Fail / faculty review | planned (Increment 8) |
 | Renderers | `rules/render.py` | P-018 | JSON report, evaluator checklist, feedback handover | planned (Increments 9, 25) |
 
@@ -44,6 +45,7 @@ schemas (`schemas/`) are not changed (D-038). `rules.engine.evaluate()` keeps it
 | **Hard-coded safety rule** | `coverage.py`, `context.py` | "Low confidence is never absence" is not configurable, so it cannot be switched off by accident (D-010) |
 | **Absent, not guessed** | `context.py` `Anchor` | A key time that cannot be established has `time=None`, a reason and flags. Defaults would hide data problems; exceptions would stop the other rules (D-002, D-039) |
 | **Flags travel with values** | `context.py` `Elapsed`, `outcome.py` `flags_of` | A time difference carries both anchors' flags, and every rule outcome carries the flags of everything it used (`uses=`), so no result can lose `shock_time_from_removal` (D-023) |
+| **Errors become results** | `engine.py` | A rule that raises is recorded as `engine_error` with its message; the other rules still run (D-063). A silent skip would hide a bug, and stopping would lose every other result |
 | **Checks return an outcome or "go on"** | `checks.py` | Each ladder step returns a `RuleOutcome` or `None`. A rule is then a short chain such as `depends(...) or requires(...) or occurrences(...)`, and the order of diagram (c) is the same in every rule |
 | **Immutable data** | all stages (frozen dataclasses, tuples) | One rule cannot change the evidence another rule sees. Inputs are never modified |
 | **Provenance records for clinical values** | `config.py` `ClinicalValue` | Every clinical number states who provided and who approved it. Unapproved values stay null (D-005, D-033) |
@@ -69,7 +71,8 @@ a tolerance (D-034).
 ### Add a rule
 1. Add a line to `configs/rules.yaml` in its display position, with `status: pending` and any
    `depends_on` on other rules' results.
-2. Implement it in `rules/video_rules.py` or `rules/audio_rules.py` with the shared checks in
+2. Implement it in `rules/video_rules.py` or `rules/audio_rules.py` as a function decorated with
+   `@rule("A3", requires=("stand_clear_command",))` (D-064), with the shared checks in
    ladder order: `depends` → `requires` → (`restart_ambiguity`) → `occurrences` (which calls
    `missing`, with any approved `inference`), and `timed` for limits. Pass every anchor and elapsed
    time used as `uses=`, so their flags are carried. Never build a Fail for a missing event

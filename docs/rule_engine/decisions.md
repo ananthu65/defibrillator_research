@@ -499,6 +499,43 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ## Working method
 
+### D-063 A rule that raises an error is recorded, never skipped
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:**
+  - A registered rule that raises an exception, or returns something invalid (not an outcome, the
+    wrong rule ID, or evidence outside the timeline), gets the result **`engine_error`**,
+    including the error message.
+  - Every other rule is still evaluated.
+  - Rules that depend on it are **not evaluable because of it**.
+  - It makes the overall result **incomplete**, never Pass.
+- **Reason:** One broken rule must not stop the assessment (D-002), and must not disappear
+  silently from the report.
+- **Exception kept on purpose:** a rule configured by `implementation: module:function` (the
+  shared contract in `docs/contracts.md`) that breaks the contract still stops the run, as the
+  shared contract test requires. Malformed input and invalid config also still stop the run
+  (P-002, D-049).
+- **Affects:** all rules; P-017, P-026; Increments 7 and 8.
+
+### D-064 Rules register themselves next to their logic
+- **Date / by / status:** 2026-10-14 · Arnikan (brief §3) · approved
+- **Decision:** A rule is a Python function marked `@rule("A3", requires=(...))`, declaring its
+  ID and the events it reads. The engine discovers every `*_rules` module in `rules/`, so adding
+  a rule needs no engine change. Display order, status, dependencies and clinical values stay in
+  `rules.yaml` (D-005, D-006).
+- **Load-time checks (2026-10-14, Arnikan):** when the engine loads, the registered rules must
+  match `rules.yaml`. Each mismatch is a clear error with a code, and no assessment is produced:
+  - an approved rule with no registered implementation (and no implementation path) is an error
+    (`approved_rule_not_registered`), **not** a pending result;
+  - two different implementations for one rule ID is an error naming both locations
+    (`duplicate_rule_registration`);
+  - a registered rule ID that is not in the **full catalogue** in `configs/rules.yaml` is an
+    error, probably a typo (`registered_rule_not_in_config`). This is checked against the
+    catalogue whatever config is being assessed, so copying the config elsewhere cannot hide an
+    unknown ID. A smaller config (for example a one-rule test config) only decides which rules
+    are evaluated; registered rules outside it are simply not run, and that is not an error;
+  - an event the rule declares must exist in the vocabulary (`unknown_required_event`).
+- **Affects:** all rules; P-026; Increment 7. **Resolved:** OQ-043.
+
 ### D-022 The shared contract test is updated as rules change
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
 - **Decision:** The rule count in `tests/test_pipeline_contracts.py` was changed from 14 to 16.
