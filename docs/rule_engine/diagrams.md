@@ -38,7 +38,7 @@ flowchart TD
     B["P-002 Validate timeline"]
     C["P-003 Map names"]
     D["P-004 Set aside low-confidence events"]
-    E["P-005 Flag anomalies"]
+    E["P-005 Flag anomalies<br/>incl. event counts, paddle identity"]
     F["P-006 Check header"]
     G["P-007 Coverage status<br/>P-008 What missing means"]
     H["P-009 Shock time · P-010 Phases<br/>P-011 Resolve commands · P-012 Key times<br/>P-013 Weak ambiguous commands"]

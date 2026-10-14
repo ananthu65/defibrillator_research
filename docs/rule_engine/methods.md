@@ -15,7 +15,7 @@ A stable core between two adaptable edges, with every changeable value in config
 | Stage | Module | Decision points | What it does | Status |
 |---|---|---|---|---|
 | Adapters | `rules/adapters/annotation.py` | P-001 | Convert one source (CVAT annotations now, model outputs later) into shared `Event`s plus a `TimelineHeader` | planned (Increment 10) |
-| Preparation | `rules/prepare.py`, `rules/vocabulary.py` | P-002 to P-005 | Validate, map names, set aside low-confidence events, flag anomalies → `PreparedTimeline` | built |
+| Preparation | `rules/prepare.py`, `rules/vocabulary.py` | P-002 to P-005 | Validate, map names, set aside low-confidence events, flag anomalies, including confident-event counts against `expected_counts` and paddle identity (Increment 9a, D-071) → `PreparedTimeline` | built |
 | Coverage | `rules/coverage.py` | P-006 to P-008 | Validate the header; decide whether each event was observable and what "missing" means | built |
 | Context | `rules/context.py` | P-009 to P-013 | Shock time, phases, command resolution, key times (anchors), computed once → `ProcedureContext` | built |
 | Rule outcome | `rules/outcome.py` | (all rule results) | `RuleOutcome`: kind, reason, failure code, evidence, flags, `blocked_by`, `timing_checked`; maps onto the shared `RuleResult` | built (Increment 6) |

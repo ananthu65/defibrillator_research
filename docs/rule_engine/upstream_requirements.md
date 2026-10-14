@@ -102,6 +102,25 @@ The format is a proposal to agree; it fits the current `Event` schema without ch
 
 Raw `object_visible:<class>` events are not used as rule evidence.
 
+### Sanity checks needed from video postprocessing
+
+The rule engine cannot see boxes, only events. These checks have to happen where the boxes are,
+before events are produced. Each failure should be reported with the recording, the frames and
+the objects, and not silently corrected.
+
+| Check | Why |
+|---|---|
+| **Placement zones never move while the paddles do.** A zone box that follows a paddle's motion is a mislabelled paddle (or a paddle labelled as a zone) | Zone visibility (R8's one-zone inference) and "in zone" (R3) would be judged against a moving target |
+| **At most one apical and one sternal paddle per frame** | Two boxes of one paddle class in one frame means one is the other paddle, so per-paddle placements would be wrong |
+| **Paddle identity kept over time.** The apical paddle stays apical from when it is taken until it is put back, and is not swapped with the sternal one between frames or after occlusion | R8 (apical before sternal) depends entirely on which paddle is which |
+
+The rule engine checks the results of these at the event level (D-071): an event expected once
+that appears more than once raises `count_violation`, marked "possibly the same incident
+detected twice" when the two are within the simultaneous window. Two or more placements of one
+paddle and none of the other raises `paddle_identity_conflict`. These catch problems that slip
+through, but they cannot show which frame went wrong, so the checks above are still needed
+upstream.
+
 ## From audio command detection (Sanjeevan)
 
 Command names follow the A1–A6 wording in the supervisor's proposal. **All names and phrases are

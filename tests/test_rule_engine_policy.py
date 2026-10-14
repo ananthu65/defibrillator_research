@@ -171,7 +171,8 @@ class ThroughTheEngine(unittest.TestCase):
         shocks = [Event("shock_delivered_on_screen", t, t, "annotation", 1.0, event_id=f"s{t}") for t in (30, 60)]
         config = {**RULES, "rules": [{"id": "R1", "status": "approved"}]}
         result = assess(shocks, config, registry={"R1": RuleSpec("R1", lambda c, d, r: passed("R1", "ok", ("s30",)))})
-        self.assertEqual(result.overall.timeline_anomalies, ("multiple_shocks",))
+        # Two shocks also break the expected count of exactly one (D-071), so both are listed.
+        self.assertEqual(result.overall.timeline_anomalies, ("multiple_shocks", "count_violation"))
         self.assertEqual(result.overall.result, INCOMPLETE)
 
 
@@ -181,10 +182,19 @@ class ReviewAnomalySetting(unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ConfigError, "distinct anomaly codes"):
                 with_engine(review_anomalies={"value": value})
 
-    def test_decided_list_d069(self):
+    def test_decided_list_d069_plus_proposed_count_anomalies(self):
         setting = CONFIG.engine.settings["review_anomalies"]
-        self.assertFalse(setting.undecided)
-        self.assertEqual(setting.value, ["unknown_labels_present", "multiple_shocks", "mixed_evidence_sources"])
+        self.assertEqual(setting.value, ["unknown_labels_present", "multiple_shocks", "mixed_evidence_sources",
+                                         "count_violation", "paddle_identity_conflict"])
+        self.assertTrue(setting.undecided)  # the two count anomalies are proposed (OQ-046)
+
+    def test_count_violation_alone_makes_the_result_incomplete_never_fail(self):
+        takes = [Event("first_paddle_taken", t, t, "annotation", 1.0, event_id=f"t{t}") for t in (5, 9)]
+        config = {**RULES, "rules": [{"id": "R1", "status": "approved"}]}
+        result = assess(takes, config, registry={"R1": RuleSpec("R1", lambda c, d, r: passed("R1", "ok", ("t5",)))})
+        self.assertEqual(result.overall.timeline_anomalies, ("count_violation",))
+        self.assertEqual(result.overall.result, INCOMPLETE)
+        self.assertIn(TIMELINE_NEEDS_REVIEW, result.overall.flags)
 
 
 if __name__ == "__main__":

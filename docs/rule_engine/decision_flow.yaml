@@ -117,8 +117,8 @@ decision_points:
     name: Anomaly detection
     stage: preparation
     status: built
-    decides: Which data problems the report and rules must take into account
-    inputs: [confident events, unknown labels, simultaneous_window_seconds]
+    decides: Which data problems the report and rules must take into account, including event counts and paddle identity
+    inputs: [confident events, unknown labels, simultaneous_window_seconds, expected_counts]
     branches:
       - condition: More than one confident shock indication
         outcome: Anomaly; within the simultaneous window it is marked possibly the same shock detected twice; not merged
@@ -130,13 +130,27 @@ decision_points:
       - condition: Any unknown label
         outcome: Anomaly listing the labels
         anomalies: [unknown_labels_present]
+      - condition: At least one confident event, and the count is outside its expected_counts range (exactly, at least, at most)
+        outcome: Anomaly per event, naming the event, the expected and found counts and the event IDs; never a Fail by itself; nothing merged (D-071)
+        anomalies: [count_violation]
+      - condition: Same, for an event limited to one, with an extra event within the simultaneous window of another
+        outcome: The pair is marked possibly the same incident detected twice
+        anomalies: [count_violation]
+      - condition: No confident event of that name
+        outcome: No count anomaly; a missing event is decided by coverage and the rules (A-018)
+        next: P-008
+      - condition: Expected count unlimited, or undecided (gel, buttons pressed, paddles firmly on chest)
+        outcome: Not checked
+      - condition: Two or more apical placements and no sternal placement, or the reverse
+        outcome: Anomaly; the paddle identity may have been swapped or lost
+        anomalies: [paddle_identity_conflict]
       - condition: None of the above
         outcome: No anomaly
-    config: [engine.yaml simultaneous_window_seconds]
-    code: rules/prepare.py (_anomalies)
-    decisions: [D-029, D-030, D-031]
-    assumptions: [A-006]
-    open_questions: [OQ-019]
+    config: [engine.yaml simultaneous_window_seconds, engine.yaml expected_counts]
+    code: rules/prepare.py (_anomalies, _count_anomalies)
+    decisions: [D-029, D-030, D-031, D-071]
+    assumptions: [A-006, A-018]
+    open_questions: [OQ-019, OQ-046, OQ-021, OQ-022, OQ-023]
 
   - id: P-006
     name: Header validation

@@ -45,6 +45,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
+| OQ-046 | new (2026-10-14) | Arnikan | — | open | Do count anomalies block an overall Pass? Zero found = missing? |
 | OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
 | OQ-044 | new (2026-10-14) | Arnikan | — | answered | Which timeline anomalies block an overall Pass, and where in the order? |
@@ -155,6 +156,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   pass?
 - **Affects:** R1.
 - **Interim behaviour:** R1 is not built yet (Increment 17). Every application is kept (D-012).
+  `expected_counts.gel_applied` is undecided, so repeated gel is not checked as a count (D-071).
 
 ### OQ-022 Paddles lifted and placed again before the shock
 - **Old no.:** E-14b · **Owner:** supervisor · **Also involves:** Ananth (detects re-placement),
@@ -163,7 +165,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   mistake? Which placement counts for R2, R3 and R8?
 - **Affects:** R2, R3, R8; P-012.
 - **Interim behaviour:** The earliest placement is used as the key time, and all placements are
-  recorded and flagged `multiple_candidates` (D-040).
+  recorded and flagged `multiple_candidates` (D-040). The placement events are expected exactly
+  once (placeholder), so a second placement also raises `count_violation`, never a Fail by itself;
+  `paddles_firmly_on_chest` is undecided and not checked (D-071).
 
 ### OQ-023 Discharge buttons pressed more than once
 - **Old no.:** E-14c · **Owner:** supervisor · **Also involves:** Ananth (detects each press),
@@ -172,6 +176,8 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   Which press counts for R4?
 - **Affects:** R4.
 - **Interim behaviour:** R4 is not built yet (Increment 16). Every press is kept (D-012).
+  `expected_counts.both_paddle_buttons_pressed` is undecided, so repeated presses are not checked
+  as a count (D-071).
 
 ### OQ-001 Final policy when coverage is unknown
 - **Old no.:** E-1 · **Owner:** team · **Also involves:** supervisor (whether unverifiable
@@ -315,6 +321,20 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 ---
 
 ## For Arnikan (rule engine and annotation)
+
+### OQ-046 Do count anomalies block an overall Pass?
+- **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Also involves:** — · **Raised:**
+  2026-10-14 · **Status:** open
+- **Question:**
+  - **(a)** Should `count_violation` and `paddle_identity_conflict` be review anomalies, so the
+    overall result is Incomplete instead of Pass (a Fail stays Fail, flagged
+    `timeline_needs_review`)? This is the proposal.
+  - **(b)** Is A-018 right: zero confident events is a missing event, decided by the coverage
+    step and the rules, and never a count violation?
+- **Affects:** P-005, P-017; `engine.yaml` `review_anomalies` and `expected_counts`.
+- **Interim behaviour:** Both codes are in `review_anomalies`, and the setting is marked
+  undecided. Two shocks raise both `multiple_shocks` and `count_violation`; they are listed once
+  each.
 
 ### OQ-007 Zone visibility for annotation timelines
 - **Old no.:** E-3c · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·

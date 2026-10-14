@@ -56,6 +56,11 @@ Checked when the engine loads, before any timeline is read (D-064). `RegistryErr
 | `multiple_shocks` | More than one confident `shock_delivered_on_screen` | Every recording has exactly one shock, so more than one is a data problem. Shock-dependent rules give Unable to Verify. Duplicates are **not merged** (merging is upstream's job) | `within_simultaneous_window` (true means "possibly the same shock detected twice"), `smallest_gap_seconds`, `simultaneous_window_seconds` |
 | `mixed_evidence_sources` | The same canonical event comes from human annotation **and** a model | One assessment should use one kind of evidence; otherwise a human tag could silently fill a model miss. Flag only | — |
 | `unknown_labels_present` | Any label is not in `vocabulary.yaml` | Shows a possible naming mismatch, instead of silently treating the event as missing | `labels` (`source:label`) |
+| `count_violation` *(Increment 9a, D-071)* | At least one confident event of a canonical event, and the count is outside its `engine.yaml` `expected_counts` range. One anomaly per event. Not raised for unlimited or undecided counts, or when there is no confident event at all (that is a missing event, A-018) | A one-off event seen twice usually means a detection or annotation problem. **Never a Fail by itself**; nothing is merged. A rule may fail on a repeated action only once the supervisor decides it is a mistake. Two shocks raise both this and `multiple_shocks` | `event`, `expected` (for example `{exactly: 1}`), `found`; for events limited to one: `possible_duplicates` (pairs of event IDs within the window, "possibly the same incident detected twice") and `simultaneous_window_seconds` |
+| `paddle_identity_conflict` *(Increment 9a, D-071)* | Two or more confident `apical_paddle_placed` and no `sternal_paddle_placed`, or the reverse | The paddle identity was probably swapped or lost (detection or annotation), so placement order cannot be trusted. Never a Fail by itself | `apical_paddle_placed`, `sternal_paddle_placed` (the counts) |
+
+Whether `count_violation` and `paddle_identity_conflict` block an overall Pass is proposed
+(they are in `review_anomalies`, marked undecided) and open as OQ-046.
 
 Low-confidence events are not anomalies. They are listed in `PreparedTimeline.excluded`
 (`ExcludedEvent`, reason `below_confidence_threshold`) and can be looked up with

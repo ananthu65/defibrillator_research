@@ -160,6 +160,148 @@ class Anomalies(unittest.TestCase):
         self.assertEqual(prepared.sources, {"annotation", "audio"})  # includes sources of excluded events
 
 
+def with_counts(**values):
+    counts = {**CONFIG.engine.expected_counts,
+              **{name: Setting(f"expected_counts.{name}", value) for name, value in values.items()}}
+    return replace(CONFIG, engine=replace(CONFIG.engine, expected_counts=counts))
+
+
+def counts(prepared):
+    return [a for a in prepared.anomalies if a.code == "count_violation"]
+
+
+class ExpectedCounts(unittest.TestCase):
+    """P-005, D-071: confident events per canonical event against engine.yaml expected_counts."""
+
+    def test_exactly_one_met_raises_nothing(self):
+        self.assertEqual(counts(prepare_timeline([event("first_paddle_taken", 5)], CONFIG)), [])
+
+    def test_exactly_one_found_twice_names_the_event_counts_and_ids(self):
+        prepared = prepare_timeline([event("first_paddle_taken", 5, event_id="t1"),
+                                     event("first_paddle_taken", 20, event_id="t2")], CONFIG)
+        anomaly, = counts(prepared)
+        self.assertEqual(anomaly.event_ids, ("t1", "t2"))
+        self.assertEqual({k: anomaly.details[k] for k in ("event", "expected", "found", "possible_duplicates")},
+                         {"event": "first_paddle_taken", "expected": {"exactly": 1}, "found": 2,
+                          "possible_duplicates": []})
+        self.assertIn("first_paddle_taken: expected exactly 1, found 2 confident events", anomaly.message)
+        self.assertNotIn("possibly the same", anomaly.message)
+        self.assertEqual(len(prepared.named("first_paddle_taken")), 2)  # kept, not merged
+
+    def test_no_events_is_missing_not_a_count_violation(self):
+        # A-018: a missing event is decided by the coverage step and the rules.
+        self.assertEqual(counts(prepare_timeline([event("Gel applied", 1)], CONFIG)), [])
+
+    def test_only_confident_events_are_counted(self):
+        prepared = prepare_timeline([event("second_paddle_taken", 5, "video", 0.9, event_id="v1"),
+                                     event("second_paddle_taken", 9, "video", 0.2, event_id="v2")], CONFIG)
+        self.assertEqual(counts(prepared), [])
+
+    def test_unlimited_is_never_a_violation(self):
+        commands = [event("stand_clear_command", t, "audio", 0.9) for t in (1, 2, 3, 4)]
+        self.assertEqual(counts(prepare_timeline(commands, CONFIG)), [])
+
+    def test_undecided_count_is_not_checked(self):
+        gel = [event("Gel applied", t) for t in (1, 2, 3, 4, 5)]
+        self.assertIsNone(CONFIG.engine.expected_counts["gel_applied"].value)
+        self.assertEqual(counts(prepare_timeline(gel, CONFIG)), [])
+
+    def test_at_least(self):
+        config = with_counts(gel_applied={"at_least": 2})
+        self.assertEqual(counts(prepare_timeline([event("Gel applied", 1), event("Gel applied", 5)], config)), [])
+        anomaly, = counts(prepare_timeline([event("Gel applied", 1)], config))
+        self.assertEqual((anomaly.details["expected"], anomaly.details["found"]), ({"at_least": 2}, 1))
+        self.assertNotIn("possible_duplicates", anomaly.details)  # only for events limited to one
+
+    def test_at_most(self):
+        config = with_counts(gel_applied={"at_most": 2})
+        self.assertEqual(counts(prepare_timeline([event("Gel applied", 1), event("Gel applied", 1.1)], config)), [])
+        anomaly, = counts(prepare_timeline([event("Gel applied", t) for t in (1, 1.1, 1.2)], config))
+        self.assertEqual((anomaly.details["expected"], anomaly.details["found"]), ({"at_most": 2}, 3))
+        self.assertNotIn("possible_duplicates", anomaly.details)
+
+    def test_exactly_more_than_one(self):
+        config = with_counts(gel_applied={"exactly": 2})
+        self.assertEqual(counts(prepare_timeline([event("Gel applied", 1), event("Gel applied", 5)], config)), [])
+        for times in ((1,), (1, 5, 9)):
+            with self.subTest(times=times):
+                anomaly, = counts(prepare_timeline([event("Gel applied", t) for t in times], config))
+                self.assertEqual(anomaly.details["found"], len(times))
+
+    def test_every_violation_is_reported_separately_in_name_order(self):
+        prepared = prepare_timeline([event("second_paddle_taken", t, event_id=f"s{t}") for t in (5, 9)]
+                                    + [event("first_paddle_taken", t, event_id=f"f{t}") for t in (1, 3)], CONFIG)
+        self.assertEqual([a.details["event"] for a in counts(prepared)], ["first_paddle_taken", "second_paddle_taken"])
+
+    def test_two_shocks_raise_both_the_shock_anomaly_and_the_count(self):
+        prepared = prepare_timeline([event("shock_delivered_on_screen", t, event_id=f"s{t}") for t in (30, 60)],
+                                    CONFIG)
+        self.assertEqual([a.code for a in prepared.anomalies], ["multiple_shocks", "count_violation"])
+
+
+class PossibleDuplicates(unittest.TestCase):
+    def test_extra_event_within_the_window_is_marked(self):
+        prepared = prepare_timeline([event("paddles_removed_after_shock", 40.0, event_id="r1"),
+                                     event("paddles_removed_after_shock", 40.3, event_id="r2")], CONFIG)
+        anomaly, = counts(prepared)
+        self.assertEqual(anomaly.details["possible_duplicates"], [["r1", "r2"]])
+        self.assertEqual(anomaly.details["simultaneous_window_seconds"], 0.5)
+        self.assertIn("possibly the same incident detected twice", anomaly.message)
+
+    def test_only_the_close_pair_is_marked(self):
+        prepared = prepare_timeline([event("first_paddle_taken", t, event_id=f"t{t}") for t in (5.0, 5.4, 20.0)],
+                                    CONFIG)
+        self.assertEqual(counts(prepared)[0].details["possible_duplicates"], [["t5.0", "t5.4"]])
+
+    def test_exactly_at_the_window_counts_as_close(self):
+        prepared = prepare_timeline([event("first_paddle_taken", t, event_id=f"t{t}") for t in (5.0, 5.5)], CONFIG)
+        self.assertEqual(counts(prepared)[0].details["possible_duplicates"], [["t5.0", "t5.5"]])
+
+    def test_at_most_one_is_also_limited_to_one(self):
+        config = with_counts(gel_applied={"at_most": 1})
+        prepared = prepare_timeline([event("Gel applied", 1.0, event_id="g1"),
+                                     event("Gel applied", 1.2, event_id="g2")], config)
+        self.assertEqual(counts(prepared)[0].details["possible_duplicates"], [["g1", "g2"]])
+
+
+class PaddleIdentity(unittest.TestCase):
+    def identity(self, *timeline):
+        return prepare_timeline(list(timeline), CONFIG).anomaly("paddle_identity_conflict")
+
+    def test_two_apical_and_no_sternal(self):
+        anomaly = self.identity(event("apical_paddle_placed", 10, event_id="a1"),
+                                event("apical_paddle_placed", 14, event_id="a2"))
+        self.assertEqual(anomaly.event_ids, ("a1", "a2"))
+        self.assertEqual(anomaly.details, {"apical_paddle_placed": 2, "sternal_paddle_placed": 0})
+        self.assertIn("2 apical_paddle_placed and no sternal_paddle_placed", anomaly.message)
+
+    def test_two_sternal_and_no_apical(self):
+        anomaly = self.identity(event("sternal_paddle_placed", 10), event("sternal_paddle_placed", 14),
+                                event("sternal_paddle_placed", 18))
+        self.assertEqual(anomaly.details, {"apical_paddle_placed": 0, "sternal_paddle_placed": 3})
+
+    def test_one_of_each_or_one_alone_is_no_conflict(self):
+        for timeline in ([event("apical_paddle_placed", 10), event("sternal_paddle_placed", 14)],
+                         [event("apical_paddle_placed", 10)], []):
+            with self.subTest(timeline=[e.event_name for e in timeline]):
+                self.assertIsNone(self.identity(*timeline))
+
+    def test_two_apical_and_one_sternal_is_a_count_problem_not_identity(self):
+        prepared = prepare_timeline([event("apical_paddle_placed", 10), event("apical_paddle_placed", 14),
+                                     event("sternal_paddle_placed", 12)], CONFIG)
+        self.assertFalse(prepared.has_anomaly("paddle_identity_conflict"))
+        self.assertEqual([a.details["event"] for a in counts(prepared)], ["apical_paddle_placed"])
+
+    def test_low_confidence_placements_do_not_count(self):
+        self.assertIsNone(self.identity(Event("apical_paddle_placed", 10, 10, "video", 0.9, event_id="a1"),
+                                        Event("apical_paddle_placed", 14, 14, "video", 0.1, event_id="a2")))
+
+    def test_conflict_is_never_a_fail_by_itself(self):
+        prepared = prepare_timeline([event("apical_paddle_placed", 10), event("apical_paddle_placed", 14)], CONFIG)
+        self.assertEqual({a.code for a in prepared.anomalies}, {"count_violation", "paddle_identity_conflict"})
+        self.assertEqual(len(prepared.named("apical_paddle_placed")), 2)  # nothing removed or judged
+
+
 class MalformedInput(unittest.TestCase):
     def assertRejected(self, timeline, message, code):
         with self.assertRaisesRegex(TimelineError, message) as caught:

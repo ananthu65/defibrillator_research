@@ -54,6 +54,13 @@ is explained in [anomalies.md](anomalies.md).
 | More than one confident shock | Anomaly; "possibly the same shock detected twice" if within the window; not merged → P-009 | `multiple_shocks` |
 | One event reported by both a human tag and a model | Flag only | `mixed_evidence_sources` |
 | Any unknown label | Warning listing the labels | `unknown_labels_present` |
+| At least one confident event, count outside its expected range (D-071) | Anomaly naming the event, expected and found counts and the event IDs; never a Fail by itself | `count_violation` |
+| Same, event limited to one, an extra event within the simultaneous window | Pair marked "possibly the same incident detected twice" | `count_violation` |
+| No confident event of that name | No count anomaly; a missing event → P-008 (A-018) | — |
+| Count unlimited (commands) or undecided (gel, buttons, paddles firmly on chest) | Not checked | — |
+| Two or more apical placements and no sternal, or the reverse | Anomaly: the paddle identity may have been swapped or lost | `paddle_identity_conflict` |
+
+Whether the two count codes block an overall Pass is proposed and open (OQ-046).
 
 ### Stage: coverage
 
@@ -537,3 +544,29 @@ illustration only.)*
 3. With every rule pending today: **Incomplete**, "rules not yet approved for R1, R2, …".
 4. Had the file held two events with the same ID: P-002 rejects it (`duplicate_event_id`), the
    error is printed, **no report** is written, and the exit code is 2.
+
+### W-35 Paddles removed twice, 0.3 s apart → count anomaly, possibly one removal
+*(Built in Increment 9a; the counts are placeholders.)*
+1. Confident `paddles_removed_after_shock` at 40.0 s and 40.3 s. The expected count is exactly 1.
+2. P-005: **`count_violation`**, "expected exactly 1, found 2". The pair is within the 0.5 s
+   window, so it is marked "possibly the same incident detected twice". Both events are kept.
+3. No rule fails because of the count. P-012 uses the earliest removal (`multiple_candidates`).
+4. P-017, under the proposal (OQ-046): no Fail elsewhere → **Incomplete**, "the timeline needs
+   review (count_violation)". A Fail elsewhere would stay Fail, flagged.
+
+### W-36 Two apical placements and no sternal → paddle identity conflict
+*(Built in Increment 9a.)*
+1. Confident `apical_paddle_placed` at 10 s and 14 s; no `sternal_paddle_placed`.
+2. P-005: **`paddle_identity_conflict`** (the paddle identity was probably swapped or lost), and
+   **`count_violation`** for the apical placement.
+3. R8 (Increment 12) cannot trust the placement order. Under the proposal (OQ-046), the overall
+   result can't be Pass.
+
+### W-37 Stand clear said three times → nothing
+1. Three confident `stand_clear_command`. Commands are unlimited.
+2. P-005: no count anomaly. A3 uses any valid occurrence (D-012).
+
+### W-38 First paddle taken never detected → missing, not a count anomaly
+1. No confident `first_paddle_taken` (its expected count is exactly 1).
+2. P-005: **no** `count_violation` (A-018). The missing event goes to the coverage step (P-008),
+   which decides Fail or Unable to Verify, as before.

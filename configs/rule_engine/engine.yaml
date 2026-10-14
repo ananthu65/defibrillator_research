@@ -42,5 +42,31 @@ unable_to_verify_outcome: {value: null, undecided: true, note: "overall result w
 # Fail but is flagged timeline_needs_review; any other result is Incomplete, checked before the
 # Unable-to-Verify setting (D-069).
 review_anomalies:
-  value: [unknown_labels_present, multiple_shocks, mixed_evidence_sources]
-  note: decided 2026-10-14 (D-069)
+  value: [unknown_labels_present, multiple_shocks, mixed_evidence_sources, count_violation, paddle_identity_conflict]
+  undecided: true
+  note: the first three decided 2026-10-14 (D-069); count_violation and paddle_identity_conflict proposed (OQ-046)
+
+# Expected number of CONFIDENT events per canonical event (P-005). Every canonical event in the
+# vocabulary must be listed. value: {exactly: n} | {at_least: n} | {at_most: n} | unlimited, or
+# null while undecided (not checked). A count outside the range raises count_violation; for events
+# limited to one, extra events within simultaneous_window_seconds are marked "possibly the same
+# incident detected twice". No events at all is never a count violation: a missing event is
+# decided by the coverage step and the rules (A-018). A violation is never a Fail by itself (D-071).
+# Every value is a placeholder until the supervisor answers the repeated-actions questions.
+expected_counts:
+  gel_applied:                   {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  first_paddle_taken:            {value: {exactly: 1}, placeholder: true}
+  first_paddle_placed:           {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  second_paddle_taken:           {value: {exactly: 1}, placeholder: true}
+  apical_paddle_placed:          {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  sternal_paddle_placed:         {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  paddles_firmly_on_chest:       {value: null, undecided: true, placeholder: true, note: paddles placed again (OQ-022)}
+  both_paddle_buttons_pressed:   {value: null, undecided: true, placeholder: true, note: buttons pressed again (OQ-023)}
+  shock_delivered_on_screen:     {value: {exactly: 1}, placeholder: true, note: two or more also raise multiple_shocks}
+  paddles_removed_after_shock:   {value: {exactly: 1}, placeholder: true}
+  oxygen_away_command:           {value: unlimited, placeholder: true}
+  continue_compressions_command: {value: unlimited, placeholder: true}
+  stand_clear_command:           {value: unlimited, placeholder: true}
+  stop_compressions_command:     {value: unlimited, placeholder: true}
+  shock_command:                 {value: unlimited, placeholder: true}
+  start_compressions_command:    {value: unlimited, placeholder: true}

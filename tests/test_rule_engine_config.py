@@ -63,8 +63,10 @@ class RepositoryConfig(unittest.TestCase):
     def test_engine_placeholders_and_undecided_policies_are_marked(self):
         self.assertIn("simultaneous_window_seconds", self.config.engine.placeholders)
         self.assertIn("placement_match_window_seconds", self.config.engine.placeholders)
-        self.assertEqual(self.config.engine.undecided, ["coverage_policy.outcomes.unknown",
-                                                        "inferred_fail_outcome", "unable_to_verify_outcome"])
+        self.assertEqual(self.config.engine.undecided, [
+            "coverage_policy.outcomes.unknown", "expected_counts.both_paddle_buttons_pressed",
+            "expected_counts.gel_applied", "expected_counts.paddles_firmly_on_chest", "inferred_fail_outcome",
+            "review_anomalies", "unable_to_verify_outcome"])
         self.assertIs(self.config.engine.value("assume_first_taken_is_apical"), False)
         self.assertIsNone(self.config.engine.value("unable_to_verify_outcome"))
         self.assertEqual(self.config.engine.coverage_outcomes["covered"].value, "fail")
@@ -244,6 +246,35 @@ class InvalidEngineSettings(unittest.TestCase):
 
     def test_null_only_while_undecided(self):
         self.assertRejected("only while undecided", lambda d: d.update(unable_to_verify_outcome={"value": None}))
+
+    def test_bad_expected_counts_are_rejected(self):
+        for value in ("two", {"exactly": 0}, {"exactly": True}, {"exactly": 1.5}, {"between": 1},
+                      {"exactly": 1, "at_most": 2}, {}):
+            with self.subTest(value=value):
+                self.assertRejected("unlimited or one of", lambda d: d["expected_counts"].update(
+                    first_paddle_taken={"value": value, "placeholder": True}))
+
+    def test_expected_count_null_only_while_undecided(self):
+        self.assertRejected("only while undecided", lambda d: d["expected_counts"].update(gel_applied={"value": None}))
+
+    def test_every_count_form_is_accepted(self):
+        for value in ({"exactly": 1}, {"at_least": 2}, {"at_most": 3}, "unlimited"):
+            with self.subTest(value=value):
+                data = copy.deepcopy(ENGINE)
+                data["expected_counts"]["gel_applied"] = {"value": value}  # a count is always written as a record
+                self.assertEqual(EngineSettings.from_dict(data).expected_counts["gel_applied"].value, value)
+
+    def test_expected_counts_must_cover_the_vocabulary_exactly(self):
+        for mutate, message in ((lambda d: d["expected_counts"].pop("gel_applied"), r"missing \['gel_applied'\]"),
+                                (lambda d: d["expected_counts"].update(gel_aplied="unlimited"),
+                                 r"not in the vocabulary \['gel_aplied'\]")):
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as directory:
+                data = copy.deepcopy(ENGINE)
+                mutate(data)
+                path = Path(directory) / "engine.yaml"
+                path.write_text(yaml.safe_dump(data), encoding="utf-8")
+                with self.assertRaisesRegex(ConfigError, message):
+                    RuleEngineConfig.from_dict({**copy.deepcopy(RULES), "engine": str(path)})
 
     def test_every_allowed_policy_value_is_accepted(self):
         for name, values in (("inferred_fail_outcome", ["fail", "unable_to_verify"]),

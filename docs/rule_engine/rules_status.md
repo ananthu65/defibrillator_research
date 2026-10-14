@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–9)
+## What is built so far (Increments 0–9a)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -44,6 +44,10 @@ Everything every rule will rely on is built and tested:
 - **JSON report and command line:** P-027 (Increment 9). `python -m rules.run --events <file>`
   writes the report. Its structure, and every result, flag and code the feedback module may
   receive, are in the versioned [output contract](output_contract.md) (D-070).
+- **Event counts and paddle identity:** P-005 (Increment 9a, D-071). An event expected once that
+  appears more than once, or a swapped paddle identity, is flagged for review. It is never a
+  Fail by itself. A rule may fail on a repeated action only once the supervisor decides that it
+  is a mistake (OQ-021 to OQ-023).
 
-No individual rule is built yet, so all 16 still report "pending". Next is the annotation input
-adapter (Increment 10).
+No individual rule is built yet, so all 16 still report "pending". Next: the annotation task
+(Step 9b, awaiting approval), then the annotation input adapter (Increment 10).

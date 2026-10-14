@@ -20,6 +20,8 @@ MODALITIES = ("video", "audio")
 COVERAGE_STATUSES = ("covered", "not_covered", "unknown")
 MISSING_OUTCOMES = ("fail", "unable_to_verify")
 OVERALL_UNABLE_OUTCOMES = ("fail", "faculty_review")
+COUNT_BOUNDS = ("exactly", "at_least", "at_most")
+UNLIMITED = "unlimited"
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -75,6 +77,7 @@ class EngineSettings:
     coverage_outcomes: dict[str, Setting]
     coverage_overrides: dict[str, dict[str, Setting]] = field(default_factory=dict)  # "region:x" -> status -> outcome
     regions: dict[str, tuple[str, ...]] = field(default_factory=dict)  # region -> canonical events it governs
+    expected_counts: dict[str, Setting] = field(default_factory=dict)  # canonical event -> {bound: n} | unlimited | None
 
     @classmethod
     def from_dict(cls, data, where="engine"):
@@ -83,7 +86,7 @@ class EngineSettings:
         expected = {"schema_version", "confidence_thresholds", "simultaneous_window_seconds",
                     "gel_minimum_gap_seconds", "placement_match_window_seconds", "assume_first_taken_is_apical",
                     "duration_tolerance_seconds", "coverage_policy", "inferred_fail_outcome",
-                    "unable_to_verify_outcome", "review_anomalies"}
+                    "unable_to_verify_outcome", "review_anomalies", "expected_counts"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
@@ -116,7 +119,12 @@ class EngineSettings:
                     raise ConfigError(f"{at}.{name}: expected a mapping of {list(COVERAGE_STATUSES)} to outcomes")
                 overrides[f"{kind}:{name}"] = {s: _setting(f"coverage_policy.by_{kind}.{name}.{s}", value, where,
                                                            _choice(MISSING_OUTCOMES)) for s, value in statuses.items()}
-        return cls(confidence, settings, coverage, overrides, regions)
+        counts = data["expected_counts"]
+        if not isinstance(counts, dict) or not counts:
+            raise ConfigError(f"{where} expected_counts: expected a mapping of canonical event -> expected count")
+        expected_counts = {name: _setting(f"expected_counts.{name}", value, where, _count)
+                           for name, value in counts.items()}
+        return cls(confidence, settings, coverage, overrides, regions, expected_counts)
 
     def value(self, name):
         return self.settings[name].value
@@ -124,7 +132,7 @@ class EngineSettings:
     def _all_settings(self):
         overrides = [s for statuses in self.coverage_overrides.values() for s in statuses.values()]
         return [*self.confidence_thresholds.values(), *self.settings.values(), *self.coverage_outcomes.values(),
-                *overrides]
+                *overrides, *self.expected_counts.values()]
 
     @property
     def placeholders(self):
@@ -163,6 +171,11 @@ class RuleEngineConfig:
                 if name not in vocabulary.events or vocabulary.modality(name) != "video":
                     raise ConfigError(f"{engine_path} coverage_policy.regions.{region}: {name!r} is not a "
                                       "canonical video event in the vocabulary")
+        missing = sorted(set(vocabulary.events) - set(engine.expected_counts))
+        unknown = sorted(set(engine.expected_counts) - set(vocabulary.events))
+        if missing or unknown:
+            raise ConfigError(f"{engine_path} expected_counts: every canonical event needs an expected count; "
+                              f"missing {missing}, not in the vocabulary {unknown}")
         return cls(rules, timing, engine, vocabulary)
 
     def rule(self, rule_id):
@@ -334,6 +347,23 @@ def _anomaly_list(value, at):
     from rules.prepare import ANOMALY_CODES
     if not isinstance(value, list) or not all(v in ANOMALY_CODES for v in value) or len(set(value)) != len(value):
         raise ConfigError(f"{at}: must be a list of distinct anomaly codes from {list(ANOMALY_CODES)}")
+
+
+def _count(value, at):
+    if value == UNLIMITED:
+        return
+    bound, n = next(iter(value.items())) if isinstance(value, dict) and len(value) == 1 else (None, None)
+    if bound not in COUNT_BOUNDS or isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ConfigError(f"{at}: must be {UNLIMITED} or one of {{exactly: n}}, {{at_least: n}}, {{at_most: n}} "
+                          "with n a positive whole number")
+
+
+def count_allows(expected, found):
+    """Whether `found` confident events satisfy an expected count ({bound: n} or unlimited)."""
+    if expected == UNLIMITED:
+        return True
+    (bound, n), = expected.items()
+    return {"exactly": found == n, "at_least": found >= n, "at_most": found <= n}[bound]
 
 
 def _boolean(value, at):

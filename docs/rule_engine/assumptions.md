@@ -154,3 +154,18 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **If wrong:** A provided value would be used, flagged instead. That is one line in
   `rules/checks.py` (`time_limit`).
 - **Related:** D-005, D-061, D-062, OQ-042.
+
+### A-018 No events at all is a missing event, not a count violation
+- **Assumption:** The expected-count check (D-071) raises `count_violation` only when at least
+  one confident event exists and the count is outside its range. Zero confident events is a
+  missing event, decided by the coverage step (P-007, P-008) and the rules.
+- **Why:**
+  - Whether a missing step is a mistake depends on coverage: an event the camera could not
+    see is not the learner's fault (D-004).
+  - Low confidence is not absence (D-010).
+  - A count anomaly for every missing step would mark every Fail for a skipped step as
+    "timeline needs review", and turn every Unable to Verify into Incomplete.
+  - "Too few but not zero" is still checked, for example `at_least: 2` with one found.
+- **Status:** active; open as OQ-046 (b).
+- **If wrong:** Remove the `not same` condition in `rules/prepare.py` (`_count_anomalies`).
+- **Related:** D-071, OQ-046.

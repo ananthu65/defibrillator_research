@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 1
+**Report version:** 2
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -27,6 +27,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-10-14 | First version (Increment 9) |
+| 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (proposed, OQ-046). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
 
 ## How to get the report
 
@@ -87,7 +88,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 1,
+  "report_version": 2,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -209,6 +210,8 @@ the restart command at 33 s, and there was no "oxygen away" command.
 |---|---|---|
 | `mixed_evidence_sources` | built | One event comes from both human annotation and a model |
 | `unknown_labels_present` | built | Some labels are not recognised (a possible naming mismatch) |
+| `count_violation` | built (v2) | An event appeared more (or fewer) times than expected, for example two paddle removals. `details` gives the `event`, `expected` and `found` counts. For events expected once, `possible_duplicates` lists pairs "possibly the same incident detected twice". **Not a learner mistake**: no rule fails because of it. Whether it blocks an overall Pass is proposed (OQ-046) |
+| `paddle_identity_conflict` | built (v2) | Two or more placements of one paddle and none of the other: the paddle identity was probably swapped or lost. Not a learner mistake. Whether it blocks an overall Pass is proposed (OQ-046) |
 
 (`multiple_shocks` is listed above.)
 

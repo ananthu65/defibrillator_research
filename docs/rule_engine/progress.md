@@ -2586,3 +2586,156 @@ timeline exits with 0: Incomplete, every rule pending.
 **Increment 10: annotation input adapter.** It turns a CVAT record into mapped events and a
 header, with `analyses_run: {video: true, audio: false}`, and marks every result
 `annotation_coverage_assumed`, so the report shows `development_data: true`.
+
+### Status of the separate annotation task (2026-10-14)
+Not done. None of the three `annotation/` tag lists contains `first_paddle_firmly_on_the_chest`,
+and nothing writes zone-visibility events. A plan was shown to Arnikan. It is now **Step 9b** in
+the plan, together with the audit extensions from Increment 9a. `annotation/` is unchanged until
+Arnikan approves and Ananth has been told.
+
+---
+
+## Increment 9a: Event count and consistency checks (2026-10-14)
+
+Inserted before Increment 10 at Arnikan's request. It is numbered 9a, and the annotation task is
+9b, so Increments 10 to 26 keep their numbers and every existing reference stays valid.
+
+### What was done
+- **Expected counts (P-005, D-071):** `engine.yaml` `expected_counts` gives every canonical
+  event an expected number of **confident** events:
+  - Exactly 1: `first_paddle_taken`, `second_paddle_taken`, `first_paddle_placed`,
+    `apical_paddle_placed`, `sternal_paddle_placed`, `paddles_removed_after_shock`,
+    `shock_delivered_on_screen`.
+  - Unlimited: the six commands.
+  - Undecided, so not checked: `gel_applied`, `both_paddle_buttons_pressed`,
+    `paddles_firmly_on_chest`. These are linked to the repeated-actions questions OQ-021,
+    OQ-022 and OQ-023.
+  - Every value is marked `placeholder: true`.
+- **`count_violation`:** one anomaly per event whose count is outside its range. It names the
+  event, the expected and found counts (`details.event`, `expected`, `found`) and lists the
+  event IDs.
+- **Possible duplicates:** for an event limited to one (`exactly: 1` or `at_most: 1`), each pair
+  within `simultaneous_window_seconds` is listed in `details.possible_duplicates`. The message
+  says "possibly the same incident detected twice". Nothing is merged.
+- **`paddle_identity_conflict`:** two or more apical placements and no sternal placement, or the
+  reverse. The details give both counts.
+- **Effect:** never a Fail by itself; no event is removed or changed. Both codes are added to
+  `review_anomalies` as a proposal (the setting is marked undecided, OQ-046). With them, a
+  timeline with a count problem is **Incomplete**, never Pass, and a Fail stays Fail, flagged
+  `timeline_needs_review`. A rule may fail on a repeated action only once the supervisor decides
+  that the repetition is a mistake.
+- **Upstream:** `upstream_requirements.md` lists the sanity checks needed from video
+  postprocessing:
+  - placement zones never move while the paddles do;
+  - at most one apical and one sternal paddle per frame;
+  - paddle identity kept over time.
+- **Annotation audit (plan only, Step 9b):** extend `audit_cvat_backups.py` to report:
+  - frames with two boxes of the same paddle label;
+  - zone tracks that move like a paddle;
+  - incidents tagged more than once (the existing repeated-tag checks, plus marking near
+    duplicates).
+- **Output contract version 2:** two codes were added, a version trigger under D-070. The
+  changelog says what changed; no field was added, removed or renamed.
+
+### How it was done
+- **Config:**
+  - `rules/config.py` validates every count (`unlimited`, or one of `exactly` / `at_least` /
+    `at_most` with a positive whole number). Null is allowed only while undecided.
+  - The list must name every canonical event in the vocabulary and nothing else, so adding an
+    event forces a decision on its count.
+  - `count_allows()` is the single place where a count is compared with its range.
+- **Preparation:** `_count_anomalies()` in `rules/prepare.py` runs after the existing anomaly
+  checks, on confident events only. Excluded low-confidence events are never counted.
+
+### Methods and design choices
+- **Counts are an engineering check, not a clinical rule.** They live in `engine.yaml`, as
+  placeholders, and raise anomalies, not rule results. Whether a repeated action is a learner's
+  mistake is the supervisor's decision; once it is made, the rule concerned will apply it.
+- **Two shocks raise both `multiple_shocks` and `count_violation`.** `multiple_shocks` is the
+  shock-specific anomaly that the procedure context uses to refuse a shock time. The count check
+  is general, so it is raised as well. The overall result lists each code once.
+
+### Assumptions
+- **New: A-018.** No confident event at all is a **missing event**, decided by the coverage step
+  and the rules, not a count violation. Otherwise every skipped step would be marked "timeline
+  needs review", and every Unable to Verify would become Incomplete. This is open as OQ-046 (b).
+
+### How it stays adaptable
+- **Supervisor answers on repetition:** set the value in `expected_counts` (for example
+  `gel_applied: {value: {at_least: 2}}`).
+- **OQ-046:** keep or remove the two codes in `review_anomalies`.
+- **A new canonical event:** loading fails until it has an expected count.
+
+### Tests (380 → 406)
+- **`tests/test_rule_engine_prepare.py`, +21:**
+  - **Expected counts (11):**
+    - exactly 1 met;
+    - exactly 1 found twice: event, counts and IDs, and the events kept;
+    - zero found is not a violation;
+    - only confident events counted;
+    - unlimited;
+    - undecided not checked;
+    - `at_least` met and violated;
+    - `at_most` met and violated;
+    - `exactly: 2` with one and with three found;
+    - several violations reported separately in name order;
+    - two shocks give both codes.
+  - **Possible duplicates (4):**
+    - a close pair is marked;
+    - only the close pair of three events;
+    - exactly at the window counts as close;
+    - `at_most: 1` is also limited to one.
+  - **Paddle identity (6):**
+    - two apical and no sternal;
+    - three sternal and no apical;
+    - one of each, one alone and none are not conflicts;
+    - two apical and one sternal is a count problem only;
+    - low-confidence placements are not counted;
+    - nothing is removed or judged.
+- **`tests/test_rule_engine_config.py`, +4:**
+  - invalid counts rejected (7 forms);
+  - null only while undecided;
+  - every count form accepted;
+  - the list must match the vocabulary exactly (missing and unknown event).
+- **`tests/test_rule_engine_policy.py`, +1 and 2 updated:**
+  - New: a count violation alone makes the result Incomplete, flagged.
+  - Updated: two shocks now list both codes; the review list contains the proposed codes and is
+    marked undecided.
+- **Updated:** the config test's list of undecided settings.
+
+Full suite: **406 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output still matches the reference. `python -m rules.run` on the sample timeline
+still gives Incomplete with no anomalies.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m unittest tests.test_rule_engine_prepare -v
+```
+
+### Documents updated
+- **Code and config:** `rules/prepare.py`, `rules/config.py`, `rules/render.py`
+  (`REPORT_VERSION` 2), `configs/rule_engine/engine.yaml`.
+- **Tests:** `tests/test_rule_engine_prepare.py`, `tests/test_rule_engine_config.py`,
+  `tests/test_rule_engine_policy.py`.
+- **`decision_flow.yaml`:** P-005 branches.
+- **`pathways.md`:** P-005 table, W-35 to W-38.
+- **`diagrams.md`:** (b).
+- **`anomalies.md`:** the two codes.
+- **`output_contract.md`:** version 2.
+- **`upstream_requirements.md`:** the video sanity checks.
+- **`implementation_plan.md`:** rows 9a and 9b, section D.
+- **Registers:** `decisions.md` (D-071); `assumptions.md` (A-018); `open_questions.md` (OQ-046
+  new; interim notes on OQ-021, OQ-022, OQ-023).
+- **Other docs:** `methods.md`, `rules_status.md`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **New: OQ-046** (Arnikan):
+  - (a) Should `count_violation` and `paddle_identity_conflict` block an overall Pass (the
+    proposal)?
+  - (b) Is A-018 right that zero found is a missing event, not a count violation?
+- **Linked, for the supervisor:** OQ-021 (gel), OQ-022 (re-placed paddles), OQ-023 (buttons)
+  decide the undecided counts, and whether a repeat can ever be a Fail.
+
+### Next
+**Step 9b** (annotation task, awaiting approval), then **Increment 10** (annotation input
+adapter).

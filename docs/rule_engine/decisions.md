@@ -114,6 +114,35 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** P-017; `engine.yaml: review_anomalies` (no longer undecided). **Resolved:**
   OQ-044.
 
+### D-071 Event counts and paddle identity are checked, never a Fail by themselves
+- **Date / by / status:** 2026-10-14 · Arnikan · approved (the values are placeholders; the
+  effect on the overall result is OQ-046)
+- **Decision:** Preparation (P-005) checks two things.
+  - **Expected counts:** the number of confident events of each canonical event is checked
+    against `engine.yaml` `expected_counts` (`exactly`, `at_least`, `at_most` or `unlimited`).
+    - Exactly 1: both paddles taken, first placement, apical and sternal placements, removal,
+      shock on screen.
+    - Unlimited: every command.
+    - Undecided, so not checked: gel, buttons pressed, paddles firmly on chest. These are tied
+      to the supervisor's repeated-actions questions OQ-021, OQ-022, OQ-023.
+    - Every value is a placeholder.
+    - A count outside its range raises `count_violation`, naming the event, the expected and
+      found counts, and the event IDs.
+  - **Paddle identity:** two or more apical placements and no sternal placement, or the
+    reverse, raises `paddle_identity_conflict`.
+  - **Possible duplicates:** for an event limited to one, an extra event within
+    `simultaneous_window_seconds` of another is marked "possibly the same incident detected
+    twice".
+- **Effect:** never a Fail by itself; nothing is removed or merged. A rule may fail on a
+  repeated action only once the supervisor decides that the repetition is a mistake. The
+  proposal that both codes block an overall Pass, extending the D-069 list, is OQ-046. Until
+  it is answered, both are in `review_anomalies`, and that setting is marked undecided.
+- **Reason:** A repeated one-off event (two shocks, two removals) or a swapped paddle identity
+  usually means a detection or annotation problem. A rule using such data could give a wrong
+  result without anyone noticing.
+- **Affects:** P-005, P-017; Increment 9a. **Assumption:** A-018. **Open questions:** OQ-046,
+  OQ-021, OQ-022, OQ-023.
+
 ### D-066 Results from annotation data are marked as development data
 - **Date / by / status:** 2026-10-14 · Arnikan · approved
 - **Decision:** When any rule result carries `annotation_coverage_assumed` (an annotation
