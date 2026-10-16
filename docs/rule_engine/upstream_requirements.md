@@ -102,6 +102,13 @@ The format is a proposal to agree; it fits the current `Event` schema without ch
 
 Raw `object_visible:<class>` events are not used as rule evidence.
 
+### Annotation export (for the final CVAT backups)
+
+Ananth runs the rule engine's exporter and audit on the final backups and sends back only the
+records, the export manifest and the audit outputs, never media (D-083, D-085). Instructions and
+the items to fix in the backups:
+[docs/annotation/rule_engine_export_howto.md](../annotation/rule_engine_export_howto.md).
+
 ### Sanity checks needed from video postprocessing
 
 The rule engine cannot see boxes, only events. These checks have to happen where the boxes are,

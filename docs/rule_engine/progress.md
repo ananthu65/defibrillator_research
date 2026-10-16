@@ -2754,3 +2754,259 @@ adapter).
   - P-005, P-017, `anomalies.md`, `pathways.md` (P-005 note, W-35, W-36);
   - `output_contract.md`: wording only, the version stays 2;
   - `implementation_plan.md` section D.
+
+---
+
+## CVAT frozen, separate exporter, commit rule; Steps 9b and 9c revised (2026-10-14, plan only)
+
+### Decisions recorded (Arnikan)
+- **D-073:** CVAT is frozen. Tags and component names never change; names are mapped in
+  `vocabulary.yaml` only.
+- **D-074:** Ananth's dataset files are not modified. A **separate exporter** reads the CVAT
+  backups and writes rule-engine records to a separate output. A **separate audit script** holds
+  the new checks. Also decided:
+  - a missing zone track means unknown;
+  - off-pattern videos are listed for annotation review;
+  - learner order is information only;
+  - the thresholds are 5% of the frame diagonal and 15 frames.
+
+  Closes OQ-007 and OQ-008.
+- **D-075:** commit only on an explicit instruction, and push only on an explicit instruction,
+  including documentation-only commits. It replaces every earlier rule. Recorded in the brief, the
+  plan and the agent's memory.
+
+### Findings used by the plan
+- **The new tag isn't in the backups:** the current CVAT backups (phase 1 inventory, 144 videos,
+  14 declared labels each) don't contain `first_paddle_firmly_on_the_chest`. It appears once the
+  final backups are exported.
+- **The tag lists matter for training:** `build_yolo_video_dataset.py` uses its tag list to
+  choose training frames, and Ananth's training view reads `sample_manifest.csv`. That is why the
+  dataset files stay untouched.
+- **fps must be read per video:** it varies (25, 29.71, 29.98, 30, 30.01, 24.91), and every video
+  starts at frame 0.
+- **Zone tracks by camera view (current backups):**
+
+  | View | Usual pattern | Off-pattern videos |
+  |---|---|---|
+  | LL | apical only (44 of 48) | 1 sternal only, 3 none |
+  | LS | both (44 of 48) | 2 apical only, 2 sternal only |
+  | T | both (38 of 48) | 7 sternal only, 3 none |
+
+  That is 18 off-pattern videos, 6 of them with no zone track.
+
+### Plan
+Rows 9b, 9c and 10 of `implementation_plan.md` are revised. The full plan, with its open points,
+was shown to Arnikan; no code was changed.
+
+---
+
+## Step 9b: rule-engine annotation exporter and audit (2026-10-16)
+
+Arnikan told Ananth before the work started. No file of the training pipeline was changed (see
+"Verification").
+
+### Decisions recorded (Arnikan's answers to the 9b/9c questions)
+- **D-076:** fps, width and height come from `video_conversion.csv` only. A missing video is an
+  export issue.
+- **D-077:** the usual zone pattern per view is fixed in config, with the actual distribution
+  printed beside it.
+- **D-078:** the output folders.
+- **D-079:** the training code is reused by import, pinned by tests.
+- **D-080:** a zone track that is never visible means not covered (information in the audit).
+- **D-081:** Step 9c's settings, evidence type, no event on disagreement, and the validation
+  gate (final backups; R8 waits for Arnikan's review).
+- **D-082:** the zone pattern is used for the review list only; reviewed exceptions remove a
+  video from it and make the zone not covered.
+- **Registers:** OQ-047 to OQ-052 are recorded as answered by these decisions. **OQ-053 (new,
+  Ananth):** are the converted videos constant frame rate?
+
+### What was done
+- **`annotation/export_rule_engine_records.py` (P-028):** reads the CVAT backup ZIPs directly and
+  writes `data/rule_engine/annotation_export/<run>/`:
+  - `records.jsonl`: one record per task, with:
+    - every tag under its CVAT name, with frame and seconds;
+    - `fps`, `width`, `height`;
+    - `start_frame`, `stop_frame`, `duration_seconds`;
+    - `zone_tracks`, `zone_visibility` intervals;
+    - an empty `derived_events` (9c).
+  - `export_issues.csv`;
+  - `export_manifest.json`: a SHA-256 per backup ZIP, counts, the config and report checksums.
+
+  It refuses `data/video/` and non-empty folders.
+- **`annotation/audit_rule_engine_checks.py` (P-029):** writes the review list (`issues.csv`),
+  information (`info.csv`), `zone_patterns.csv`, `audit_manifest.json`, and a README. The README
+  shows the usual pattern beside the actual distribution per view and the off-pattern videos.
+- **`configs/rule_engine/annotation_export.yaml`:** zone and paddle labels (CVAT names), the
+  usual pattern, `reviewed_zone_exceptions` (empty), and the two accepted thresholds.
+
+### How it was done
+- **Reuse by import:** task discovery comes from `audit_cvat_backups.py` (`canonicalize_task_id`,
+  `normalize_jobs`, `read_json_entry`, `Issue`). Geometry comes from
+  `build_yolo_video_dataset.py` (`collect_annotations`, `track_box_at`, `clip_box`,
+  `shape_box`).
+- **Zone visibility:** a zone is visible on a frame when any of its tracks gives a box there that
+  survives `clip_box`. This is exactly how `frame_boxes` builds the training labels, and a test
+  compares the two frame by frame. Visible frames become runs, merged across tracks and jobs.
+- **Times:** `frame / fps`, the training data's convention. Every current video starts at frame
+  0.
+
+### Methods and design choices
+- **The exporter writes facts only.** Coverage policy stays in the rule engine (P-030,
+  Increment 10): exception → not covered; visible → covered; never visible → not covered;
+  no track → unknown.
+- **Exporter and audit tests share one file** with a synthetic CVAT backup builder (`tests/` is
+  not a package).
+
+### Smoke run on real backups (read-only)
+Both scripts ran on one annotator's corrected backups, 39 ZIPs in
+`D:\FYP\Annotation - correction\Kartheepan\Complete sets (…)`. Output went to the gitignored
+`data/rule_engine/`.
+- **Export:** 38 records, 270 tags, 65 zone intervals. P01_LL agrees with the conversion report:
+  fps 24.91, frames 0 to 472, duration 18.988 s.
+- **These corrected backups already contain `first_paddle_firmly_on_the_chest`** (P01_LL, frame
+  323). Only the older backups behind the phase 1 reports lack it.
+- **Findings:**
+  - `P14_LL.zip` contains task P14_LS (`duplicate_task`);
+  - 8 zone tracks moved 5.7% to 13.2% of the diagonal;
+  - 2 near-duplicate gel tags (1 and 15 frames apart);
+  - no off-pattern videos in this set.
+- **Not run on the full set:** the phase 1 backup layout (`defibliration2.zip`,
+  `kartheepan/P01_LL.zip`, …) is not on this machine, so the "current" folder needs Arnikan's
+  confirmation.
+
+### Tests (406 → 437)
+`tests/test_rule_engine_annotation_export.py`, 31 tests:
+- **Visibility matches training (3):**
+  - the `track_box_at` behaviour pinned;
+  - visible frames equal the frames with a training box;
+  - a box outside the image is not visible.
+- **Records (10):**
+  - every tag kept and timed;
+  - outside keyframes and merging across tracks and jobs;
+  - missing and never-visible tracks (facts only);
+  - a single-frame shape reported, not converted;
+  - `fps_missing`;
+  - frame-count mismatch;
+  - a tag outside the frames;
+  - a project backup with duplicates;
+  - an unrecognised name;
+  - deterministic output.
+- **Separation from training (3):** writing inside `data/video` refused; a non-empty folder
+  refused; the command line writes three files.
+- **Configuration (5):**
+  - the repository config;
+  - an exception loaded;
+  - invalid exceptions;
+  - invalid patterns and settings;
+  - the real conversion report (144 videos; P01_LL is 24.91 fps).
+- **Audit checks (9):**
+  - duplicate paddle boxes;
+  - one box per paddle, and a standalone shape counted;
+  - a moving zone, and one overlapping a paddle;
+  - the 15-frame window;
+  - learner order is information only;
+  - zone patterns for 5 view cases;
+  - a never-visible track;
+  - an exception removes a video from the list;
+  - a contradicted exception.
+- **Audit output (1):** five files, the README table and the review-only `issues.csv`.
+
+Full suite: **437 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Verification: Ananth's files unchanged
+`git diff --stat` lists only `docs/rule_engine/` files. `git status` shows no change to
+`annotation/build_yolo_video_dataset.py`, `create_grouped_video_split.py`,
+`validate_yolo_dataset.py`, `audit_cvat_backups.py`, `to_timeline.py`, `annotation/reports/`,
+`annotation/splits/`, `annotation/docs/`, `video/`, `configs/video/` or `configs/pipeline.yaml`.
+New files: the two scripts, the config and the test file.
+
+### Try it yourself
+```powershell
+.venv\Scripts\python -m annotation.export_rule_engine_records --backup-root "<CVAT backup folder>" --output data/rule_engine/annotation_export/2026-10-16
+.venv\Scripts\python -m annotation.audit_rule_engine_checks --backup-root "<CVAT backup folder>" --output annotation/reports/rule_engine_audit/2026-10-16
+```
+
+### Documents updated
+- **`decision_flow.yaml`:** new stage `annotation_export`, P-028 to P-031, and P-001 revised.
+- **`pathways.md`:** P-028 to P-031 and P-001, and W-39 to W-44.
+- **`diagrams.md`:** (h) and (i), with (a) and (b) linked.
+- **Registers:** `decisions.md` (D-076 to D-082); `open_questions.md` (OQ-047 to OQ-052
+  answered, OQ-053 new).
+- **Other docs:** `anomalies.md` (export and audit codes), `implementation_plan.md` (rows 9b,
+  9c, 10), `methods.md`, `rules_status.md`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **New:** OQ-053 (Ananth), constant frame rate.
+- **Needed for the real run:** which backup folder is the current set.
+
+### Next
+Increment 10 (annotation adapter, P-001 and P-030). Step 9c is planned and not built. Nothing is
+committed; commit only when Arnikan says so (D-075).
+
+---
+
+## Step 9b handover: Ananth runs the exporter; privacy rule (2026-10-16)
+
+### Decisions recorded (Arnikan)
+- **D-083:** the corrected backups go to Ananth, and Arnikan no longer works with them. **Ananth
+  runs the exporter and the audit on the final backups.** He sends only `records.jsonl`,
+  `export_manifest.json` and the audit outputs, never media. How-to:
+  [docs/annotation/rule_engine_export_howto.md](../annotation/rule_engine_export_howto.md).
+- **D-084:** until then, the smoke-run export of the 39 corrected backups is the development
+  data for Increment 10:
+  - records: `data/rule_engine/annotation_export/smoke-kartheepan/`;
+  - audit: `data/rule_engine/audit_smoke/kartheepan/`.
+
+  Both are gitignored. Exported records are never committed. P14_LS in that set is unreliable.
+- **D-085, privacy:** media in the backups is never opened, listed in detail or printed. Only
+  `task.json` and `annotations.json` are read. Recorded in the brief (section 6, rule 8) and the
+  agent's memory.
+
+### Code change for D-085
+- **The manifest no longer hashes the whole ZIP:** reading the whole file would read the video
+  bytes. It now records each ZIP's size and a SHA-256 over its `task.json` and
+  `annotations.json` entries only (`annotation_sha256`).
+- **New tests (2):**
+  - a spy on `ZipFile.open` shows that the export and the audit open only those two entries;
+  - the digest stays the same when only the media changes, and changes when an annotation
+    changes.
+- **Disclosure:** the earlier smoke run hashed the whole ZIPs for its manifest. No media was
+  opened, listed in detail or printed.
+
+### Annotation findings for Ananth to fix in the backups (smoke run, 39 corrected backups)
+1. **`P14_LL.zip` contains a task named `P14_LS`.** It clashes with `P14_LS.zip`
+   (`duplicate_task`), so the P14_LL video seems to be missing from that set.
+2. **8 moving zone tracks** (centre moving > 5% of the frame diagonal; none overlapped a paddle at
+   its end frame):
+
+   | Video | Zone | Moved |
+   |---|---|---|
+   | P06_T | sternal | 5.8% |
+   | P07_T | sternal | 6.8% |
+   | P07_T | apical | 8.1% |
+   | P14_LS (in `P14_LL.zip`) | apical | 7.6% |
+   | P14_LS (in `P14_LL.zip`) | sternal | 6.8% |
+   | P31_LL | apical | 5.7% |
+   | P31_T | sternal | 13.2% |
+   | P31_T | apical | 11.2% |
+
+3. **2 near-duplicate gel tags:**
+   - P06_LS, frames 259 and 260;
+   - P12_LS, frames 164 and 179.
+
+The same list, with frames, is in the how-to.
+
+### Registers
+- **New open questions, both Ananth's:**
+  - **OQ-054:** when the final export will be available;
+  - **OQ-055:** does anything in his pipeline take the camera view from the backup file name?
+- **Plan:** rows 9b, 9c and 10 updated.
+- **`diagrams.md` (h):** shows Ananth running the exporter and sending records back, and the
+  interim smoke data.
+- **Also updated:** `decision_flow.yaml` (P-028, P-029), `methods.md`,
+  `upstream_requirements.md`.
+
+### Tests
+437 → 439, all pass, 1 skipped (charging sound). The pipeline output is unchanged. None of
+Ananth's files changed.

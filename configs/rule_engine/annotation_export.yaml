@@ -1,0 +1,25 @@
+schema_version: 1
+# Rule-engine annotation export and audit (owner: Arnikan; D-074). Read only by
+# annotation/export_rule_engine_records.py and annotation/audit_rule_engine_checks.py. The
+# training pipeline never reads it. CVAT names are used exactly as they are (D-073).
+
+zone_labels: [apical_placement_zone, sternal_placement_zone]   # CVAT zone track labels
+paddle_labels: [paddle_apical, paddle_sternal]                 # CVAT paddle track labels
+
+# Zone tracks normally present in each camera view (D-077). Used ONLY by the audit's review list:
+# the rule engine never uses it, and it never affects a result (D-082). The audit report prints
+# the actual distribution per view beside it.
+usual_zone_pattern:
+  LL: [apical_placement_zone]
+  LS: [apical_placement_zone, sternal_placement_zone]
+  T:  [apical_placement_zone, sternal_placement_zone]
+
+# Videos where an annotator confirmed that a zone was genuinely not visible (D-082). They leave the
+# audit's review list, and the annotation adapter (Increment 10) treats that zone as not covered
+# instead of unknown. One entry per video and zone:
+#   - {task: P07_T, zone: apical_placement_zone, confirmed_by: <annotator>, confirmed_on: "YYYY-MM-DD", note: ...}
+reviewed_zone_exceptions: []
+
+audit:
+  zone_motion_fraction_of_diagonal: {value: 0.05, placeholder: true}   # accepted 2026-10-14 (D-074)
+  repeated_tag_window_frames:       {value: 15, placeholder: true}     # accepted 2026-10-14 (D-074)

@@ -9,29 +9,128 @@ schema_version: 1
 #   decisions (D-), assumptions (A-), open_questions (OQ-).
 # Every flag, anomaly, rejection and failure code listed here must exist in docs/rule_engine/anomalies.md,
 # and (for built points) in the code; tests/test_rule_engine_docs.py checks this.
-stages: [adapter, preparation, coverage, context, rule, overall_policy, renderer]
+stages: [annotation_export, adapter, preparation, coverage, context, rule, overall_policy, renderer]
 
 decision_points:
+
+  # ---- Annotation export (Step 9b): CVAT backups -> rule-engine records; the training pipeline is untouched ----
+
+  - id: P-028
+    name: Annotation export
+    stage: annotation_export
+    status: built
+    decides: What the rule engine knows about one annotated video, read directly from its CVAT backup (D-074)
+    inputs: [CVAT backup ZIPs, annotation/reports/phase4/video_conversion.csv (fps, frame size), configs/rule_engine/annotation_export.yaml]
+    branches:
+      - condition: Task found and its video is in the conversion report
+        outcome: One record in records.jsonl with every tag under its CVAT name (frame and seconds), frame range, duration, zone tracks and zone visibility intervals
+        next: P-001
+      - condition: Video missing from the conversion report
+        outcome: No record; export issue fps_missing (D-076)
+      - condition: Frame count differs from the conversion report
+        outcome: Record written; export issue frame_count_mismatch (warning)
+      - condition: Zone track present
+        outcome: Visible on exactly the frames where the training dataset has a box for it (track_box_at then clip_box, by import, D-079); runs merged across tracks and jobs
+      - condition: Zone drawn as a single-frame shape, not a track
+        outcome: Not converted; export issue zone_shape_without_track
+      - condition: The same task in two archives, an unrecognised task name, or unreadable CVAT files
+        outcome: The first copy is kept; export issue duplicate_task, unrecognized_task_name or invalid_cvat_json
+      - condition: Output folder inside data/video or not empty
+        outcome: Refused; nothing is written (the training pipeline is never touched)
+    config: [configs/rule_engine/annotation_export.yaml zone_labels]
+    code: annotation/export_rule_engine_records.py (run by Ananth on the final backups, D-083; reads only task.json and annotations.json, D-085)
+    decisions: [D-073, D-074, D-076, D-078, D-079, D-083, D-084, D-085]
+    assumptions: []
+    open_questions: [OQ-053, OQ-054, OQ-055]
+
+  - id: P-029
+    name: Annotation audit (review list)
+    stage: annotation_export
+    status: built
+    decides: Which annotation problems go on the review list, and what is information only (D-074, D-082)
+    inputs: [CVAT backup ZIPs, conversion report, usual_zone_pattern, reviewed_zone_exceptions, audit thresholds]
+    branches:
+      - condition: Two or more boxes of one paddle label on the same frame
+        outcome: Review duplicate_paddle_box (frame range)
+      - condition: A zone track's centre moves more than 5% of the frame diagonal
+        outcome: Review zone_moves_like_paddle, naming any paddle box it overlaps
+      - condition: The same tag twice within 15 frames
+        outcome: Review repeated_incident_tag (possibly the same incident tagged twice)
+      - condition: Zone tracks differ from the view's usual pattern (missing, unless a reviewed exception, or unexpected), including no zone
+        outcome: Review zone_pattern_off; the pattern is used only here and never affects a result (D-082)
+      - condition: A reviewed exception for a zone that is visible
+        outcome: Review zone_exception_contradicted
+      - condition: Learner procedure order, the same tag further apart than 15 frames, no first-placement tag, a never-visible zone track, a confirmed exception
+        outcome: Information only (info.csv), never an annotation issue
+    config: [annotation_export.yaml usual_zone_pattern, reviewed_zone_exceptions, audit.zone_motion_fraction_of_diagonal, audit.repeated_tag_window_frames]
+    code: annotation/audit_rule_engine_checks.py (run by Ananth on the final backups, D-083)
+    decisions: [D-074, D-077, D-078, D-080, D-082, D-083, D-085]
+    assumptions: []
+    open_questions: [OQ-054]
+
+  - id: P-030
+    name: Zone coverage for an annotated recording
+    stage: adapter
+    status: planned
+    decides: The header coverage of each placement zone (region) for one annotated recording (Increment 10)
+    inputs: [exporter record (zone_tracks, zone_visibility), reviewed_zone_exceptions]
+    branches:
+      - condition: The zone is confirmed not visible by an annotator (reviewed exception)
+        outcome: not covered (D-082)
+        next: P-007
+      - condition: Zone track present and visible on some frames
+        outcome: covered
+        next: P-007
+      - condition: Zone track present but outside on every frame
+        outcome: not covered (D-080)
+        next: P-007
+      - condition: No zone track
+        outcome: unknown (D-074)
+        next: P-007
+    config: [annotation_export.yaml reviewed_zone_exceptions]
+    code: rules/adapters/annotation.py (Increment 10)
+    decisions: [D-074, D-080, D-082]
+    assumptions: []
+    open_questions: []
+
+  - id: P-031
+    name: Derived per-paddle placement
+    stage: annotation_export
+    status: planned
+    decides: Whether the exporter derives apical_paddle_placed / sternal_paddle_placed from the paddle and zone boxes (Step 9c, D-081)
+    inputs: [paddle_apical and paddle_sternal boxes, zone boxes, tags first_paddle_firmly_on_the_chest and paddles_firmly_on_chest]
+    branches:
+      - condition: The paddle box overlaps its zone box by at least 0.5 of its area, steady for 5 frames (centre moving under 2% of the diagonal), and agrees with the tags within 15 frames
+        outcome: A placement event per placement episode, direct evidence flagged derived_placement, method in metadata
+      - condition: The zone has no track, the paddle has two boxes, or the result disagrees with the tags
+        outcome: No event; an export issue
+      - condition: Validation report (needs first_paddle_firmly_on_the_chest, final backups) not yet reviewed by Arnikan
+        outcome: R8 does not use derived placements
+    config: [annotation_export.yaml (9c settings, planned)]
+    code: annotation/export_rule_engine_records.py (Step 9c)
+    decisions: [D-073, D-081]
+    assumptions: []
+    open_questions: [OQ-004]
 
   - id: P-001
     name: Annotation timeline adapter
     stage: adapter
     status: planned
-    decides: How a CVAT annotation record becomes a timeline, a header and coverage
-    inputs: [events.jsonl record, zone annotations (OQ-007)]
+    decides: How an exporter record becomes a timeline, a header and coverage (Increment 10; reads records.jsonl, not events.jsonl, D-074)
+    inputs: [exporter record (P-028), reviewed_zone_exceptions]
     branches:
       - condition: Record converted
         outcome: Events plus header analyses_run {video true, audio false}; every result flagged
         next: P-002
         flags: [annotation_coverage_assumed]
-      - condition: Zone annotation information missing
-        outcome: Zone coverage left unknown
-        next: P-002
+      - condition: Zone coverage per region
+        outcome: Decided by P-030
+        next: P-030
     config: []
     code: rules/adapters/annotation.py (Increment 10)
-    decisions: [D-035]
+    decisions: [D-035, D-074]
     assumptions: [A-001, A-015]
-    open_questions: [OQ-007, OQ-037]
+    open_questions: [OQ-037]
 
   - id: P-002
     name: Timeline validation

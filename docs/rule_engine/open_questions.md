@@ -38,6 +38,9 @@ first, so that section can be printed for supervisor meetings.
 | OQ-004 | E-3 | Ananth | Arnikan | open | Who produces per-paddle placement events? |
 | OQ-017 | E-10 | Ananth | Arnikan | open | Pipeline to call the full rule-engine assessment |
 | OQ-020 | E-13 | Ananth | Sanjeevan, Arnikan | open | Timeline header: can it be provided, in what format? |
+| OQ-053 | new (2026-10-16) | Ananth | Arnikan, Sanjeevan | open | Are the converted videos constant frame rate? |
+| OQ-054 | new (2026-10-16) | Ananth | Arnikan | open | When will the final export be available? |
+| OQ-055 | new (2026-10-16) | Ananth | Arnikan | open | Does anything take the camera view from the backup file name? |
 | OQ-009 | E-4 | Sanjeevan | Arnikan | open | Missing audio command events |
 | OQ-045 | new (2026-10-14) | Sanjeevan | Arnikan | open | Confirm the output contract's versioning rule |
 | OQ-015 | E-8 | team | supervisor | open | Final IDs for R8 and A8 |
@@ -45,9 +48,15 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
-| OQ-007 | E-3c | Arnikan | — | open | Zone visibility for annotation timelines |
-| OQ-008 | E-3d | Arnikan | — | open | Annotation label lists that drop the first-placement tag |
+| OQ-007 | E-3c | Arnikan | — | answered | Zone visibility for annotation timelines |
+| OQ-008 | E-3d | Arnikan | — | answered | Annotation label lists that drop the first-placement tag |
 | OQ-046 | new (2026-10-14) | Arnikan | — | answered | Do count anomalies block an overall Pass? Zero found = missing? |
+| OQ-047 | new (2026-10-14) | Arnikan | — | answered | Where does the exporter get each video's fps? |
+| OQ-048 | new (2026-10-14) | Arnikan | — | answered | Usual zone pattern: computed or configured? |
+| OQ-049 | new (2026-10-14) | Arnikan | — | answered | Output folders of the exporter and the audit |
+| OQ-050 | new (2026-10-14) | Arnikan | — | answered | Reuse the existing scripts by import, or copy their helpers? |
+| OQ-051 | new (2026-10-14) | Arnikan | — | answered | A zone track that is never visible |
+| OQ-052 | new (2026-10-14) | Arnikan | — | answered | Derived placements: settings, evidence type, disagreement with tags |
 | OQ-044 | new (2026-10-14) | Arnikan | — | answered | Which timeline anomalies block an overall Pass, and where in the order? |
 | OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
@@ -224,6 +233,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   `sternal_paddle_placed`? CVAT has no per-paddle placement tags.
 - **Affects:** R8, R3; P-003, P-015.
 - **Interim behaviour:** These names are placeholders. Without them, R8 is Unable to Verify.
+- **Update 2026-10-14:** CVAT is frozen (D-073), so no CVAT tag will provide these events. For
+  **annotation** timelines, Step 9c plans to derive them from the annotated paddle and zone boxes
+  in the rule engine's own exporter. For **model** timelines, the question stays open for Ananth.
 
 ### OQ-017 Pipeline to call the full rule-engine assessment
 - **Old no.:** E-10 · **Owner:** Ananth · **Also involves:** Arnikan (provides the function) ·
@@ -248,6 +260,36 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   didn't run".
 - **Interim behaviour:** No header means coverage is unknown, so missing events give Unable to
   Verify (D-008, D-009).
+
+### OQ-053 Are the converted videos constant frame rate?
+- **Old no.:** new (2026-10-16) · **Owner:** Ananth · **Also involves:** Arnikan (exporter),
+  Sanjeevan (audio times) · **Raised:** 2026-10-16 · **Status:** open
+- **Question:** The exporter converts frames to seconds as `frame / fps`, with fps from
+  `video_conversion.csv` (D-076). Are the converted videos constant frame rate? If not,
+  `frame / fps` only approximates real time, and the error grows through the video.
+- **Affects:** every annotation time; rules comparing video and audio times, such as R7/A6 (shock
+  on screen to the restart command) and A8.
+- **Interim behaviour:** Constant frame rate is assumed. fps values in the report vary by video
+  (24.91 to 30.01), so it is read per video.
+
+### OQ-054 When will the final export be available?
+- **Old no.:** new (2026-10-16) · **Owner:** Ananth · **Also involves:** Arnikan · **Raised:**
+  2026-10-16 · **Status:** open
+- **Question:** When will the exporter and audit outputs for the final backup set (D-083) be
+  available?
+- **Affects:** Increment 10 onward (real annotation data), the Step 9c validation report.
+- **Interim behaviour:** The smoke-run export of 39 corrected backups is used as development data
+  (D-084).
+
+### OQ-055 Does anything take the camera view from the backup file name?
+- **Old no.:** new (2026-10-16) · **Owner:** Ananth · **Also involves:** Arnikan · **Raised:**
+  2026-10-16 · **Status:** open
+- **Question:** In the smoke run, `P14_LL.zip` contained a task named P14_LS. Does anything in the
+  training pipeline take the camera view or task ID from the backup **file name**, instead of from
+  inside the backup? If so, P14_LS could be trained or split under the wrong view.
+- **Affects:** Ananth's split and dataset. The rule engine's exporter takes the ID from the task
+  name and media name inside the backup, and reports the clash as `duplicate_task`.
+- **Interim behaviour:** P14_LS in the interim data is treated as unreliable (D-084).
 
 ---
 
@@ -322,23 +364,46 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ## For Arnikan (rule engine and annotation)
 
-### OQ-007 Zone visibility for annotation timelines
-- **Old no.:** E-3c · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
-  **Status:** open
-- **Question:** `events.jsonl` has no zone tracks. Should zone flags be added to it (in
-  `annotation/build_yolo_video_dataset.py`), or supplied as a separate per-task file?
-- **Affects:** R8; P-001, P-007.
-- **Interim behaviour:** Zone coverage is unknown.
+### OQ-047 Where does the exporter get each video's fps? — *answered*
+- **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Question:** Use an MP4 header reader cross-checked with the conversion report, or the report
+  only?
+- **Answer:** The conversion report only; a missing video is an export issue.
+- **Answered:** 2026-10-16 → **D-076**.
 
-### OQ-008 Annotation label lists that drop the first-placement tag
-- **Old no.:** E-3d · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
-  **Status:** open
-- **Question:** `first_paddle_firmly_on_the_chest` must be added to the label lists in
-  `build_yolo_video_dataset.py` and `create_grouped_video_split.py`, not only the audit list.
-  Otherwise `events.jsonl` drops it.
-- **Affects:** R2, R8; P-003.
-- **Interim behaviour:** The tag is missing from annotation timelines, so the first-placement
-  key time is absent.
+### OQ-048 Usual zone pattern: computed or configured? — *answered*
+- **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Answer:** Fixed in config, with the actual distribution per view printed beside it.
+- **Answered:** 2026-10-16 → **D-077**.
+
+### OQ-049 Output folders of the exporter and the audit — *answered*
+- **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Answer:** As proposed: `data/rule_engine/annotation_export/<run>/` and
+  `annotation/reports/rule_engine_audit/<run>/`.
+- **Answered:** 2026-10-16 → **D-078**.
+
+### OQ-050 Reuse the existing scripts by import, or copy their helpers? — *answered*
+- **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Answer:** By import, with a test pinning the behaviour.
+- **Answered:** 2026-10-16 → **D-079**.
+
+### OQ-051 A zone track that is never visible — *answered*
+- **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Answer:** Not covered; the audit lists it as information.
+- **Answered:** 2026-10-16 → **D-080**.
+
+### OQ-052 Derived placements: settings, evidence type, disagreement with tags — *answered*
+- **Old no.:** new (2026-10-14, Step 9c plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·
+  **Status:** answered
+- **Answer:** The placeholders are accepted. Derived placements are direct evidence, flagged
+  `derived_placement`. There is no event when they disagree with the tags. R8 waits for the
+  validation report.
+- **Answered:** 2026-10-16 → **D-081**.
 
 ### OQ-046 Do count anomalies block an overall Pass? — *answered*
 - **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Raised:** 2026-10-14 · **Status:**
@@ -351,6 +416,26 @@ Questions the supervisor owns, then questions owned by others that have a clinic
     step and the rules, and never a count violation?
 - **Answer:** (a) Yes, both codes block an overall Pass. (b) A-018 is right.
 - **Answered:** 2026-10-14 → **D-072**.
+
+### OQ-007 Zone visibility for annotation timelines — *answered*
+- **Old no.:** E-3c · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
+  **Status:** answered
+- **Question:** `events.jsonl` has no zone tracks. Should zone flags be added to it (in
+  `annotation/build_yolo_video_dataset.py`), or supplied as a separate per-task file?
+- **Answer:** Neither file of Ananth's changes. A separate rule-engine exporter reads the zone
+  tracks from the CVAT backups and writes zone visibility to its own output. A missing zone
+  track means visibility unknown.
+- **Answered:** 2026-10-14 → **D-074**.
+
+### OQ-008 Annotation label lists that drop the first-placement tag — *answered*
+- **Old no.:** E-3d · **Owner:** Arnikan · **Also involves:** — · **Raised:** 2026-10-10 ·
+  **Status:** answered
+- **Question:** `first_paddle_firmly_on_the_chest` must be added to the label lists in
+  `build_yolo_video_dataset.py` and `create_grouped_video_split.py`, not only the audit list.
+  Otherwise `events.jsonl` drops it.
+- **Answer:** The lists stay as they are. The separate exporter keeps every tag, including this
+  one, so `events.jsonl` is not needed for rule-engine timelines.
+- **Answered:** 2026-10-14 → **D-074**.
 
 ### OQ-044 Which timeline anomalies block an overall Pass, and where in the order? — *answered*
 - **Old no.:** new (2026-10-14) · **Owner:** Arnikan · **Raised:** 2026-10-14 · **Status:**

@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–9a)
+## What is built so far (Increments 0–9a, Step 9b)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -48,6 +48,14 @@ Everything every rule will rely on is built and tested:
   appears more than once, or a swapped paddle identity, is flagged for review. It is never a
   Fail by itself. A rule may fail on a repeated action only once the supervisor decides that it
   is a mistake (OQ-021 to OQ-023).
+- **Annotation export and audit:** P-028 and P-029 (Step 9b, D-074). The rule engine reads the
+  CVAT backups through its own exporter. Records contain every tag, the duration and zone
+  visibility. A separate audit lists annotation problems for review. The training pipeline is
+  untouched.
 
-No individual rule is built yet, so all 16 still report "pending". Next: the annotation task
-(Step 9b, awaiting approval), then the annotation input adapter (Increment 10).
+**For R8:** per-paddle placements derived from the annotated boxes are planned (Step 9c, D-081).
+R8 may use them only after Arnikan has reviewed their validation report, which needs the final
+backups.
+
+No individual rule is built yet, so all 16 still report "pending". Next: the annotation input
+adapter (Increment 10), with Step 9c planned.

@@ -608,6 +608,169 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   the engine raises.
 - **Affects:** P-027; Increment 9 onward. **Open question:** OQ-045.
 
+### D-073 CVAT is frozen: names are mapped, never changed
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** The CVAT project is frozen. Annotation is almost done and model training is about
+  to start. The existing CVAT tags and component (track) names are used throughout the project
+  and will not change.
+  - Renaming or adding a CVAT label is never proposed. Any difference between a CVAT name and
+    a canonical event name is handled by a mapping in `configs/rule_engine/vocabulary.yaml`.
+  - The annotation entries `apical_paddle_placed` and `sternal_paddle_placed` in the vocabulary
+    will therefore never be CVAT tags. They are planned as events derived by the rule engine's
+    own exporter (Step 9c).
+- **Reason:** Changing a label would invalidate annotations and training data that the whole
+  team relies on.
+- **Affects:** P-003; the vocabulary; Steps 9b and 9c.
+
+### D-074 Annotation data for the rule engine comes from a separate exporter
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:**
+  - **Ananth's dataset files are not modified:** `build_yolo_video_dataset.py`,
+    `create_grouped_video_split.py`, `validate_yolo_dataset.py`, `events.jsonl`,
+    `sample_manifest.csv`, the split files, and the existing audit script and its outputs.
+  - **A separate exporter** reads the CVAT backups directly. It writes rule-engine annotation
+    records to a separate output that the training pipeline never reads. The records contain:
+    - every tag, including `first_paddle_firmly_on_the_chest`;
+    - zone visibility from the zone tracks;
+    - `stop_frame` and `duration_seconds`.
+  - **The new annotation checks go in a separate audit script**, so the existing audit outputs
+    don't change.
+  - **Both run on the current backups now** and on the final backups once annotation is
+    complete.
+  - **A missing zone track means visibility unknown,** not "not visible".
+  - **Off-pattern videos are listed for annotation review:** those whose zone tracks differ from
+    their camera view's usual pattern, including the 6 with no zone track at all.
+  - **The learner's procedure order is information only,** never an annotation issue.
+  - **Thresholds (placeholders, accepted):** a zone moving more than 5% of the frame diagonal;
+    repeated tags within 15 frames marked "possibly the same incident tagged twice".
+- **Reason:** Training is about to start. The rule engine must not change any file that the
+  training pipeline reads, or the image set it was built from.
+- **Affects:** Steps 9b and 9c; Increment 10 (the adapter reads the exporter's output).
+  **Resolves:** OQ-007, OQ-008.
+
+### D-076 Video fps comes from the conversion report only
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** The exporter takes each video's fps, width and height from
+  `annotation/reports/phase4/video_conversion.csv` only, which it reads but never changes. There
+  is no MP4 parser. A video missing from the report is an export issue (`fps_missing`), and no
+  record is written for it. A frame count different from the report's is a warning.
+- **Open question:** whether the converted videos have a constant frame rate is OQ-053 (Ananth).
+- **Affects:** P-028. **Resolves:** OQ-047.
+
+### D-077 The usual zone pattern per view is fixed in config
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** `configs/rule_engine/annotation_export.yaml` `usual_zone_pattern` defines which
+  zones each view normally shows:
+  - LL: apical only;
+  - LS: both;
+  - T: both.
+
+  The audit report prints the actual distribution per view beside it.
+- **Affects:** P-029. **Resolves:** OQ-048.
+
+### D-078 Output folders of the exporter and the audit
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **Exporter:** writes to `data/rule_engine/annotation_export/<run>/`. It is not committed,
+    and writing inside `data/video/` is refused.
+  - **Audit:** writes to `annotation/reports/rule_engine_audit/<run>/`. These are small reports
+    and can be committed, like the Phase 1 reports.
+  - **Both** refuse a folder that is not empty.
+- **Affects:** P-028, P-029. **Resolves:** OQ-049.
+
+### D-079 The exporter reuses the training code by import, pinned by tests
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **What is reused, by import only, from the existing scripts:** task discovery (from
+    `audit_cvat_backups.py`) and box geometry (from `build_yolo_video_dataset.py`).
+  - **So zone visibility always matches the training boxes:** a zone is visible on exactly the
+    frames where the training dataset has a box for it (`track_box_at`, then `clip_box`).
+  - **Tests pin the behaviour:**
+    - the `track_box_at` behaviour itself;
+    - the visible frames equal the frames on which `frame_boxes` returns the zone.
+- **Affects:** P-028.
+- **Resolves:** OQ-050.
+
+### D-080 A zone track that is never visible means not covered
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** A zone track that exists but is outside on every frame means the annotator saw no
+  zone: coverage **not covered**. The audit lists it as information (`zone_track_never_visible`),
+  not as an issue.
+- **Affects:** P-029, P-030. **Resolves:** OQ-051.
+
+### D-081 Derived per-paddle placements (Step 9c)
+- **Date / by / status:** 2026-10-16 · Arnikan · approved (plan only; not built)
+- **Decision:**
+  - **Placeholders accepted:**
+    - overlap ≥ 0.5 of the paddle box;
+    - steady for 5 frames;
+    - centre moving < 2% of the frame diagonal;
+    - agreement with the tags within 15 frames.
+  - **Evidence:** derived placements are **direct** evidence, flagged `derived_placement`, with
+    the method in metadata.
+  - **No event** when they disagree with the tags.
+  - **Validation gate:** it needs `first_paddle_firmly_on_the_chest`, so it runs on the final
+    backups. **R8 may not use derived placements until Arnikan has reviewed that report.**
+- **Note (2026-10-16):** the smoke run found the tag already present in the corrected backups of
+  one annotator. This doesn't change the gate.
+- **Affects:** P-031; R8 (Increment 12). **Resolves:** OQ-052.
+
+### D-082 The zone pattern is for the review list only; reviewed exceptions
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **Where the usual pattern is used:** only by the annotation audit's review list. The rule
+    engine never uses it, and it never affects a result.
+  - **Reviewed exceptions:** `annotation_export.yaml` `reviewed_zone_exceptions` lists videos
+    where an annotator confirmed that a zone was genuinely not visible. Each entry gives the
+    task, the zone, `confirmed_by` and `confirmed_on`.
+  - **Their effect:** those videos leave the review list (information
+    `zone_exception_confirmed`), and Increment 10 treats the confirmed zone as **not covered**
+    instead of unknown.
+  - **A contradicted exception** (an exception for a zone that is visible) is put on the review
+    list (`zone_exception_contradicted`).
+- **Affects:** P-029, P-030.
+
+### D-083 Ananth runs the exporter and the audit on the final backups
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** The corrected CVAT backups are handed over to Ananth, and Arnikan no longer works
+  with them. Ananth runs `export_rule_engine_records.py` and `audit_rule_engine_checks.py` on the
+  final backup set, following [docs/annotation/rule_engine_export_howto.md](../annotation/rule_engine_export_howto.md).
+  He sends Arnikan only:
+  - `records.jsonl`;
+  - `export_manifest.json`;
+  - the audit outputs.
+
+  He never sends any media. The scripts change nothing in his training data (D-074).
+- **Open question:** when the final export will be available is OQ-054.
+- **Affects:** P-028, P-029; Increment 10.
+
+### D-084 Interim development data: the smoke-run export
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - Until the final export arrives, Increment 10 uses the smoke-run output of the 39 corrected
+    backups as development data:
+    - the records: `data/rule_engine/annotation_export/smoke-kartheepan/`;
+    - the audit: `data/rule_engine/audit_smoke/kartheepan/`.
+  - The data stays in the gitignored `data/rule_engine/` folder. **Exported records are never
+    committed.**
+  - P14_LS in this set is unreliable: `P14_LL.zip` contains a task named P14_LS, so the record may
+    be either video.
+- **Note:** this smoke run was made before D-085. Its manifest therefore hashed the whole ZIPs;
+  nothing was opened or printed from the media. The exporter now hashes only the annotation JSON.
+- **Affects:** Increment 10.
+
+### D-085 Privacy: media in the CVAT backups is never read
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** The CVAT backups may contain the video files.
+  - Media content is never opened, listed in detail, or printed. Only the annotation JSON is
+    read: `task.json` and `annotations.json`.
+  - The exporter's manifest hashes only those two entries. A media entry's file name is used
+    only to recognise the task.
+  - A test checks that the export and the audit open no other ZIP entry.
+  - Exported records and media are never committed.
+- **Recorded in:** `agent_brief.md` (section 6, rule 8) and the agent's memory.
+- **Affects:** P-028, P-029; Step 9c.
+
 ---
 
 ## Working method
@@ -660,6 +823,17 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** Commit messages carry no Co-Authored-By or other AI attribution. AI use is
   disclosed in [ai_usage_log.md](ai_usage_log.md). Commit messages are shown before
   committing.
+
+### D-075 Commit and push only on explicit instruction
+- **Date / by / status:** 2026-10-14 · Arnikan · approved
+- **Decision:** The agent commits only when Arnikan explicitly tells it to commit, and pushes
+  only when explicitly told to push (`feature/rule-engine` only). This includes
+  documentation-only commits. It replaces every earlier commit rule. Still in force: the commit
+  message is shown before committing, and no commit carries Claude attribution (D-026).
+- **Reason:** Arnikan controls what enters the history and the remote. The OQ-046 decision was
+  committed as a separate commit without its message being shown first.
+- **Recorded in:** `agent_brief.md` (section 6, rule 7), `implementation_plan.md` (section C),
+  and the agent's memory.
 
 ### D-046 Environment and dependencies
 - **Date / by / status:** 2026-10-10 · Arnikan · approved

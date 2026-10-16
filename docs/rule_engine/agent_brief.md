@@ -142,6 +142,14 @@ Notes:
 6. **No new heavy dependencies.** Ask before adding any package.
 7. **Git:** work on a feature branch (for example `feature/rule-engine`), one small commit
    per increment with a clear message. Never commit data, recordings or outputs.
+   **(Updated 2026-10-14; replaces every earlier commit rule.)** Commit only when I explicitly
+   tell you to commit, and push only when I explicitly tell you to push. This includes
+   documentation-only commits. Show me the commit message before committing, and never include
+   a Co-Authored-By line or any other Claude attribution.
+8. **Privacy of the CVAT backups (added 2026-10-16).** The backups may contain the video files.
+   Never open, list in detail, or print any media content from them: read only the annotation
+   JSON (`task.json`, `annotations.json`). Never commit exported annotation records or any media;
+   they stay in the gitignored `data/` folder.
 
 ---
 
@@ -174,7 +182,7 @@ Keep each increment small enough that I can review it in one sitting. For each o
 1. Implement only that increment.
 2. Add tests for it, including the edge cases that apply from section 8.
 3. Run the full test suite and the pipeline command from section 6.
-4. Commit.
+4. Propose the commit message; commit only when I explicitly tell you to (see section 6, rule 7).
 5. **Stop and report** using the template below, then wait for me to say "continue". If I
    ask questions, answer them before moving on.
 

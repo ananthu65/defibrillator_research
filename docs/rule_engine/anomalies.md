@@ -139,6 +139,38 @@ The decision points that will raise these are P-001, P-015 and P-018 in
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
 | `placement_missing` | R8 (Increment 12; D-058) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
 
+## Annotation export and audit codes (Step 9b; not rule-engine codes)
+
+These come from the separate exporter and audit (`annotation/export_rule_engine_records.py`,
+`annotation/audit_rule_engine_checks.py`, D-074). They describe the annotation data, never the
+learner, and never reach a rule result or the report.
+
+**Exporter (`export_issues.csv`, P-028):**
+
+| Code | Severity | When |
+|---|---|---|
+| `fps_missing` | error | The video is not in `video_conversion.csv`; no record is written (D-076) |
+| `frame_count_mismatch` | warning | The backup's frame count differs from the conversion report |
+| `tag_outside_frames` | warning | A tag lies outside the task's frame range (it is still exported) |
+| `zone_shape_without_track` | review | A zone drawn as a single-frame shape; not converted to visibility |
+| `duplicate_task` | error | The same task in a second archive; the first copy is kept |
+| `unrecognized_task_name`, `invalid_cvat_json`, `missing_annotations_json`, `no_tasks_in_archive`, `no_zip_archives`, `unreadable_zip` | error | The backup cannot be read as a CVAT task |
+
+**Audit review list (`issues.csv`, P-029):**
+
+| Code | When |
+|---|---|
+| `duplicate_paddle_box` | Two or more boxes of one paddle label on the same frames (frame range) |
+| `zone_moves_like_paddle` | A zone track's centre moves more than 5% of the frame diagonal; names any paddle box it overlaps (IoU ≥ 0.5) |
+| `repeated_incident_tag` | The same tag twice within 15 frames: possibly the same incident tagged twice |
+| `zone_pattern_off` | Zone tracks differ from the view's usual pattern (config), including no zone; missing zones excused by a reviewed exception don't count (D-077, D-082) |
+| `zone_exception_contradicted` | A reviewed "not visible" exception for a zone that is visible |
+| `zone_pattern_unknown_view` | No usual pattern is configured for the view |
+
+**Audit information only (`info.csv`), never annotation issues:** `tag_sequence` (the learner's
+order), `repeated_tag` (the same tag further apart than 15 frames), `first_placement_tag_missing`,
+`zone_track_never_visible` (counts as not covered, D-080), `zone_exception_confirmed`.
+
 ## Rule failure codes (planned, Increments 11 to 23)
 
 A Fail carries one of these codes; they come from the brief's rule table. They become code as

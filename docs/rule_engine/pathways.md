@@ -12,13 +12,58 @@ is explained in [anomalies.md](anomalies.md).
 
 ## Part 1: decision points by stage
 
+### Stage: annotation export (Step 9b; separate from the training pipeline, D-074)
+
+#### P-028 Annotation export (built)
+`annotation/export_rule_engine_records.py` reads the CVAT backups directly. It writes
+`data/rule_engine/annotation_export/<run>/records.jsonl`. No file of the training pipeline changes.
+
+| Condition | Outcome | Export issue |
+|---|---|---|
+| Task found; its video is in `video_conversion.csv` | One record: every tag under its CVAT name, with frame and seconds (`frame / fps`); frame range; `duration_seconds = (stop_frame + 1) / fps`; zone tracks; zone visibility intervals | — |
+| Video missing from the conversion report | No record (D-076) | `fps_missing` |
+| Frame count differs from the report | Record written | `frame_count_mismatch` |
+| Zone track | Visible on exactly the frames where the training dataset has a box for it (D-079); runs merged across tracks and jobs | — |
+| Zone drawn as a single-frame shape | Not converted | `zone_shape_without_track` |
+| Same task in two archives | The first copy kept | `duplicate_task` |
+| Output inside `data/video/`, or not empty | Refused; nothing written | — |
+
+#### P-029 Annotation audit (built)
+`annotation/audit_rule_engine_checks.py` writes `annotation/reports/rule_engine_audit/<run>/`.
+
+| Condition | Result | Code |
+|---|---|---|
+| Two or more boxes of one paddle label on a frame | Review list | `duplicate_paddle_box` |
+| Zone centre moves more than 5% of the frame diagonal | Review list, naming any paddle it overlaps | `zone_moves_like_paddle` |
+| Same tag twice within 15 frames | Review list: possibly the same incident tagged twice | `repeated_incident_tag` |
+| Zone tracks differ from the view's usual pattern (missing ones not excused by a reviewed exception, or unexpected ones), including no zone | Review list; the pattern never affects a result (D-082) | `zone_pattern_off` |
+| Reviewed exception for a zone that is visible | Review list | `zone_exception_contradicted` |
+| Learner order; same tag further apart; no first-placement tag; never-visible zone track; confirmed exception | **Information only** | `tag_sequence`, `repeated_tag`, `first_placement_tag_missing`, `zone_track_never_visible`, `zone_exception_confirmed` |
+
+#### P-031 Derived per-paddle placement (planned, Step 9c, D-081)
+| Condition | Outcome | Notes |
+|---|---|---|
+| Paddle box inside its zone (overlap ≥ 0.5), steady for 5 frames (centre < 2% of the diagonal), agreeing with the tags within 15 frames | `apical_paddle_placed` / `sternal_paddle_placed`, one per placement episode | Direct evidence, flagged `derived_placement`, method in metadata |
+| Zone has no track, paddle has two boxes, or disagreement with the tags | No event | Export issue |
+| Validation report not yet reviewed (needs the final backups) | R8 does not use derived placements | — |
+
 ### Stage: adapter
 
 #### P-001 Annotation timeline adapter (planned, Increment 10)
 | Condition | Outcome | Flags |
 |---|---|---|
-| A CVAT record is converted | Events, plus a header saying video was analysed and audio was not | `annotation_coverage_assumed` on every result |
-| No zone annotation information | Zone coverage unknown | — |
+| An exporter record is converted (D-074) | Events, plus a header saying video was analysed and audio was not | `annotation_coverage_assumed` on every result |
+| Zone coverage per region | → P-030 | — |
+
+#### P-030 Zone coverage for an annotated recording (planned, Increment 10)
+| Condition | Coverage of the region | Decision |
+|---|---|---|
+| Annotator confirmed the zone was genuinely not visible (reviewed exception) | **not covered** | D-082 |
+| Zone track present and visible on some frames | **covered** | D-074 |
+| Zone track present but outside on every frame | **not covered** | D-080 |
+| No zone track | **unknown** | D-074 |
+
+The view's usual zone pattern plays no part here (D-082).
 
 ### Stage: preparation
 
@@ -570,3 +615,42 @@ illustration only.)*
 1. No confident `first_paddle_taken` (its expected count is exactly 1).
 2. P-005: **no** `count_violation` (A-018). The missing event goes to the coverage step (P-008),
    which decides Fail or Unable to Verify, as before.
+
+### W-39 An LL video with its apical zone tracked → covered
+*(Export and audit built in Step 9b; coverage in Increment 10.)*
+1. P-028: P01_LL has one `apical_placement_zone` track, visible from frame 0 to 472 (fps 24.91
+   from the conversion report) → interval 0.0 to 18.948 s. There is no sternal track.
+2. P-029: LL's usual pattern is apical only, so the video is not on the review list.
+3. P-030: apical → **covered**; sternal → **unknown** (no track).
+
+### W-40 A T video with no zone track at all → unknown, on the review list
+1. P-028: no zone track, so no intervals.
+2. P-029: T's usual pattern is both zones → **`zone_pattern_off`** (missing both). It is one of
+   the 6 videos with no zone in the current backups.
+3. P-030: both zones **unknown**. R8 (Increment 12) cannot rely on zone visibility, so it reports
+   Unable to Verify rather than guessing.
+
+### W-41 An annotator confirms that the apical zone was genuinely not visible → not covered
+1. Arnikan adds `{task: P14_T, zone: apical_placement_zone, confirmed_by: …, confirmed_on: …}` to
+   `reviewed_zone_exceptions`.
+2. P-029: the missing apical zone is excused → off the review list (information
+   `zone_exception_confirmed`).
+3. P-030: apical → **not covered**, instead of unknown. R8 can then use its one-visible-zone logic
+   for the sternal zone.
+4. Had the apical zone actually been visible: **`zone_exception_contradicted`** on the review list.
+
+### W-42 A zone track that is outside on every frame → not covered
+1. P-028: the track exists, but no frame has a training box → `zone_tracks` 1, no interval.
+2. P-029: information `zone_track_never_visible`, not an issue.
+3. P-030: **not covered** (D-080). The annotator saw no zone.
+
+### W-43 The same tag twice, 1 frame apart → possibly one incident
+1. P-028: both tags exported (every tag is kept).
+2. P-029: **`repeated_incident_tag`**, "possibly the same incident tagged twice" (within 15
+   frames). Had they been 40 frames apart: information `repeated_tag` only. The learner may have
+   repeated the action, and only the rule engine judges that (D-071).
+
+### W-44 A video missing from the conversion report → no record
+1. P-028: its fps is unknown, so frames cannot become seconds → export issue **`fps_missing`**; no
+   record (D-076).
+2. The adapter never sees it. The fix is in Ananth's conversion report, not in a guessed fps.
