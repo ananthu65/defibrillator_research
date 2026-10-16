@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–9a, Step 9b)
+## What is built so far (Increments 0–9a, Steps 9b and 9c)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -53,9 +53,15 @@ Everything every rule will rely on is built and tested:
   visibility. A separate audit lists annotation problems for review. The training pipeline is
   untouched.
 
-**For R8:** per-paddle placements derived from the annotated boxes are planned (Step 9c, D-081).
-R8 may use them only after Arnikan has reviewed their validation report, which needs the final
-backups.
+- **Derived per-paddle placements:** P-031 (Step 9c, D-081, D-086 to D-089). The exporter derives
+  `apical_paddle_placed` / `sternal_paddle_placed` from the annotated boxes. When the annotators
+  didn't tag a first placement and both paddles went on together, they are flagged
+  `possible_parallel_placement`.
+
+**For R2 and R8:** R8 may use derived placements only after Arnikan has reviewed the validation
+report of the final export, and recorded that export and its settings (the gate, D-088). A
+possible parallel placement is enough for R2 and R8 to Fail with `simultaneous` once the gate is
+approved (D-091).
 
 No individual rule is built yet, so all 16 still report "pending". Next: the annotation input
-adapter (Increment 10), with Step 9c planned.
+adapter (Increment 10).

@@ -1,6 +1,7 @@
 # Rule-engine export: how to run it on the final backups
 
-**For:** Ananth · **From:** Arnikan · **Date:** 2026-10-16 · Decisions D-074, D-083 and D-085
+**For:** Ananth · **From:** Arnikan · **Date:** 2026-10-16 (updated for Step 9c) · Decisions
+D-074, D-083, D-085 and D-086 to D-089
 in [decisions.md](../rule_engine/decisions.md)
 
 The rule engine needs the annotation facts of each video: every tag, the frame range and
@@ -53,7 +54,7 @@ python -m annotation.audit_rule_engine_checks `
 
 | Folder | Files |
 |---|---|
-| `data/rule_engine/annotation_export/final-<date>/` (gitignored) | `records.jsonl` (one line per video), `export_manifest.json` (backup names and sizes, a SHA-256 of each backup's annotation JSON, counts), `export_issues.csv` |
+| `data/rule_engine/annotation_export/final-<date>/` (gitignored) | `records.jsonl` (one line per video, including the per-paddle placements derived from the boxes), `export_manifest.json` (backup names and sizes, a SHA-256 of each backup's annotation JSON, counts, `export_id`, `placement_settings_sha256`), `export_issues.csv`, `placement_validation.csv` and `placement_validation.md` (how well the derived placements agree with the tags) |
 | `annotation/reports/rule_engine_audit/final-<date>/` | `README.md`, `issues.csv` (review list), `info.csv` (information only), `zone_patterns.csv`, `audit_manifest.json` |
 
 ## What to send me
@@ -61,7 +62,12 @@ python -m annotation.audit_rule_engine_checks `
 **Send:**
 - `records.jsonl`;
 - `export_manifest.json`;
+- `placement_validation.csv` and `placement_validation.md`;
 - the whole audit folder.
+
+Please send `records.jsonl` and `export_manifest.json` from the same run, unchanged.
+`export_id` is the SHA-256 of that exact `records.jsonl`. My review of the derived placements
+applies only to that export and its settings.
 
 **Never send media:** no backup ZIPs, no videos, no frames, no images. Please don't commit
 `records.jsonl`; exported records stay out of git.
@@ -92,6 +98,14 @@ python -m annotation.audit_rule_engine_checks `
    - P06_LS, frames 259 and 260;
    - P12_LS, frames 164 and 179.
 
+4. **Overlapping tracks of the same paddle** (a general point, not from the trial run). Some paddles were annotated with several tracks of
+   one label (different IDs). That is fine where one track ends and the next one continues. But
+   where two `paddle_apical` (or two `paddle_sternal`) tracks **overlap** on the same frames,
+   please fix them: there are then two boxes of one paddle in those frames, which also affects
+   your training labels. Where to look:
+   - the audit's `duplicate_paddle_box` (review list) gives the frame ranges;
+   - the exporter's `placement_duplicate_paddle_box` gives the ones that blocked a placement.
+
 The audit on the final backups will show whether these are fixed. The rest of the review list
 (`issues.csv`) is also worth a look. Everything in `info.csv` is information only: for example,
 the learner's order of steps is never an annotation problem.
@@ -113,5 +127,7 @@ the learner's order of steps is never an annotation problem.
 | `frame_count_mismatch` | The backup's frame count differs from the conversion report |
 | `duplicate_task` | Two backups contain the same task; the first, in path order, is used |
 | `unrecognized_task_name` | Neither the task name nor the media file name gives a `PXX_VIEW` ID |
+| `placement_duplicate_paddle_box` | Two tracks of one paddle overlap during its placement (item 4); no placement is derived for it |
+| `placement_disagrees_with_tag` | A derived placement contradicts `first_paddle_firmly_on_the_chest` or `paddles_firmly_on_chest`; no placement is derived. Worth a look: either a tag or the boxes may be off |
 | "refusing to write inside …data\video" | Choose an output folder outside `data/video/` |
 | "output folder is not empty" | Use a new run folder |

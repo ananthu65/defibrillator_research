@@ -40,12 +40,24 @@ is explained in [anomalies.md](anomalies.md).
 | Reviewed exception for a zone that is visible | Review list | `zone_exception_contradicted` |
 | Learner order; same tag further apart; no first-placement tag; never-visible zone track; confirmed exception | **Information only** | `tag_sequence`, `repeated_tag`, `first_placement_tag_missing`, `zone_track_never_visible`, `zone_exception_confirmed` |
 
-#### P-031 Derived per-paddle placement (planned, Step 9c, D-081)
-| Condition | Outcome | Notes |
+#### P-031 Derived per-paddle placement (built, Step 9c; D-081, D-086 to D-089)
+Derived per paddle **label**, across all its tracks (D-087). T1 is `first_paddle_firmly_on_the_chest`
+and T2 is `paddles_firmly_on_chest`, following the annotators' convention (A-019).
+
+| Condition | Outcome | Code |
 |---|---|---|
-| Paddle box inside its zone (overlap ≥ 0.5), steady for 5 frames (centre < 2% of the diagonal), agreeing with the tags within 15 frames | `apical_paddle_placed` / `sternal_paddle_placed`, one per placement episode | Direct evidence, flagged `derived_placement`, method in metadata |
-| Zone has no track, paddle has two boxes, or disagreement with the tags | No event | Export issue |
-| Validation report not yet reviewed (needs the final backups) | R8 does not use derived placements | — |
+| Paddle box ≥ 0.5 inside its zone, steady for 5 frames (centre < 2% of the diagonal) | A placement starts; it ends after 5 frames (`exit_frames`) out of the zone | — |
+| A track of the paddle ends and another track of the same label continues | The same placement (not a re-placement) | — |
+| Zone not visible on a frame (occlusion) | **Unknown**: doesn't start or end a placement; in on both sides of the gap is the same placement (A-020, D-090) | counted in `frames_zone_not_visible` |
+| Two boxes of one paddle on a frame during a placement | No event for that paddle | `placement_duplicate_paddle_box` (review) |
+| Zone has no visible track, or the paddle never settles | No event (reason in the validation report) | — |
+| T1 present, both derived, the earlier within 15 frames of T1 | Both events: direct evidence, flagged `derived_placement` | — |
+| T1 present, both derived, the earlier more than 15 frames from T1 | No event for either paddle | `placement_disagrees_with_tag` |
+| T1 present, one derived (one-zone view) | Event if not earlier than T1 − 15; otherwise none | `placement_disagrees_with_tag` |
+| T1 missing, both within `simultaneous_window_seconds` | Both kept, flagged `possible_parallel_placement`; enough for R2/R8 to Fail `simultaneous` once the gate is approved (D-091) | — |
+| T1 missing otherwise | No events | — |
+| T2 present, a first placement after T2 + 15 | No event for that paddle (both if parallel) | `placement_disagrees_with_tag` |
+| Gate: no review record for this `export_id` and these settings | The Increment 10 adapter doesn't pass derived placements to the engine (D-088) | — |
 
 ### Stage: adapter
 
@@ -654,3 +666,59 @@ illustration only.)*
 1. P-028: its fps is unknown, so frames cannot become seconds → export issue **`fps_missing`**; no
    record (D-076).
 2. The adapter never sees it. The fix is in Ananth's conversion report, not in a guessed fps.
+
+### W-45 Correct, fully visible placement → both placements derived
+*(Step 9c, built.)*
+1. LS view, both zones visible. Tags: first paddle firmly on the chest at frame 21; paddles
+   firmly on chest at 45.
+2. P-031: the apical paddle settles in its zone at frame 20 and the sternal one at 40.
+3. The earlier (20) is 1 frame from T1 → both events kept, flagged `derived_placement`. Both are
+   at or before T2 + 15 → kept.
+4. R8 (Increment 12), once the gate is passed: apical first → Pass – Direct.
+
+### W-46 Both paddles placed at the same time, no first-placement tag → possible parallel placement
+1. The learner places both paddles together. Following their convention, the annotators don't tag
+   `first_paddle_firmly_on_the_chest` (A-019).
+2. P-031: apical derived at frame 20, sternal at 30 (0.4 s at 25 fps), within
+   `simultaneous_window_seconds` (0.5 s).
+3. Both events are kept, flagged **`possible_parallel_placement`**.
+4. Once the gate is approved for this export and its settings (D-088), R2 and R8 **Fail** with
+   **`simultaneous`** on this positive evidence alone (D-091). Before that, the adapter doesn't
+   pass the events on.
+
+### W-47 No first-placement tag, placements far apart → no events
+1. T1 is missing, and the derived placements are at frames 20 and 40 (0.8 s apart).
+2. P-031: neither the tag (one paddle went first, but it wasn't tagged) nor a parallel placement
+   explains this → **no events**. The validation report gives the reason.
+3. R8 → Unable to Verify (placements missing), never a guessed order.
+
+### W-48 A paddle tracked with two track IDs
+1. `paddle_apical` track A ends at frame 50, and track B (a new ID) continues from frame 50 in the
+   same place.
+2. P-031 works per label: the paddle stays in its zone throughout → **one placement**, at frame 20.
+   It is not mistaken for a re-placement at 50 (D-087).
+3. Had the two tracks overlapped (two `paddle_apical` boxes on the same frames): no event,
+   review issue `placement_duplicate_paddle_box`, for Ananth to fix, because the overlap also
+   affects the training labels.
+
+### W-49 Placement disagrees with the first-placement tag → no event for either paddle
+1. Both zones visible. The earlier derived placement is at frame 20, but T1 is at frame 36, 16
+   frames later.
+2. P-031: more than the 15-frame window → **no event for either paddle**, review issue
+   `placement_disagrees_with_tag` (D-086).
+3. One-zone view instead (LL, apical only): the apical placement must not be earlier than T1 − 15.
+   Placed at frame 50 with T1 at 30 is fine: the visible paddle was simply the second.
+
+### W-50 The zone is hidden for 6 frames during a placement → still one placement
+*(Step 9c, A-020, D-090.)*
+1. The apical paddle settles in its zone at frame 20 and stays there. On frames 41 to 46 the
+   annotator marked the apical zone outside (the paddle or a hand covers it), and it is visible
+   again from frame 47.
+2. P-031: frames 41 to 46 are **unknown**, neither in nor out. They don't end the placement, and
+   the paddle is in its zone on both sides of the gap → **one placement**, at frame 20.
+   `frames_zone_not_visible` is 6 in the validation report.
+3. Had those 6 frames counted as "out", they would have exceeded `exit_frames` (5) and invented a
+   re-placement at frame 47.
+4. Compare: the paddle really lifted off for frames 41 to 46, with the zone visible → 6 out
+   frames → **two placements**, at 20 and 47 (a re-placement, D-012; `count_violation` in the
+   engine, D-071).

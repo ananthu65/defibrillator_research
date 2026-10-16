@@ -23,3 +23,22 @@ reviewed_zone_exceptions: []
 audit:
   zone_motion_fraction_of_diagonal: {value: 0.05, placeholder: true}   # accepted 2026-10-14 (D-074)
   repeated_tag_window_frames:       {value: 15, placeholder: true}     # accepted 2026-10-14 (D-074)
+
+# Step 9c: per-paddle placements derived from the annotated paddle and zone boxes (D-081, D-086 to
+# D-089). Derived per paddle LABEL across all its tracks, never per track (D-087). The window for
+# a possible parallel placement is engine.yaml simultaneous_window_seconds (read from there).
+derived_placements:
+  paddles:   # CVAT paddle label -> its CVAT zone label and the canonical event (mapping only, D-073)
+    paddle_apical:  {zone: apical_placement_zone,  event: apical_paddle_placed}
+    paddle_sternal: {zone: sternal_placement_zone, event: sternal_paddle_placed}
+  min_overlap_of_paddle:         {value: 0.5,  placeholder: true}   # share of the paddle box inside its zone
+  steady_frames:                 {value: 5,    placeholder: true}   # frames the paddle must stay in and steady
+  max_centre_motion_of_diagonal: {value: 0.02, placeholder: true}   # allowed centre motion over those frames
+  exit_frames:                   {value: 5,    placeholder: true}   # frames out of the zone before a re-placement counts
+  tag_agreement_window_frames:   {value: 15,   placeholder: true}
+  first_placement_tag: first_paddle_firmly_on_the_chest   # T1 (CVAT tag)
+  both_placed_tag: paddles_firmly_on_chest                # T2 (CVAT tag), used only when present
+  # The gate (D-088): R8 may use derived placements only for the export and settings reviewed here.
+  # Fill all four after reviewing placement_validation.md of that export: export_id and
+  # placement_settings_sha256 are copied from its export_manifest.json.
+  reviewed_for_r8: {reviewed_by: null, reviewed_on: null, export_id: null, placement_settings_sha256: null}

@@ -2,6 +2,7 @@
 import copy
 import contextlib
 import csv
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -154,7 +155,8 @@ class Records(unittest.TestCase):
                                                       "start_seconds": 0.8, "end_seconds": 3.96}])
         self.assertEqual(record["derived_events"], [])
         self.assertEqual(issues, [])
-        self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1})
+        self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1,
+                                              "derived_events": 0})
         self.assertEqual(manifest["backups"][0]["archive"], "kartheepan/P01_LL.zip")
 
     def test_zone_intervals_close_at_outside_keyframes_and_merge_across_tracks_and_jobs(self):
@@ -208,6 +210,21 @@ class Records(unittest.TestCase):
         issues = []
         self.assertEqual(list(iter_tasks(backups.backups, issues)), [])
         self.assertEqual(codes(issues), ["unrecognized_task_name"])
+
+    def test_derived_placements_reach_the_record_and_the_manifest_identifies_the_export(self):
+        placed = lambda frame: [rect(0, 1000, 800, 1100, 900), rect(frame - 1, 1000, 800, 1100, 900), rect(frame, 150, 150, 250, 250)]
+        backups = Backups(self).add("P22_LL.zip", task("P22_LL", tags=[tag("first_paddle_firmly_on_the_chest", 21)],
+                                                       tracks=[track(APICAL, rect(0)), track("paddle_apical", *placed(20))]))
+        manifest, records, _ = backups.export()
+        derived = records["P22_LL"]["derived_events"]
+        self.assertEqual([(e["event_name"], e["frame"], e["flags"]) for e in derived],
+                         [("apical_paddle_placed", 20, ["derived_placement"])])
+        records_bytes = (backups.root / "out/records.jsonl").read_bytes()
+        self.assertEqual(manifest["export_id"], hashlib.sha256(records_bytes).hexdigest())   # the file as sent
+        self.assertNotIn(b"\r\n", records_bytes)
+        self.assertEqual(manifest["placement_settings_sha256"], load_config().placements.digest())
+        self.assertEqual(manifest["placement_validation"]["videos"], 1)
+        self.assertTrue((backups.root / "out/placement_validation.md").read_text(encoding="utf-8").startswith("# Derived"))
 
     def test_export_is_deterministic(self):
         backups = Backups(self).add("P10_T.zip", task("P10_T", tags=[tag("Gel applied", 3), tag("Gel applied", 3)],
@@ -271,13 +288,14 @@ class OutputIsSeparateFromTraining(unittest.TestCase):
         self.assertEqual(code, EXIT_REFUSED)
         self.assertIn("not empty", message)
 
-    def test_command_line_writes_the_three_files(self):
+    def test_command_line_writes_the_five_files(self):
         backups = Backups(self).add("P13_LL.zip", task("P13_LL"))
         code, _ = self.run_main("--backup-root", str(backups.backups), "--output", str(backups.root / "run"),
                                 "--conversion-report", str(backups.conversion()), "--config", str(backups.config()))
         self.assertEqual(code, 0)
         self.assertEqual(sorted(p.name for p in (backups.root / "run").iterdir()),
-                         ["export_issues.csv", "export_manifest.json", "records.jsonl"])
+                         ["export_issues.csv", "export_manifest.json", "placement_validation.csv",
+                          "placement_validation.md", "records.jsonl"])
 
 
 class Configuration(unittest.TestCase):

@@ -3010,3 +3010,123 @@ The same list, with frames, is in the how-to.
 ### Tests
 437 → 439, all pass, 1 skipped (charging sound). The pipeline output is unchanged. None of
 Ananth's files changed.
+
+---
+
+## Step 9c: derived per-paddle placements (2026-10-16)
+
+### Decisions and assumptions recorded (Arnikan's answers)
+- **A-019, the annotators' convention:** a correct, fully visible procedure is tagged first
+  paddle taken → first paddle firmly on the chest (T1) → second paddle taken → paddles firmly on
+  chest (T2). T1 is not tagged when both paddles go on together, and T2 is not tagged when only
+  one paddle is visible as both are placed.
+- **D-086, the tag rules:**
+  - two-zone disagreement with T1 → no event for either paddle;
+  - one-zone videos → not earlier than T1 − 15;
+  - T1 missing and both placements within `simultaneous_window_seconds` → both kept, flagged
+    `possible_parallel_placement`; T1 missing otherwise → no events;
+  - T2 only when present;
+  - re-placement after `exit_frames`, a separate setting.
+- **D-087:** placements are derived per paddle label across all its tracks. A split track is not a
+  re-placement. Overlapping tracks of one paddle give no event, and Ananth fixes them.
+- **D-088, the gate:** a review record with `export_id` and `placement_settings_sha256`, enforced
+  by the Increment 10 adapter. An approval doesn't carry over to another export or other
+  settings. The engine flag `derived_placement` enters the contract with R8 (Increment 12).
+- **D-089, the validation report for tuning:**
+  - highest overlap, steady frames achieved and centre motion for each video and paddle;
+  - their distributions;
+  - the parallel-placement count.
+- **A-020 (mine, for your review):** a frame whose zone isn't visible counts as out of the zone.
+  The report gives `frames_zone_not_visible` to check this.
+- **OQ-056 (new, Arnikan):** is `possible_parallel_placement` alone enough for a Fail, or does it
+  need review?
+
+### What was done
+- **`annotation/derive_paddle_placements.py`** (new, called by the exporter):
+  - frame states per paddle label (in, out, blocked);
+  - placement episodes (steady start, exit after `exit_frames`);
+  - the tag rules;
+  - the events;
+  - the validation rows, summary and Markdown;
+  - the settings loader;
+  - the gate check `derived_placements_approved()`.
+- **Exporter:**
+  - fills `derived_events`;
+  - writes `placement_validation.csv` and `placement_validation.md`;
+  - adds `export_id`, `placement_settings_sha256` and the validation summary to the manifest;
+  - reads `simultaneous_window_seconds` from `engine.yaml` (`--engine-config`).
+- **Config:** `annotation_export.yaml` `derived_placements` holds the paddle → zone → event
+  mapping, the five placeholder settings, T1 and T2, and the empty `reviewed_for_r8` record.
+- **Vocabulary:** the annotation entries `apical_paddle_placed` / `sternal_paddle_placed` are no
+  longer placeholders. They are now the exporter's derived names (D-073).
+- **Bug found by a test and fixed:** on Windows, `records.jsonl` was written with CRLF line
+  endings while the export ID hashed the LF text, so the ID wouldn't match the file sent. The
+  file is now written as bytes (LF on every OS), and `export_id` is the SHA-256 of the file
+  exactly as sent.
+
+### Limits of this step
+- **No geometry in the interim data:** the smoke-run records (D-084) were exported before 9c and
+  hold no box geometry. Real derived placements, and the validation report, therefore first
+  appear when Ananth runs the final export.
+- **Placeholders not tuned yet:** they couldn't be tuned on real data before then. The report's
+  distributions are there for that.
+
+### Tests (439 → 465)
+- **`tests/test_rule_engine_derived_placements.py`, 24 tests:**
+  - **placement:** both paddles in order, with the event's fields; the overlap boundary (0.5 vs
+    0.49); the steady-frames boundary (5 vs 4); the motion boundary (43 vs 45 px moves the start
+    from frame 20 to 21); zone not visible;
+  - **re-placement:** after 6 frames out; a 4-frame dip; `exit_frames` as its own setting;
+  - **tracks:** a split track (one placement); overlapping tracks (no event, review issue, the
+    other paddle unaffected);
+  - **tag rules:** the T1 window (15 vs 16); one zone (before T1 − 15 rejected, second paddle
+    accepted); parallel (0.4 s, flagged); T1 missing otherwise (0.52 s apart, or one paddle); T2
+    only when present; a parallel placement failing T2 drops both;
+  - **validation:** rows for tuning; summary counts and the Markdown;
+  - **gate:** approved only for the reviewed export and settings; the digest ignores the review
+    record; a partial review record is rejected;
+  - **configuration:** the repository settings; the parallel window comes from `engine.yaml`;
+    invalid settings.
+- **Exporter (+1):** derived events reach the record. `export_id` equals the SHA-256 of
+  `records.jsonl` as written, with no CRLF. The settings hash and validation files are present.
+- **Vocabulary (+1, 1 updated):** the derived labels map to the canonical events; the
+  placeholder list no longer has them.
+
+Full suite: **465 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-031 now built, with every branch.
+- **`pathways.md`:** the P-031 table, and W-45 to W-49 (correct placement, parallel placement,
+  T1 missing otherwise, split track, disagreement and the one-zone case).
+- **`diagrams.md`:** (j).
+- **Registers:** `decisions.md` (D-086 to D-089); `assumptions.md` (A-019, A-020);
+  `open_questions.md` (OQ-056).
+- **`anomalies.md`:** placement export issues and event flags.
+- **`docs/annotation/rule_engine_export_howto.md`:** send the validation files; keep
+  `records.jsonl` and the manifest from the same run; fix overlapping tracks; the new messages.
+- **Other docs:** `implementation_plan.md` (rows 9c, 10, 11, 12, section D), `rules_status.md`,
+  `methods.md`, `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 10, the annotation adapter, with the gate check. Nothing is committed; commit only when
+Arnikan says so.
+
+### Review changes before the commit (Arnikan, 2026-10-16)
+- **A-020 changed → D-090:** a frame where the zone isn't visible is **unknown**, neither in nor
+  out of the zone.
+  - It doesn't start or end a placement, and in on both sides of the gap is the same placement.
+  - Only out frames count towards `exit_frames`.
+  - Code: a new `unknown` frame state in `derive_paddle_placements.py`.
+  - The validation report still counts the not-visible frames per paddle.
+  - **Tests (+4):**
+    - a 6-frame occlusion during a placement is one placement (the old rule would have invented
+      a re-placement at frame 47);
+    - a real 6-frame exit with the zone visible is two placements;
+    - unknown frames don't start a placement;
+    - out frames on both sides of an occlusion add up to an exit.
+- **OQ-056 closed → D-091:** `possible_parallel_placement` is enough for R2 and R8 to Fail with
+  `simultaneous`, but only once the gate is approved, as for every derived placement.
+- **Docs:** P-031 (new branch), pathways (P-031 table, W-46 updated, W-50 new), diagram (j)
+  (unknown state, D-091), anomalies, rules status, plan rows 9c/11/12, registers.
+- **Tests:** 465 → 469.

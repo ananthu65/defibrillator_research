@@ -96,20 +96,38 @@ decision_points:
   - id: P-031
     name: Derived per-paddle placement
     stage: annotation_export
-    status: planned
-    decides: Whether the exporter derives apical_paddle_placed / sternal_paddle_placed from the paddle and zone boxes (Step 9c, D-081)
-    inputs: [paddle_apical and paddle_sternal boxes, zone boxes, tags first_paddle_firmly_on_the_chest and paddles_firmly_on_chest]
+    status: built
+    decides: Whether the exporter derives apical_paddle_placed / sternal_paddle_placed from the paddle and zone boxes, per paddle label across all its tracks (Step 9c; D-081, D-086, D-087)
+    inputs: [paddle_apical and paddle_sternal boxes (all tracks of each label), zone boxes, tags first_paddle_firmly_on_the_chest (T1) and paddles_firmly_on_chest (T2), engine.yaml simultaneous_window_seconds]
     branches:
-      - condition: The paddle box overlaps its zone box by at least 0.5 of its area, steady for 5 frames (centre moving under 2% of the diagonal), and agrees with the tags within 15 frames
-        outcome: A placement event per placement episode, direct evidence flagged derived_placement, method in metadata
-      - condition: The zone has no track, the paddle has two boxes, or the result disagrees with the tags
-        outcome: No event; an export issue
-      - condition: Validation report (needs first_paddle_firmly_on_the_chest, final backups) not yet reviewed by Arnikan
-        outcome: R8 does not use derived placements
-    config: [annotation_export.yaml (9c settings, planned)]
-    code: annotation/export_rule_engine_records.py (Step 9c)
-    decisions: [D-073, D-081]
-    assumptions: []
+      - condition: The paddle box has at least 0.5 of its area inside its zone, steady for 5 frames with the centre moving under 2% of the diagonal
+        outcome: A placement starts on that frame; it lasts until the paddle has been out of its zone on exit_frames (5) frames with no in frame between them, after which a re-placement can start
+      - condition: One box of the paddle, but its zone not visible on the frame (occlusion)
+        outcome: Unknown, neither in nor out; it doesn't start or end a placement, and in on both sides of the gap is the same placement (A-020, D-090); counted per paddle in the validation report
+      - condition: A track of the paddle ends and another track of the same label continues it
+        outcome: The same placement continues (per label, never per track, D-087)
+      - condition: Two boxes of the same paddle on a frame, from exit_frames before a placement to its end
+        outcome: No event for that paddle; review issue placement_duplicate_paddle_box (Ananth fixes the tracks)
+      - condition: Zone of the paddle has no visible track, or the paddle never settles in its zone
+        outcome: No event (reason in placement_validation.csv)
+      - condition: T1 present, both paddles derived, the earlier within 15 frames of T1
+        outcome: Events for both, direct evidence flagged derived_placement, method in metadata
+      - condition: T1 present, both paddles derived, the earlier more than 15 frames from T1
+        outcome: No event for either paddle; review issue placement_disagrees_with_tag
+      - condition: T1 present, one paddle derived (e.g. a one-zone view)
+        outcome: Event if not earlier than T1 minus 15 frames; otherwise no event, placement_disagrees_with_tag
+      - condition: T1 missing, both placements within simultaneous_window_seconds of each other
+        outcome: Both events kept, flagged possible_parallel_placement (A-019); enough for R2 and R8 to fail with simultaneous once the gate is approved (D-091)
+      - condition: T1 missing otherwise
+        outcome: No events
+      - condition: T2 present and a paddle's first placement later than T2 plus 15 frames
+        outcome: No event for that paddle (both, for a parallel placement); placement_disagrees_with_tag
+      - condition: Gate review record missing, or for another export_id or other placement settings
+        outcome: The Increment 10 adapter does not pass derived placements to the engine; R8 cannot use them (D-088)
+    config: [annotation_export.yaml derived_placements (min_overlap_of_paddle, steady_frames, max_centre_motion_of_diagonal, exit_frames, tag_agreement_window_frames, reviewed_for_r8), engine.yaml simultaneous_window_seconds]
+    code: annotation/derive_paddle_placements.py (derive_placements, derived_placements_approved), called by annotation/export_rule_engine_records.py
+    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091]
+    assumptions: [A-019, A-020]
     open_questions: [OQ-004]
 
   - id: P-001

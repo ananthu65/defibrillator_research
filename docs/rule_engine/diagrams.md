@@ -249,3 +249,44 @@ flowchart TD
     classDef planned stroke-dasharray: 5 5
     class Z,X,NC1,T,UN,V,CO,NC2,P7 planned
 ```
+
+## (j) Derived per-paddle placement (P-031, Step 9c; D-081, D-086 to D-088, D-090, D-091)
+
+Built in the exporter, per paddle **label** across all its tracks (D-087). T1 is
+`first_paddle_firmly_on_the_chest` and T2 is `paddles_firmly_on_chest` (A-019). Settings are
+placeholders.
+
+```mermaid
+flowchart TD
+    F["Each frame, per paddle label"] --> B{"Boxes of this paddle?"}
+    B -->|two or more| BL["blocked<br/>(overlapping tracks)"]
+    B -->|none| O["out"]
+    B -->|one| Z{"Its zone visible?"}
+    Z -->|"no (A-020, D-090)"| UK["unknown<br/>neither in nor out:<br/>doesn't start or end a placement"]
+    Z -->|yes| OV{"≥ 0.5 of the paddle<br/>box inside the zone?"}
+    OV -->|no| O
+    OV -->|yes| I["in"]
+    I --> S{"In for 5 frames and centre<br/>moving < 2% of the diagonal?"}
+    S -->|yes| P["Placement starts<br/>ends after 5 out frames (exit_frames),<br/>unknown frames skipped;<br/>then a re-placement can start"]
+    UK -.->|"in on both sides of the gap:<br/>same placement"| P
+    BL -.->|"touches a placement"| NB["No event for this paddle<br/>placement_duplicate_paddle_box<br/>(Ananth fixes the tracks)"]
+    P --> T{"T1 tagged?"}
+    T -->|yes, both paddles derived| T1{"Earlier placement within<br/>15 frames of T1?"}
+    T1 -->|yes| K["Keep both"]
+    T1 -->|no| N1["No event for either<br/>placement_disagrees_with_tag"]
+    T -->|yes, one paddle derived| T1b{"Not earlier than<br/>T1 − 15 frames?"}
+    T1b -->|yes| K
+    T1b -->|no| N1
+    T -->|no| PP{"Both derived, within<br/>simultaneous_window_seconds?"}
+    PP -->|yes| KP["Keep both, flagged<br/>possible_parallel_placement<br/>(R2/R8 Fail simultaneous once<br/>the gate is approved, D-091)"]
+    PP -->|no| N2["No events"]
+    K --> T2{"T2 tagged?"}
+    KP --> T2
+    T2 -->|"no: not checked"| EV["Events: direct evidence,<br/>flagged derived_placement,<br/>method in metadata"]
+    T2 -->|yes| T2c{"First placement at or<br/>before T2 + 15?"}
+    T2c -->|yes| EV
+    T2c -->|no| N3["No event for that paddle<br/>(both if parallel)"]
+    EV --> G{"Gate (D-088): reviewed for this<br/>export_id and these settings?"}
+    G -->|yes| R8["Adapter passes them on;<br/>R8 may use them"]
+    G -->|no| HOLD["Kept in records.jsonl,<br/>not passed to the engine"]
+```

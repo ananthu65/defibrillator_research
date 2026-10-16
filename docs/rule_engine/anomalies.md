@@ -155,6 +155,17 @@ learner, and never reach a rule result or the report.
 | `zone_shape_without_track` | review | A zone drawn as a single-frame shape; not converted to visibility |
 | `duplicate_task` | error | The same task in a second archive; the first copy is kept |
 | `unrecognized_task_name`, `invalid_cvat_json`, `missing_annotations_json`, `no_tasks_in_archive`, `no_zip_archives`, `unreadable_zip` | error | The backup cannot be read as a CVAT task |
+| `placement_duplicate_paddle_box` | review | Step 9c (P-031): two boxes of one paddle label overlap during its placement, so no event for that paddle (D-087). Ananth fixes the tracks, which also affect the training labels |
+| `placement_disagrees_with_tag` | review | Step 9c: a derived placement contradicts T1 or T2 (D-086), so no event (for both paddles when the earlier one disagrees with T1) |
+
+**Flags on derived placement events (`derived_events[].flags`, Step 9c):** `derived_placement`
+(every derived event; it is direct evidence with the method in metadata, D-081) and
+`possible_parallel_placement` (T1 not tagged and both placements within
+`simultaneous_window_seconds`, D-086; enough for R2/R8 to Fail `simultaneous` once the gate is
+approved, D-091). They are exporter flags. `derived_placement`
+becomes a rule-engine flag, in the decision flow and the output contract, when R8 uses it
+(Increment 12, D-088). The reasons for "no event" (zone unknown, never settled, T1 missing) are
+in `placement_validation.csv`, not export issues.
 
 **Audit review list (`issues.csv`, P-029):**
 

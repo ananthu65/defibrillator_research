@@ -169,3 +169,31 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Status:** confirmed by D-072 (2026-10-14).
 - **If wrong:** Remove the `not same` condition in `rules/prepare.py` (`_count_anomalies`).
 - **Related:** D-071, D-072, OQ-046.
+
+### A-019 The annotators' tagging convention for paddle placement
+- **Assumption (from Arnikan, 2026-10-16):** a correct, fully visible procedure is tagged in this
+  order: `first_paddle_taken` → `first_paddle_firmly_on_the_chest` → `second_paddle_taken` →
+  `paddles_firmly_on_chest`. Two exceptions:
+  - when a learner places both paddles at the same time (a mistake), annotators don't tag
+    `first_paddle_firmly_on_the_chest`, because no paddle went first;
+  - when only one paddle is visible as both are placed, `paddles_firmly_on_chest` isn't tagged.
+- **Why it matters:** a missing first-placement tag is evidence in itself. With two
+  near-simultaneous derived placements, it supports `possible_parallel_placement` (D-086).
+- **Status:** active (stated by Arnikan from the annotation videos).
+- **If wrong:** the T1 and T2 rules in `annotation/derive_paddle_placements.py` (`_check_tags`)
+  change.
+- **Related:** D-086, OQ-056.
+
+### A-020 A frame where the zone is not visible is unknown, neither in nor out of the zone
+- **Assumption (changed by Arnikan on 2026-10-16; the first version counted such a frame as
+  "out"):** when the paddle's zone has no visible box on a frame, the frame is **unknown**. An
+  example is the annotator marking the zone outside while the paddle covers it.
+  - An unknown frame doesn't start a placement and doesn't end one.
+  - If the paddle is in its zone on both sides of the gap, it is the same placement.
+  - Out frames on both sides of a gap still add up towards an exit.
+- **Why:** counting it as "out" would turn a zone occlusion longer than `exit_frames` into an
+  invented re-placement.
+- **How it is checked:** the validation report still gives each paddle's
+  `frames_zone_not_visible`.
+- **Status:** decided, D-090.
+- **Related:** D-081, D-089, D-090.

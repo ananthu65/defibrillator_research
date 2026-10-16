@@ -57,6 +57,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-050 | new (2026-10-14) | Arnikan | — | answered | Reuse the existing scripts by import, or copy their helpers? |
 | OQ-051 | new (2026-10-14) | Arnikan | — | answered | A zone track that is never visible |
 | OQ-052 | new (2026-10-14) | Arnikan | — | answered | Derived placements: settings, evidence type, disagreement with tags |
+| OQ-056 | new (2026-10-16) | Arnikan | — | answered | Is possible_parallel_placement alone enough for a Fail? |
 | OQ-044 | new (2026-10-14) | Arnikan | — | answered | Which timeline anomalies block an overall Pass, and where in the order? |
 | OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
@@ -363,6 +364,17 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 ---
 
 ## For Arnikan (rule engine and annotation)
+
+
+### OQ-056 Is `possible_parallel_placement` alone enough for a Fail? — *answered*
+- **Old no.:** new (2026-10-16) · **Owner:** Arnikan · **Raised:** 2026-10-16 · **Status:**
+  answered
+- **Question:** Derived placements of both paddles within `simultaneous_window_seconds`, with no
+  `first_paddle_firmly_on_the_chest` tag, are flagged `possible_parallel_placement` (D-086). Is
+  that enough for R2 and R8 to Fail with `simultaneous`, or should it go to review?
+- **Answer:** It is enough for a Fail, but only once the gate is approved, as for every derived
+  placement.
+- **Answered:** 2026-10-16 → **D-091**.
 
 ### OQ-047 Where does the exporter get each video's fps? — *answered*
 - **Old no.:** new (2026-10-14, Step 9b plan) · **Owner:** Arnikan · **Raised:** 2026-10-14 ·

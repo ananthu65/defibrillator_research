@@ -45,9 +45,18 @@ from annotation.audit_cvat_backups import (
     read_json_entry,
 )
 from annotation.build_yolo_video_dataset import Track, clip_box, collect_annotations, read_csv, track_box_at
+from annotation.derive_paddle_placements import (
+    VALIDATION_COLUMNS,
+    PlacementSettings,
+    derive_placements,
+    load_placement_settings,
+    validation_markdown,
+    validation_summary,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "configs/rule_engine/annotation_export.yaml"
+DEFAULT_ENGINE_CONFIG = ROOT / "configs/rule_engine/engine.yaml"   # simultaneous_window_seconds (9c)
 DEFAULT_CONVERSION_REPORT = ROOT / "annotation/reports/phase4/video_conversion.csv"
 TRAINING_DATA = ROOT / "data/video"
 EXPORTER_VERSION = 1
@@ -79,20 +88,34 @@ class ExportConfig:
     reviewed_zone_exceptions: tuple[ZoneException, ...]
     zone_motion_fraction_of_diagonal: float
     repeated_tag_window_frames: int
+    placements: PlacementSettings
 
     def confirmed_not_visible(self, task_id: str) -> set[str]:
         """Zones an annotator confirmed as genuinely not visible in this video."""
         return {e.zone for e in self.reviewed_zone_exceptions if e.task == task_id}
 
 
-def load_config(path: Path = DEFAULT_CONFIG) -> ExportConfig:
-    """Load and validate the export/audit config; every problem is a ValueError naming the entry."""
+def _read_yaml(path):
     try:
-        data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+        return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as error:
         raise ValueError(f"{path}: cannot read ({error})") from None
+
+
+def simultaneous_window_seconds(engine_path: Path = DEFAULT_ENGINE_CONFIG) -> float:
+    """The rule engine's simultaneous window, read from engine.yaml so the two never differ (D-086)."""
+    data = _read_yaml(engine_path)
+    value = _setting_value((data or {}).get("simultaneous_window_seconds"))
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+        raise ValueError(f"{engine_path}: simultaneous_window_seconds must be a nonnegative number")
+    return float(value)
+
+
+def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_CONFIG) -> ExportConfig:
+    """Load and validate the export/audit config; every problem is a ValueError naming the entry."""
+    data = _read_yaml(path)
     expected = {"schema_version", "zone_labels", "paddle_labels", "usual_zone_pattern",
-                "reviewed_zone_exceptions", "audit"}
+                "reviewed_zone_exceptions", "audit", "derived_placements"}
     if not isinstance(data, dict) or data.get("schema_version") != 1 or set(data) != expected:
         raise ValueError(f"{path}: expected schema_version: 1 and exactly the keys {sorted(expected)}")
     zones = _labels(data["zone_labels"], f"{path} zone_labels")
@@ -115,7 +138,9 @@ def load_config(path: Path = DEFAULT_CONFIG) -> ExportConfig:
         raise ValueError(f"{path} audit.zone_motion_fraction_of_diagonal: must be a number between 0 and 1")
     if isinstance(window, bool) or not isinstance(window, int) or window < 0:
         raise ValueError(f"{path} audit.repeated_tag_window_frames: must be a whole number of frames >= 0")
-    return ExportConfig(zones, paddles, usual, exceptions, float(motion), window)
+    placements = load_placement_settings(data["derived_placements"], zones, paddles,
+                                         simultaneous_window_seconds(engine_path), f"{path} derived_placements")
+    return ExportConfig(zones, paddles, usual, exceptions, float(motion), window, placements)
 
 
 def _labels(value, where):
@@ -297,7 +322,7 @@ def _seconds(frame, fps):
 # ---- records ----------------------------------------------------------------------------------------
 
 def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: ExportConfig,
-                  issues: list[Issue]) -> dict[str, Any] | None:
+                  issues: list[Issue], validation: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     """The rule-engine record for one task, or None (with an issue) when it cannot be timed."""
     where = dict(archive=source.archive, task_path=source.task_path, canonical_task_id=source.canonical_task_id)
     video = videos.get(source.canonical_task_id)
@@ -321,6 +346,9 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
             issues.append(Issue("review", "zone_shape_without_track", label=str(shape.get("label")),
                                 frame=int(shape.get("frame", -1)), details="a single-frame zone shape is not "
                                 "converted to visibility; only zone tracks are", **where))
+    derived, rows = derive_placements(source, video, config.placements, issues)
+    if validation is not None:
+        validation.extend(rows)
     return {
         "schema_version": 1,
         "kind": RECORD_KIND,
@@ -340,7 +368,7 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
         "tags": exported_tags,
         "zone_tracks": {zone: sum(t.label == zone for t in source.tracks) for zone in config.zone_labels},
         "zone_visibility": zone_visibility(source, video, config.zone_labels),
-        "derived_events": [],  # Step 9c (planned)
+        "derived_events": derived,  # Step 9c: per-paddle placements (D-081, D-086 to D-089)
     }
 
 
@@ -417,19 +445,24 @@ def annotation_digest(zip_path: Path) -> str:
 
 
 def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CONVERSION_REPORT,
-           config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
-    """Write records.jsonl, export_issues.csv and export_manifest.json; return the manifest."""
+           config_path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_CONFIG) -> dict[str, Any]:
+    """Write records.jsonl, export_issues.csv, placement_validation.csv/.md and export_manifest.json."""
     output = check_output(output)
-    config = load_config(config_path)
+    config = load_config(config_path, engine_path)
     videos = load_conversion_report(conversion_report)
     issues: list[Issue] = []
+    validation: list[dict[str, Any]] = []
     sources = unique_tasks(iter_tasks(backup_root, issues), issues)
-    records = [r for r in (export_record(s, videos, config, issues) for s in sources) if r is not None]
+    records = [r for r in (export_record(s, videos, config, issues, validation) for s in sources) if r is not None]
     output.mkdir(parents=True, exist_ok=True)
-    with (output / "records.jsonl").open("w", encoding="utf-8") as stream:
-        for record in records:
-            stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+    # Written as bytes (LF on every OS), so export_id is the SHA-256 of the file exactly as sent.
+    lines = "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records).encode("utf-8")
+    (output / "records.jsonl").write_bytes(lines)
     write_issues(output / "export_issues.csv", issues)
+    with (output / "placement_validation.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=VALIDATION_COLUMNS)
+        writer.writeheader()
+        writer.writerows(validation)
     severities = {}
     for issue in issues:
         severities[issue.severity] = severities.get(issue.severity, 0) + 1
@@ -437,14 +470,22 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
         "schema_version": 1,
         "kind": "rule_engine_annotation_export",
         "exporter_version": EXPORTER_VERSION,
+        # Identifies exactly this export (the records written); the 9c gate names it (D-088).
+        "export_id": hashlib.sha256(lines).hexdigest(),
+        "placement_settings_sha256": config.placements.digest(),
         "exported_on": date.today().isoformat(),
         "backups": backup_list(backup_root),
         "conversion_report": {"path": _display(conversion_report), "sha256": sha256_file(conversion_report)},
         "config": {"path": _display(config_path), "sha256": sha256_file(config_path)},
         "counts": {"tasks": len(sources), "records": len(records), "tags": sum(len(r["tags"]) for r in records),
-                   "zone_intervals": sum(len(r["zone_visibility"]) for r in records)},
+                   "zone_intervals": sum(len(r["zone_visibility"]) for r in records),
+                   "derived_events": sum(len(r["derived_events"]) for r in records)},
         "issues": dict(sorted(severities.items())),
     }
+    summary = validation_summary(validation, config.placements, manifest)
+    manifest["placement_validation"] = summary
+    (output / "placement_validation.md").write_text(validation_markdown(summary, validation, config.placements),
+                                                    encoding="utf-8")
     (output / "export_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
 
@@ -461,18 +502,22 @@ def main(argv: list[str] | None = None) -> int:
                         help="new run folder, e.g. data/rule_engine/annotation_export/2026-10-16")
     parser.add_argument("--conversion-report", type=Path, default=DEFAULT_CONVERSION_REPORT)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--engine-config", type=Path, default=DEFAULT_ENGINE_CONFIG,
+                        help="rule-engine engine.yaml (for simultaneous_window_seconds)")
     args = parser.parse_args(argv)
     if not args.backup_root.is_dir():
         print(f"No export: backup root not found: {args.backup_root}", file=sys.stderr)
         return EXIT_REFUSED
     try:
-        manifest = export(args.backup_root, args.output, args.conversion_report, args.config)
+        manifest = export(args.backup_root, args.output, args.conversion_report, args.config, args.engine_config)
     except ValueError as error:
         print(f"No export: {error}", file=sys.stderr)
         return EXIT_REFUSED
     counts = manifest["counts"]
     print(f"Exported {counts['records']} of {counts['tasks']} tasks ({counts['tags']} tags, "
-          f"{counts['zone_intervals']} zone intervals); issues: {manifest['issues'] or 'none'}")
+          f"{counts['zone_intervals']} zone intervals, {counts['derived_events']} derived placements); "
+          f"issues: {manifest['issues'] or 'none'}")
+    print(f"export_id {manifest['export_id']}; placement settings {manifest['placement_settings_sha256']}")
     print(f"Written to {Path(args.output).resolve()}")
     return 0
 

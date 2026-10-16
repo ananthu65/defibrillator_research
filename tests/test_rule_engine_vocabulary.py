@@ -62,10 +62,14 @@ class RepositoryVocabulary(unittest.TestCase):
         self.assertEqual(self.vocabulary.provisional_events, sorted(COMMANDS))
 
     def test_placeholders_are_listed_until_real_names_arrive(self):
+        # The annotation placement labels are no longer placeholders: the exporter derives them (D-081).
         self.assertEqual(self.vocabulary.placeholder_labels, {
-            ("annotation", "apical_paddle_placed"), ("annotation", "sternal_paddle_placed"),
             ("audio", "continue_compressions_command"), ("audio", "stop_compressions_command"),
             ("audio", "shock_command"), ("audio", "start_compressions_command")})
+
+    def test_derived_placement_labels_map_to_the_canonical_events(self):
+        self.assertEqual(self.vocabulary.canonical("annotation", "apical_paddle_placed"), "apical_paddle_placed")
+        self.assertEqual(self.vocabulary.canonical("annotation", "sternal_paddle_placed"), "sternal_paddle_placed")
 
     def test_every_canonical_event_is_accepted_under_its_own_name_from_its_model_source(self):
         # D-020: upstream emits the agreed names directly, so they must never be "unknown"

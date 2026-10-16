@@ -771,6 +771,97 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Recorded in:** `agent_brief.md` (section 6, rule 8) and the agent's memory.
 - **Affects:** P-028, P-029; Step 9c.
 
+### D-086 Derived placements are checked against the tags, including parallel placement
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** The tags are T1 (`first_paddle_firmly_on_the_chest`) and T2
+  (`paddles_firmly_on_chest`), following the annotators' convention (A-019). The window is 15
+  frames.
+  - **T1 present, both paddles derived:** the earlier placement must be within the window of
+    T1. If not, there is no event for **either** paddle.
+  - **T1 present, one paddle derived** (for example a one-zone view): the placement must not be
+    earlier than T1 minus the window. The visible paddle may be the second one.
+  - **T1 missing, both placements within `simultaneous_window_seconds` of each other:** both
+    events are kept, flagged **`possible_parallel_placement`**. R2 and R8 can then fail with
+    `simultaneous` on positive evidence (OQ-056). The window is read from `engine.yaml`, so the
+    exporter and the rule engine never differ.
+  - **T1 missing otherwise:** no events.
+  - **T2 is used only when present.** Each kept paddle's first placement must be at or before T2
+    plus the window. In a parallel placement, both are dropped if either fails.
+  - **Re-placement:** a re-placement counts only after the paddle has been out of its zone for
+    `exit_frames` frames. This is a separate setting (placeholder 5), not `steady_frames`.
+- **Reason:** A placement that contradicts the human tags is more likely a derivation error than
+  a learner's mistake. No event is safer: R8 then reports Unable to Verify, not a wrong result.
+- **Affects:** P-031; R2 and R8 (Increments 11 and 12). **Assumption:** A-019. **Open question:**
+  OQ-056.
+
+### D-087 Placements are derived per paddle label, across all its tracks
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **Per label, never per track:** annotators sometimes used several tracks of one label, with
+    different IDs. Placements are therefore derived per paddle **label**, across all its tracks.
+    A track split in the middle of a placement is then not mistaken for a re-placement.
+  - **Overlapping tracks:** frames where two tracks of the same paddle overlap (two boxes on one
+    frame) produce no event. This applies from `exit_frames` before a placement until its end. It
+    is a review issue, `placement_duplicate_paddle_box`.
+  - **Fixing them is Ananth's job,** because overlapping tracks also affect the training labels.
+    The how-to says so.
+- **Affects:** P-031.
+
+### D-088 The gate for R8: a review record tied to one export and one set of settings
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **The record:** R8 may use derived placements only after Arnikan has reviewed the validation
+    report. The review is recorded in `annotation_export.yaml`
+    `derived_placements.reviewed_for_r8`: reviewer, date, the export's `export_id` (the SHA-256 of
+    its `records.jsonl`) and its `placement_settings_sha256` (a hash of every 9c setting,
+    including the parallel window).
+  - **Its scope:** an approval doesn't apply to another export or to other settings.
+  - **Enforcement:** by the Increment 10 adapter, through `derived_placements_approved()`. It is
+    built and tested in Step 9c.
+  - **The engine flag `derived_placement`** enters the output contract with R8, in Increment 12.
+- **Affects:** P-031, P-001; Increments 10 and 12.
+
+### D-089 The validation report supports tuning
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:**
+  - **`placement_validation.csv`,** for each video and paddle:
+    - the highest overlap reached;
+    - the steady frames achieved (up to 50);
+    - the centre motion over the best steady window;
+    - frames with the zone not visible;
+    - frames with overlapping boxes;
+    - the gap to T1;
+    - the outcome and its reason;
+    - the flags.
+  - **`placement_validation.md`:**
+    - the distributions of overlap, steady frames, motion and gap;
+    - the count of videos with possible parallel placement;
+    - the agreement with T1;
+    - the no-event reasons;
+    - every disagreement;
+    - the `export_id` and the settings hash.
+  - Ananth sends both files with the records. They contain no media.
+- **Affects:** P-031.
+
+### D-090 A frame where the zone isn't visible is unknown for a placement
+- **Date / by / status:** 2026-10-16 · Arnikan · approved (it changes A-020's first version)
+- **Decision:** For derived placements, a frame with exactly one box of the paddle but no visible
+  zone box is **unknown**, neither in nor out of the zone.
+  - It doesn't start a placement episode and doesn't end one.
+  - If the paddle is in its zone on both sides of the gap, it is the same episode.
+  - Only out frames count towards `exit_frames`. Unknown frames between them are skipped.
+  - The not-visible frames are still counted per paddle in the validation report.
+- **Reason:** otherwise a zone occlusion longer than `exit_frames` would invent a re-placement.
+- **Affects:** P-031. **Assumption:** A-020.
+
+### D-091 A possible parallel placement is enough for a Fail, once the gate is approved
+- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Decision:** Derived placements flagged `possible_parallel_placement` are enough for R2 and R8
+  to **Fail** with `simultaneous`. They need no extra review, but **only once the gate is
+  approved** for that export and its settings, as for every derived placement (D-088). Before
+  that, the Increment 10 adapter doesn't pass them on, and the rules can't use them.
+- **Affects:** R2, R8 (Increments 11 and 12); P-031. **Resolves:** OQ-056.
+
 ---
 
 ## Working method
