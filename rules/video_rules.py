@@ -4,12 +4,14 @@ Registered rules run only when their status in configs/rules.yaml is `approved`;
 are reported as pending (D-043). Definitions and failure codes: docs/rule_engine/rules_status.md.
 """
 from rules import checks
+from rules.context import MULTIPLE_SHOCKS
 from rules.coverage import COVERED, LOW_CONFIDENCE_FLAG
 from rules.outcome import assumed, failed, passed, unable
 from rules.registry import rule
 
 FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN = "first_paddle_taken", "first_paddle_placed", "second_paddle_taken"
 BOTH_PLACED = "paddles_firmly_on_chest"
+SHOCK, REMOVAL = "shock_delivered_on_screen", "paddles_removed_after_shock"
 APICAL, STERNAL = "apical_paddle_placed", "sternal_paddle_placed"
 PLACEMENTS = (APICAL, STERNAL)
 
@@ -111,6 +113,80 @@ def _first_placement_missing(ctx, second):
                       timestamps={FIRST_TAKEN: window[0], SECOND_TAKEN: window[1]})
     return unable("R2", f"first placement not seen {where}, but the placement zones were not visible throughout "
                   f"({statuses})", evidence=(taken[0].event_id, second.event_id), uses=tuple(zones))
+
+
+# ---- R5 ---------------------------------------------------------------------------------------------
+
+@rule("R5", requires=(SHOCK, BOTH_PLACED, REMOVAL), description="Shock confirmed on screen after the preceding steps")
+def shock_confirmed_on_screen(ctx, definition, results):
+    """R5 (P-033): one new shock indication on the screen, after the preceding steps.
+
+    1. Two or more shocks (the preparation anomaly multiple_shocks) -> Unable to Verify.
+    2. A shock on screen:
+       - preceding_steps unset (OQ-013) -> Pass - Direct, presence only, flagged order_not_checked,
+         which keeps the overall result from being Pass (D-100);
+       - set -> any observed step starting after the shock -> Fail `wrong_order`; a step not
+         observed -> its order is not checked (order_not_checked); otherwise Pass - Direct.
+    3. No shock on screen -> coverage of the screen over the window from paddles firmly on chest to
+       paddles removed (the whole recording when either tag is missing, D-101): visible throughout
+       -> Fail `missing`; otherwise Unable to Verify (D-094). Low confidence is never a Fail.
+    """
+    if MULTIPLE_SHOCKS in ctx.shock.flags:
+        return unable("R5", "more than one shock indication on the screen; a single shock cannot be confirmed "
+                      "(timeline anomaly multiple_shocks)", evidence=ctx.shock.candidates, uses=(ctx.shock,))
+    shocks = ctx.named(SHOCK)
+    if not shocks:
+        return _shock_missing(ctx)
+    shock = shocks[0]
+    steps = definition.parameters.get("preceding_steps")
+    if steps is None:
+        return passed("R5", f"shock confirmed on the screen at {shock.start:g} s; order not checked: the steps "
+                      "that must come before it are not set (OQ-013, D-100)", (shock.event_id,),
+                      flags=(checks.ORDER_NOT_CHECKED,), timestamps={SHOCK: shock.start})
+    if not isinstance(steps, list) or [s for s in steps if s not in ctx.config.vocabulary.events]:
+        # a configuration error: recorded as engine_error (D-063), never a result about the learner
+        raise ValueError(f"R5 preceding_steps must be a list of canonical events, got {steps!r}")
+    late, unseen = [], []
+    for step in steps:
+        found = ctx.named(step)
+        if not found:
+            unseen.append(step)
+        elif found[0].start > shock.start:
+            late.append(found[0])
+    timestamps = {SHOCK: shock.start, **{e.event_name: e.start for e in late}}
+    if late:
+        names = ", ".join(f"{e.event_name} at {e.start:g} s" for e in late)
+        return failed("R5", "wrong_order", f"shock on the screen at {shock.start:g} s before the preceding "
+                      f"step(s): {names}", evidence=(shock.event_id, *(e.event_id for e in late)), timestamps=timestamps)
+    if unseen:
+        return passed("R5", f"shock confirmed on the screen at {shock.start:g} s after the observed preceding steps; "
+                      f"order not checked for steps not observed: {', '.join(unseen)}", (shock.event_id,),
+                      flags=(checks.ORDER_NOT_CHECKED,), timestamps=timestamps)
+    return passed("R5", f"shock confirmed on the screen at {shock.start:g} s, after {', '.join(steps)}",
+                  (shock.event_id, *(ctx.named(s)[0].event_id for s in steps)), timestamps=timestamps)
+
+
+def _shock_window(ctx):
+    """D-101: from paddles firmly on chest to paddles removed; None (whole recording) if either is missing."""
+    placed, removed = ctx.named(BOTH_PLACED), ctx.named(REMOVAL)
+    if not placed or not removed or removed[0].start < placed[0].start:
+        return None
+    return (placed[0].start, removed[0].start)
+
+
+def _shock_missing(ctx):
+    window = _shock_window(ctx)
+    found = ctx.missing(SHOCK, window)
+    where = (f"between paddles firmly on chest ({window[0]:g} s) and paddles removed ({window[1]:g} s)"
+             if window else "in the recording")
+    if LOW_CONFIDENCE_FLAG in found.flags:
+        return unable("R5", f"no confident shock on the screen {where}, but a low-confidence one may have been seen",
+                      evidence=found.low_confidence_event_ids, uses=(found,))
+    if found.coverage.status == COVERED and found.outcome == "fail":
+        return failed("R5", "missing", f"no shock on the screen {where}, although the screen was visible throughout "
+                      f"({found.coverage.basis})", uses=(found,))
+    return unable("R5", f"no shock seen on the screen {where}, but the screen was not visible throughout it "
+                  f"(coverage {found.coverage.status}; D-094, D-101)", uses=(found,))
 
 
 # ---- R8 ---------------------------------------------------------------------------------------------

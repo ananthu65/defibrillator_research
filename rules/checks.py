@@ -19,7 +19,8 @@ from rules.outcome import failed, flags_of, not_evaluable, passed, unable
 
 TIMING_NOT_CHECKED = "timing_not_checked"
 LIMIT_NOT_APPROVED = "limit_not_approved"
-FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED)
+ORDER_NOT_CHECKED = "order_not_checked"   # an order requirement is not set (e.g. R5's preceding steps, D-100)
+FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED)
 
 BEFORE, SIMULTANEOUS, AFTER = "before", "simultaneous", "after"
 

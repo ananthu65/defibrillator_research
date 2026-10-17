@@ -135,6 +135,43 @@ decision_points:
     assumptions: [A-019, A-020]
     open_questions: [OQ-004]
 
+  - id: P-033
+    name: R5 shock confirmed on screen
+    stage: rule
+    status: built
+    decides: R5's result (Increment 13); runs only when R5 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [shock_delivered_on_screen events, multiple_shocks, R5 preceding_steps (rules.yaml), screen coverage over paddles firmly on chest .. paddles removed]
+    branches:
+      - condition: Two or more shock indications (preparation anomaly multiple_shocks)
+        outcome: Unable to Verify; a single shock cannot be confirmed
+        flags: [multiple_shocks]
+      - condition: A shock on screen, preceding_steps unset (OQ-013)
+        outcome: Pass – Direct, presence only; flagged so the overall result cannot be Pass (D-100, like D-062)
+        flags: [order_not_checked]
+      - condition: A shock on screen, preceding_steps set, an observed step starts after the shock
+        outcome: Fail wrong_order
+        failure_codes: [wrong_order]
+      - condition: A shock on screen, preceding_steps set, a step not observed
+        outcome: Pass – Direct for the observed steps; that step's order not checked
+        flags: [order_not_checked]
+      - condition: A shock on screen after every preceding step
+        outcome: Pass – Direct
+      - condition: preceding_steps is not a list of canonical events
+        outcome: engine_error (a configuration error, never a result about the learner, D-063)
+      - condition: No shock on screen, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No shock on screen; the screen visible throughout paddles firmly on chest .. paddles removed (the whole recording when either tag is missing, D-101)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No shock on screen; the screen not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify, never Fail (D-094)
+    config: [configs/rules.yaml R5 parameters.preceding_steps, engine.yaml coverage_policy]
+    code: rules/video_rules.py (shock_confirmed_on_screen)
+    decisions: [D-039, D-093, D-094, D-100, D-101]
+    assumptions: []
+    open_questions: [OQ-013]
+
   - id: P-032
     name: R2 second paddle taken after the first is placed
     stage: rule
@@ -653,9 +690,9 @@ decision_points:
       - condition: No rule was evaluated (e.g. every rule disabled)
         outcome: Incomplete, never Pass
         flags: [no_rules_evaluated]
-      - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved
-        outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved); never Pass
-        flags: [timing_not_checked, limit_not_approved]
+      - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved / order not checked
+        outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved; order not checked, D-100); never Pass
+        flags: [timing_not_checked, limit_not_approved, order_not_checked]
       - condition: No Fail, and the timeline has a review anomaly (review_anomalies, D-069, D-072; checked before the Unable-to-Verify setting)
         outcome: Incomplete, the timeline needs review, anomalies listed; never Pass
         flags: [timeline_needs_review]

@@ -15,7 +15,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **R8** Apical before sternal | Apical placed before sternal. With one zone visible, inferred from the first placement (D-013); inferred mistakes undecided (D-015); a missing placement gives Unable to Verify, `placement_missing` (D-058); the apical-first fallback gives an assumed result that blocks an overall Pass (D-060) | apical and sternal placements (derived ones past the gate), first placement, zone coverage over the placement phase (D-099) | P-015, P-012, P-007 | `wrong_order`, `simultaneous` (a parallel placement, with the cause flag shared with R2, D-098) | 12 | **implemented** (Increment 12); pending until the supervisor confirms its definition | OQ-004, OQ-005, OQ-006, OQ-015, OQ-059 |
 | **R3** Paddles firmly on chest | Both paddles stable in their zones before the shock; otherwise (direct evidence weak or missing, D-057) Pass – Inferred if the shock on screen or the paddle removal is confirmed | paddles firmly on chest, shock time | P-016, P-009, P-008 | `not_in_zone`, `placed_after_shock` | 15 | pending | OQ-012, OQ-022 |
 | **R4** Both discharge buttons pressed | Both buttons pressed after placement and before the shock; otherwise (weak or missing, D-057) inferred as for R3 | buttons pressed, placement, shock time | P-016, P-009, P-008 | `before_placement`, `not_pressed` | 16 | pending | OQ-023 |
-| **R5** Shock confirmed on screen | One new shock indication after the preceding steps | shock on screen | P-009, P-005, P-014 | `missing`, `wrong_order` | 13 | pending | OQ-013 |
+| **R5** Shock confirmed on screen | One new shock indication after the preceding steps (a setting, unset until OQ-013: presence only, `order_not_checked`, D-100); a missing shock fails only if the screen was visible throughout paddles firmly on chest → paddles removed (D-101) | shock on screen, preceding steps, screen coverage | P-033, P-005, P-007 | `missing`, `wrong_order` | 13 | **implemented** (Increment 13); pending until the supervisor confirms its definition | OQ-013 |
 | **R6** Paddles removed after shock | Removal after the shock | paddle removal, shock time | P-009, P-014, P-008 | `removed_before_shock`, `missing` | 14 | pending | OQ-016 (limit, if any) |
 | **A1** Oxygen away | Command given before the shock | oxygen-away command, shock time | P-010, P-014, P-008 | `missing`, `after_shock` | 18 | pending | OQ-010 |
 | **A2** Continue compressions | Command given during preparation, before "stop" (A4 owns stop-before-continue, D-027) | continue command (including resolved "resume"), stop time | P-011, P-012, P-008 | `missing`, `wrong_stage` | 19 | pending | OQ-009, OQ-010 |
@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–12, with 9a, 9b and 9c)
+## What is built so far (Increments 0–13, with 9a, 9b and 9c)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -83,6 +83,10 @@ approved (D-091).
   cause flag `possible_parallel_placement`, so the feedback can explain that one action caused
   both (D-098; one or two mistakes: OQ-059).
 
-All 16 rules still report "pending" (R2 and R8 are implemented but not yet approved). On the
-interim annotation data the engine gives Incomplete, marked as development data. Next: R5
-(Increment 13).
+- **R5 (Increment 13, P-033):** implemented and tested; pending until the supervisor confirms its
+  definition. Until the preceding steps are set (OQ-013), it checks presence only, and the
+  overall result cannot be Pass (D-100).
+
+All 16 rules still report "pending" (R2, R8 and R5 are implemented but not yet approved). On the
+interim annotation data the engine gives Incomplete, marked as development data. Next: R6
+(Increment 14).

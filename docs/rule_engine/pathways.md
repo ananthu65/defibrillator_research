@@ -323,6 +323,18 @@ taken to paddles firmly on chest (D-092, D-099). Derived placements are used onl
 | The visible paddle placed clearly before the first placement | Unable to Verify | `contradictory` |
 | Not determinable (no placement and no zone visible, or no first placement) | Unable to Verify; if the fallback is on: **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-014, D-060) | — |
 
+#### P-033 R5: shock confirmed on screen (built, Increment 13; pending until approved)
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Two or more shock indications | Unable to Verify (one shock can't be confirmed) | `multiple_shocks` |
+| Shock on screen, preceding steps unset (OQ-013) | Pass – Direct, presence only; the overall result can't be Pass (D-100) | `order_not_checked` |
+| Shock on screen before an observed preceding step | Fail | `wrong_order` |
+| Shock on screen, a preceding step not observed | Pass – Direct; that step's order not checked | `order_not_checked` |
+| Shock on screen after every preceding step | Pass – Direct | — |
+| No shock, a low-confidence one exists | Unable to Verify | `low_confidence_evidence` |
+| No shock, screen visible throughout paddles firmly on chest → paddles removed (or the whole recording if a tag is missing, D-101) | Fail | `missing` |
+| No shock, screen not visible throughout that window | Unable to Verify, never Fail (D-094) | — |
+
 #### P-032 R2: second paddle taken after the first is placed (built, Increment 11; pending until approved)
 | Condition | Outcome | Code |
 |---|---|---|
@@ -864,3 +876,31 @@ illustration only.)*
 2. Only the apical placement is observed. The sternal zone was not in view during the phase, so
    its missing placement is **not** `placement_missing`. The one-zone inference applies, as in
    W-58.
+
+### W-60 R5 with a shock seen and the preceding steps not yet set → Incomplete
+*(Built in Increment 13; D-100.)*
+1. Shock on the screen at 15 s. `preceding_steps` is unset (OQ-013).
+2. P-033: **Pass – Direct**, presence only, flagged `order_not_checked`.
+3. P-017: no Fail → **Incomplete**, "order not checked for R5", never Pass (like D-062).
+4. Once the supervisor sets the steps (for example paddles firmly on chest, both buttons
+   pressed): buttons at 13 s → Pass; buttons at 16 s → **Fail `wrong_order`**; no button press
+   observed → Pass with `order_not_checked` (R4 reports the missing press).
+
+### W-61 R5 with no shock seen: the screen over the shock window
+*(Built in Increment 13; D-094, D-101.)*
+1. Paddles firmly on chest at 10 s, paddles removed at 20 s, no shock on the screen.
+2. P-033 asks the screen's coverage over 10–20 s:
+   - **visible throughout** → **Fail `missing`**;
+   - **out of view in that window** (visible only before 8 s and after 22 s) → **Unable to
+     Verify**;
+   - **visible until 15 s only** → unknown → **Unable to Verify**;
+   - **no screen track** (for example LL) → **Unable to Verify**.
+3. No paddles-firmly-on-chest tag: the whole recording is used. The screen is visible
+   throughout → Fail; visible for part of it → Unable to Verify.
+
+### W-62 R5 with two shocks on the screen → Unable to Verify
+*(Built in Increment 13; D-039, D-101.)*
+1. Shock indications at 14 s and 16 s. Preparation raises `multiple_shocks`, and there is no
+   shock time.
+2. P-033: **Unable to Verify**, citing both, flagged `multiple_shocks`. The timeline needs review
+   (D-065), so the overall result can't be Pass.

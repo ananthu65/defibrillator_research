@@ -109,6 +109,7 @@ flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`
 |---|---|---|---|
 | `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005). It stays a Pass at rule level, but the overall result cannot be Pass (D-062) |
 | `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
+| `order_not_checked` | Rule result (R5, P-033) | An order requirement is not set (R5's `preceding_steps`, OQ-013), or one of the steps it needs was not observed | The rule checked presence only, or the order against the observed steps only. Like `timing_not_checked`, the overall result cannot be Pass (D-100) |
 
 Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
 `pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`,
@@ -202,7 +203,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | R8 Apical before sternal (**built**, Increment 12, P-015; reported pending until approved) | `wrong_order` (direct, or inferred once the inferred-fail setting is decided as fail, D-015), `simultaneous` (also a parallel placement past the gate, with the cause flag, D-098) |
 | R3 Paddles firmly on chest (P-016) | `not_in_zone`, `placed_after_shock` |
 | R4 Both discharge buttons pressed (P-016) | `before_placement`, `not_pressed` |
-| R5 Shock confirmed on screen | `missing`, `wrong_order` |
+| R5 Shock confirmed on screen (**built**, Increment 13, P-033; reported pending until approved) | `missing` (no shock while the screen was visible throughout paddles firmly on chest → paddles removed, D-101), `wrong_order` (shock before a preceding step, once those are set, D-100) |
 | R6 Paddles removed after shock | `removed_before_shock`, `missing` |
 | A1 Oxygen away | `missing`, `after_shock` |
 | A2 Continue compressions | `missing`, `wrong_stage` |

@@ -3506,3 +3506,67 @@ Increment 13 (R5). Nothing is committed; commit only when Arnikan says so.
 **Review (Arnikan, 2026-10-17):** D-099 approved as interim. The final export's validation report
 will show whether it discards real placements (as P06_T might), and it will be refined then.
 **Committed** with the proposed message and pushed (on Arnikan's instruction).
+
+---
+
+## Increment 13: R5, shock confirmed on screen (2026-10-17)
+
+### Decisions recorded (Arnikan)
+- **D-100, preceding steps:**
+  - the steps that must come before the shock are a setting, `configs/rules.yaml` R5
+    `parameters.preceding_steps`, unset until the supervisor answers **OQ-013** (updated);
+  - while unset, R5 checks presence only and flags **`order_not_checked`**, which, like
+    `timing_not_checked` (D-062), keeps the overall result from being Pass;
+  - once set, a shock before an observed step → `wrong_order`; a step not observed →
+    `order_not_checked` for it.
+- **D-101, screen window:**
+  - a missing shock fails only if the screen was visible throughout the window from paddles
+    firmly on chest to paddles removed; otherwise Unable to Verify;
+  - if either tag is missing, the whole recording is used;
+  - two or more shocks remain the preparation anomaly, and R5 gives Unable to Verify.
+
+### What was done
+- **R5 in `rules/video_rules.py` (P-033).** Multiple shocks → Unable to Verify. A shock seen → the
+  preceding-step logic above. No shock → low confidence → Unable to Verify; the screen visible
+  throughout the window → Fail `missing`; otherwise Unable to Verify. An invalid
+  `preceding_steps` value is a configuration error, recorded as `engine_error` (D-063).
+- **`order_not_checked`** is in `checks.FLAGS`. The overall policy lists it as "order not
+  checked" among the Incomplete reasons.
+- **Output contract version 6:** `order_not_checked` added; `missing` and `wrong_order` built
+  for R5.
+- **R5 stays pending** in `rules.yaml`.
+
+### Tests (533 → 546; `tests/test_rule_engine_r5.py`, 13)
+- **Shock seen:**
+  - steps unset → presence only, `order_not_checked`, overall Incomplete ("order not checked");
+  - steps set and met → Pass, overall Pass;
+  - a shock before a step → `wrong_order`;
+  - a step not observed → `order_not_checked`;
+  - an invalid setting → `engine_error`;
+  - multiple shocks → Unable to Verify;
+  - pending in the catalogue.
+- **Shock missing:**
+  - screen visible throughout the window → `missing`;
+  - out of view in the window → Unable to Verify;
+  - visible for part of it → Unable to Verify;
+  - no screen track → Unable to Verify;
+  - window tags missing → whole recording (throughout → Fail; partly → Unable to Verify);
+  - low-confidence shock → Unable to Verify.
+
+Full suite: **546 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-033 (new); P-017's Incomplete branch includes `order_not_checked`.
+- **`pathways.md`:** the P-033 table; W-60 (steps unset), W-61 (screen window), W-62 (two
+  shocks).
+- **Registers:** `decisions.md` (D-100, D-101); `open_questions.md` (OQ-013 interim behaviour).
+- **Other docs:** `anomalies.md`, `output_contract.md` (v6), `rules_status.md`, `methods.md`,
+  `implementation_plan.md` (row 13), `configs/rules.yaml` (R5 parameter), `progress.md`,
+  `ai_usage_log.md`.
+
+### Open questions
+None new. OQ-013 (supervisor: which steps must precede the shock) now feeds the setting.
+
+### Next
+Increment 14 (R6). Nothing is committed; commit only when Arnikan says so.

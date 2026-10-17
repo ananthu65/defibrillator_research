@@ -39,7 +39,10 @@ rules:
   - {id: R8, title: Apical paddle placed before sternal, status: pending, implementation: null, parameters: {}}
   - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {}}
   - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {}}
-  - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {}}
+  # R5 preceding_steps: canonical events that must come before the shock on screen (D-100). Unset
+  # (null) until the supervisor answers OQ-013; while unset R5 checks presence only and flags
+  # order_not_checked, which keeps the overall result from being Pass.
+  - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {preceding_steps: null}}
   - {id: R6, title: Paddles removed after shock, status: pending, implementation: null, parameters: {}}
   - {id: A1, title: Oxygen away, status: pending, implementation: null, parameters: {}}
   - {id: A2, title: Continue compressions, status: pending, implementation: null, parameters: {}}

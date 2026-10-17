@@ -439,6 +439,37 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   - **An older export without the screen fields** gives unknown.
 - **Affects:** P-030, P-007; R5 (Increment 13).
 
+### D-100 R5's preceding steps are a setting; unset means order not checked
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:**
+  - **The setting:** the list of steps that must come before the shock is a config setting,
+    `configs/rules.yaml` R5 `parameters.preceding_steps` (canonical events). It is **unset**
+    (null) until the supervisor answers OQ-013.
+  - **While unset:** R5 checks presence only (one shock on the screen) and flags
+    `order_not_checked`. Like `timing_not_checked` (D-062), this stops the overall result from
+    being Pass ("order not checked" in the Incomplete list).
+  - **Once set:**
+    - an observed step that starts after the shock → **Fail `wrong_order`**;
+    - a step not observed → its order is not checked (`order_not_checked`), and R5 doesn't fail
+      for it, because the missing step is that step's own rule's finding;
+    - otherwise → Pass – Direct.
+  - **A setting that isn't a list of canonical events** is a configuration error, recorded as
+    `engine_error` (D-063).
+- **Affects:** R5 (P-033), P-017. **Open question:** OQ-013.
+
+### D-101 R5's missing shock: the screen must be visible over the shock window
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** For a missing shock on the screen, R5 fails (`missing`) only if the screen was
+  visible **throughout the window from `paddles_firmly_on_chest` to
+  `paddles_removed_after_shock`**. Otherwise it gives Unable to Verify (D-094).
+  - If either tag is missing (or the removal comes first), the whole recording is used.
+  - **One shock:** two or more shock indications remain the preparation anomaly
+    `multiple_shocks` (D-039), and R5 then gives Unable to Verify.
+  - Low confidence is never a Fail (D-010).
+- **Reason:** the shock is expected while the paddles are on the chest. The screen being out of
+  view then means the shock could not be seen, not that it didn't happen.
+- **Affects:** R5 (P-033).
+
 ### D-095 R2 when the first placement is missing: zone coverage over the window
 - **Date / by / status:** 2026-10-17 · Arnikan · approved; **its failure code is replaced by
   D-097** (`first_placement_not_observed`)

@@ -13,7 +13,7 @@ A Fail on a timeline with a review anomaly stays Fail, flagged timeline_needs_re
 built on annotation data (annotation_coverage_assumed) is marked as development data.
 """
 from dataclasses import dataclass
-from rules.checks import LIMIT_NOT_APPROVED, TIMING_NOT_CHECKED
+from rules.checks import LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, TIMING_NOT_CHECKED
 from rules.coverage import ANNOTATION_COVERAGE_ASSUMED  # a header flag the engine carries onto every result (P-001)
 from rules.outcome import ASSUMED, ENGINE_ERROR, FAIL, NOT_EVALUABLE, PENDING, UNABLE
 
@@ -130,6 +130,8 @@ def _incomplete(pairs):
             yield _as(group, "engine error")
         elif TIMING_NOT_CHECKED in flags or LIMIT_NOT_APPROVED in flags:
             yield _as(group, "limit not approved" if LIMIT_NOT_APPROVED in flags else "timing not checked")
+        elif ORDER_NOT_CHECKED in flags:   # D-100: like unchecked timing (D-062), never an overall Pass
+            yield _as(group, "order not checked")
 
 
 def _as(group, category):

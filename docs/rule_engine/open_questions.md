@@ -145,7 +145,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   Which steps: paddle placement only, or placement and pressing both buttons?
 - **Affects:** R5.
 - **Why it matters:** It defines when R5 reports `wrong_order`.
-- **Interim behaviour:** R5 is not built yet (Increment 13).
+- **Interim behaviour:** The answer goes into `configs/rules.yaml` R5
+  `parameters.preceding_steps` (D-100), which is unset for now. R5 (built in Increment 13)
+  checks the shock's presence only and flags `order_not_checked`, so the overall result cannot be
+  Pass. Once set, a shock before an observed step is `wrong_order`.
 
 ### OQ-016 Missing clinical time limits
 - **Old no.:** E-9 · **Owner:** supervisor · **Also involves:** Arnikan (records them in config)
