@@ -143,31 +143,34 @@ flowchart TD
     RR -.-> E
 ```
 
-## (f) R8: apical before sternal (P-015, planned)
+## (f) R8: apical before sternal (P-015, built in Increment 12; pending until approved)
+
+Zones count as visible when covered over the placement phase, from the first paddle taken to
+paddles firmly on chest (D-092, D-099). Derived placements reach R8 only past the gate (D-088).
+A parallel placement fails R2 as well, separately, with the same cause flag (D-098).
 
 ```mermaid
 flowchart TD
-    Z{"Placement zones visible?"} -->|both| B2{"Both placement<br/>events present?"}
-    B2 -->|no| PM1["Unable to Verify<br/>placement_missing (D-058)<br/>R3 reports the missing placement"]
-    B2 -->|yes| D1{"Compare apical and<br/>sternal placement times"}
+    PP{"Derived placements flagged<br/>possible_parallel_placement?"} -->|yes| FP["Fail simultaneous<br/>cause flag possible_parallel_placement<br/>(R2 fails too, separately, D-098)"]
+    PP -->|no| BOTH{"Both placements<br/>observed?"}
+    BOTH -->|yes| D1{"Compare apical and<br/>sternal placement times"}
     D1 -->|apical first| P["Pass – Direct"]
     D1 -->|sternal first| F["Fail wrong_order"]
     D1 -->|same time| FS["Fail simultaneous"]
-    Z -->|one| V{"Visible paddle has<br/>a placement event?"}
-    V -->|no| PM2["Unable to Verify, no inference<br/>placement_missing (D-058)"]
-    V -->|yes| I{"Visible paddle placed at<br/>the first placement time?"}
+    BOTH -->|no| Z{"A zone in view during the<br/>placement phase, but its<br/>placement missing?"}
+    Z -->|yes| PM["Unable to Verify<br/>placement_missing (D-058)<br/>R3 reports the missing placement"]
+    Z -->|no| ONE{"One placement observed<br/>and a first placement time?"}
+    ONE -->|yes| I{"Visible paddle placed at<br/>the first placement time?<br/>(within 0.5 s)"}
     I -->|same time| W1["That paddle was first<br/>(inferred)"]
     I -->|clearly later| W2["The other paddle was first<br/>(inferred)"]
     I -->|clearly earlier| C["Unable to Verify<br/>contradictory"]
     W1 --> O{"Apical first?"}
     W2 --> O
     O -->|yes| PI["Pass – Inferred"]
-    O -->|no| IF["Inferred mistake<br/>Unable to Verify until decided<br/>inferred_fail_policy_undecided"]
-    Z -->|none, or no first placement| N{"Fallback switched on?<br/>(off by default)"}
+    O -->|no| IF["Inferred mistake: inferred_fail_outcome<br/>undecided → Unable to Verify<br/>inferred_fail_policy_undecided<br/>(fail → Fail wrong_order)"]
+    ONE -->|"no: nothing observed and no zone<br/>in view, or no first placement"| N{"Fallback switched on?<br/>(off by default)"}
     N -->|no| U["Unable to Verify"]
     N -->|yes| AS["Assumed apical first<br/>to be checked by the evaluator<br/>overall cannot be Pass (D-060)"]
-    classDef planned stroke-dasharray: 5 5
-    class Z,B2,PM1,D1,P,F,FS,V,PM2,I,W1,W2,C,O,PI,IF,N,U,AS planned
 ```
 
 ## (g) Overall result (P-017, built)

@@ -6,7 +6,8 @@ docs/rule_engine/output_contract.md. REPORT_VERSION changes whenever that struct
 """
 from dataclasses import asdict
 
-REPORT_VERSION = 4   # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning, screen (D-093, D-094)
+REPORT_VERSION = 5   # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
+#                      screen (D-093, D-094); 5: R8 flags possible_parallel_placement, derived_placement (D-098)
 REPORT_KIND = "rule_engine_report"
 
 

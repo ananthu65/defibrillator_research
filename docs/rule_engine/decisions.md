@@ -477,6 +477,42 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   taking the second paddle first. The code names exactly what was observed, not a guess.
 - **Affects:** R2 (P-032); the output contract (v4). **Resolves:** OQ-058.
 
+### D-098 A parallel placement fails both R2 and R8, with a shared cause flag
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** R2 and R8 are separate checklist criteria, so a parallel placement fails
+  **both**, each with **`simultaneous`**, even though one action causes both.
+  - **Not a dependency cascade:** R8 has no dependency on R2. R8 can be evaluated, and the
+    apical paddle was not placed first.
+  - **The shared cause flag:** both results carry `possible_parallel_placement`, so the feedback
+    module can explain that one action caused both failures. Results resting on derived
+    placements also carry `derived_placement`.
+  - **The overall result** lists two mistakes, R2 and R8.
+  - **The gate still applies:** as with every derived placement, only once it is approved for
+    that export and its settings (D-088, D-091).
+- **Open question:** whether a parallel placement should count as two mistakes or one is OQ-059
+  (supervisor).
+- **Affects:** R2 (P-032), R8 (P-015); the output contract (v5).
+
+### D-099 R8 judges zone visibility over the placement phase
+- **Date / by / status:** 2026-10-17 · agent proposal approved by Arnikan as interim · interim.
+  The validation report of the final export will show whether it discards real placements (as
+  P06_T might, with its apical zone only partly in view), and it will be refined then.
+- **Decision:** R8's one-zone inference uses the zone windows (D-092).
+  - **When a zone counts as visible:** when it is covered over the **placement phase**. That runs
+    from the first paddle taken to paddles firmly on chest. When either tag is missing, it starts
+    at the earliest placement and ends at the second paddle taken, or else at the latest
+    placement. Without any of these, the whole recording is used.
+  - **A zone visible for only part of the phase,** or with no track, does not count as visible.
+    LL views, with no sternal zone track, therefore use the one-zone inference with the apical
+    zone.
+  - **A paddle whose zone was visible but whose placement is missing** gives Unable to Verify,
+    `placement_missing` (D-058).
+  - **When both placements are observed,** they are compared directly, whatever the zones
+    show.
+- **Reason:** the question is whether the zone was in view while the paddles were being placed,
+  not at some other time in the recording.
+- **Affects:** R8 (P-015).
+
 ---
 
 ## Shock time and command timing

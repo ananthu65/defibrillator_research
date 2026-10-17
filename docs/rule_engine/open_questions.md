@@ -32,6 +32,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-022 | E-14b | supervisor | Ananth, Arnikan | open | Paddles lifted and placed again before the shock |
 | OQ-023 | E-14c | supervisor | Ananth, Arnikan | open | Discharge buttons pressed more than once |
 | OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen (supersedes the proposal's A6 clause) |
+| OQ-059 | new (2026-10-17) | supervisor | Arnikan, Sanjeevan | open | Does a parallel placement count as one mistake or two? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -201,6 +202,17 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R6, R7/A6, A1–A8; the choice of camera angle (OQ-038).
 - **Interim behaviour:** `shock_time_fallback: none`. The removal fallback is kept behind the
   setting `removal`.
+
+### OQ-059 Does a parallel placement count as one mistake or two?
+- **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan, Sanjeevan
+  (the feedback wording) · **Raised:** 2026-10-17 · **Status:** open
+- **Question:** When a learner places both paddles at the same time, R2 (second paddle taken
+  after the first is placed) and R8 (apical before sternal) both fail with `simultaneous`. They
+  are separate checklist criteria, and one action caused both (D-098). Should the assessment
+  count this as **two mistakes** (R2 and R8) or **one**?
+- **Affects:** R2, R8; the overall result's list of mistakes; the feedback.
+- **Interim behaviour:** Two mistakes, both flagged `possible_parallel_placement`, so the
+  feedback module can explain that one action caused both.
 
 ### OQ-001 Final policy when coverage is unknown
 - **Old no.:** E-1 · **Owner:** team · **Also involves:** supervisor (whether unverifiable

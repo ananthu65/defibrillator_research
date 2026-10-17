@@ -307,16 +307,21 @@ elapsed times and checks it used.
 | R8 order not directly observable | → P-015 |
 | Required event missing, and no approved inference applies | → P-008 |
 
-#### P-015 R8 inference (planned, Increment 12)
-| Condition | Outcome | Codes |
+#### P-015 R8: apical before sternal (built, Increment 12; pending until approved)
+A zone counts as visible when it is covered over the placement phase, from the first paddle
+taken to paddles firmly on chest (D-092, D-099). Derived placements are used only past the gate
+(D-088).
+
+| Condition | Outcome | Codes and flags |
 |---|---|---|
-| Both zones visible, both placements observed | Compare the two placement times | `wrong_order`, `simultaneous` |
-| Both zones visible, one placement event missing | Unable to Verify, not `wrong_order`; R3 reports the missing placement (D-058) | `placement_missing` |
-| One zone visible, its placement matches the first placement | That paddle was first (inferred) | `inferred_fail_policy_undecided` if it is the sternal one |
-| One zone visible, its placement clearly after the first | The other paddle was first (inferred) | `inferred_fail_policy_undecided` if that means a mistake |
-| One zone visible, its paddle has no placement event | Unable to Verify, no inference; R3 reports the missing placement (D-058) | `placement_missing` |
+| Derived placements flagged `possible_parallel_placement` | Fail; **R2 fails too, separately** (D-091, D-098) | `simultaneous`; `possible_parallel_placement` (shared cause flag), `derived_placement` |
+| Both placements observed | Compare the two placement times: apical first → Pass – Direct | `wrong_order`, `simultaneous`; `derived_placement` if derived |
+| A zone visible during the placement phase, its placement missing (both zones visible with one missing, or the one visible zone without its placement) | Unable to Verify, not `wrong_order`; R3 reports the missing placement (D-058) | `placement_missing` |
+| One placement observed (the other zone not visible), within 0.5 s of the first placement | That paddle was first (inferred): apical → Pass – Inferred | — |
+| One placement observed, clearly after the first placement | The other paddle was first (inferred) | — |
+| Inferred mistake (sternal first) | Unable to Verify while undecided (D-015); Fail or Unable to Verify once decided | `inferred_fail_policy_undecided`; `wrong_order` if decided as fail |
 | The visible paddle placed clearly before the first placement | Unable to Verify | `contradictory` |
-| Not determinable (no zone visible, or no first placement) | Unable to Verify; if the fallback is on: **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-060) | — |
+| Not determinable (no placement and no zone visible, or no first placement) | Unable to Verify; if the fallback is on: **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-014, D-060) | — |
 
 #### P-032 R2: second paddle taken after the first is placed (built, Increment 11; pending until approved)
 | Condition | Outcome | Code |
@@ -494,7 +499,7 @@ illustration only.)*
 3. R7/A6 → **Unable to Verify**, flagged `shock_time_from_removal`.
 
 ### W-17 R8, one zone visible, its paddle has no placement event → Unable to Verify
-*(Planned, D-058.)*
+*(Built in Increment 12, D-058.)*
 1. Only the apical zone is visible. The first paddle was placed at 12 s, but there is no
    apical placement event.
 2. P-015: the visible paddle's placement is not observed, so the order cannot be established.
@@ -504,7 +509,7 @@ illustration only.)*
    mistake reported once, D-003).
 
 ### W-18 R8, both zones visible, one placement event missing → Unable to Verify
-*(Planned, D-058.)*
+*(Built in Increment 12, D-058.)*
 1. Both zones are visible. Apical placed at 12 s; no sternal placement event.
 2. P-015: the order cannot be compared → **Unable to Verify**, `placement_missing`, and **not**
    Fail `wrong_order`. R3 reports the missing sternal placement.
@@ -538,7 +543,7 @@ illustration only.)*
    undecided setting (OQ-002).
 
 ### W-23 R8 by the apical-first fallback → overall Incomplete
-*(Planned, D-014 and D-060; the fallback is off by default.)*
+*(Built in Increment 12, D-014 and D-060; the fallback is off by default.)*
 1. No placement zone is visible, so R8 cannot be determined. The fallback is switched on.
 2. P-015: R8's result is **assumed** ("apical first, to be checked by the evaluator"), not
    evaluated.
@@ -821,3 +826,41 @@ illustration only.)*
    with the zones visible throughout it gives **Fail `first_placement_not_observed`**: either a
    parallel placement or the second paddle taken first (D-097). The approved gate refines this
    to `simultaneous`.
+
+### W-57 One parallel placement fails R2 and R8, sharing the cause flag
+*(Built in Increment 12; D-091, D-098.)*
+1. Both paddles placed together (derived 0.08 s apart, flagged `possible_parallel_placement`). The
+   gate is approved for this export and its settings.
+2. R2 (P-032) → **Fail `simultaneous`**: the second paddle wasn't taken after the first was
+   placed.
+3. R8 (P-015) → **Fail `simultaneous`**: the apical paddle was not placed first. This is not
+   "not evaluable because of R2". R8 has no dependency on R2 and is evaluated on its own
+   evidence.
+4. Both results carry **`possible_parallel_placement`** (and `derived_placement`). The feedback
+   module can say that one action caused both failures.
+5. P-017: **Fail**, listing two mistakes, R2 and R8. Whether this should count as one mistake is
+   OQ-059 (supervisor).
+6. Gate not approved: neither rule sees the derived placements. R2 → `first_placement_not_observed`;
+   R8 → Unable to Verify, `placement_missing` (both zones in view, no placement observed).
+
+### W-58 R8 from an LL view: the one-zone inference
+*(Built in Increment 12; D-013, D-099.)*
+1. LL: the apical zone is visible throughout the placement phase; there is no sternal zone track
+   (unknown, so not visible). First placement (the first-placement tag) at 7.0 s.
+2. Apical placement at 7.2 s, within 0.5 s of the first placement → the apical paddle was first
+   → **Pass – Inferred**, citing both events.
+3. Apical placement at 11 s, clearly after → the sternal paddle was first, an inferred mistake →
+   **Unable to Verify**, `inferred_fail_policy_undecided` (D-015, OQ-005). Once decided as fail:
+   **Fail `wrong_order`**.
+4. Apical placement at 4 s, clearly before the first placement → **Unable to Verify**,
+   `contradictory`.
+5. No apical placement although the apical zone was in view → **Unable to Verify**,
+   `placement_missing` (D-058).
+
+### W-59 A zone in view only after the placement phase does not count
+*(Built in Increment 12; D-099.)*
+1. Placement phase 5–14 s (first paddle taken → paddles firmly on chest). The apical zone is
+   visible throughout it; the sternal zone only from 20 s.
+2. Only the apical placement is observed. The sternal zone was not in view during the phase, so
+   its missing placement is **not** `placement_missing`. The one-zone inference applies, as in
+   W-58.

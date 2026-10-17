@@ -3413,3 +3413,96 @@ Increment 12 (R8). Nothing is committed; commit only when Arnikan says so.
   A6 clause); and confirming R2's definition, including `first_placement_not_observed` (D-097).
 
 **Tests:** 511 run, all pass, 1 skipped (charging sound).
+
+**Committed 2026-10-17** as `d428628` and pushed (on Arnikan's instruction).
+
+---
+
+## Increment 12: R8, apical before sternal (2026-10-17)
+
+### Decisions recorded
+- **D-098 (Arnikan), a parallel placement fails both R2 and R8:**
+  - R2 and R8 are separate checklist criteria, so a parallel placement fails both, each with
+    `simultaneous`;
+  - it is not a dependency cascade: R8 has no dependency on R2 and is evaluated on its own
+    evidence (the apical paddle was not placed first);
+  - both results carry the cause flag **`possible_parallel_placement`**, so the feedback module
+    can explain that one action caused both.
+- **OQ-059 (new, supervisor):** does a parallel placement count as two mistakes or one?
+- **D-099 (my proposal, interim, for your review):** R8 judges zone visibility over the
+  **placement phase**. It runs from the first paddle taken to paddles firmly on chest; when a tag
+  is missing, it starts at the earliest placement and ends at the second paddle taken or the
+  latest placement. A zone visible for only part of the phase, or with no track, doesn't count as
+  visible. LL views (no sternal track) therefore use the one-zone inference.
+
+### What was done
+- **R8 in `rules/video_rules.py` (P-015),** following diagram (f):
+  1. a parallel placement → `simultaneous`, with the cause flag;
+  2. both placements → direct comparison (`wrong_order`, `simultaneous`);
+  3. a zone in view during the phase with its placement missing → Unable to Verify,
+     `placement_missing` (D-058);
+  4. the one-zone inference against the first placement (`placement_match_window_seconds`):
+     - apical first → Pass – Inferred;
+     - sternal first → the inferred-fail setting (undecided → Unable to Verify,
+       `inferred_fail_policy_undecided`);
+     - clearly before the first placement → `contradictory`;
+  5. not determinable → Unable to Verify, or **assumed** when `assume_first_taken_is_apical` is
+     on (off by default; blocks an overall Pass, D-060).
+
+  Derived placements reach R8 only past the gate (the adapter). Results resting on them carry
+  `derived_placement`.
+- **R2:** its parallel Fail now carries the same flags, through a shared helper.
+- **Rule-result flags** are listed in `video_rules.FLAGS`, and the docs test reads them.
+- **Output contract version 5:**
+  - two flags added: `possible_parallel_placement`, the shared cause flag, and `derived_placement`;
+  - `placement_missing`, `contradictory`, `inferred_fail_policy_undecided` and `wrong_order` (R8)
+    are now built.
+- **R8 stays pending** in `rules.yaml`.
+
+### Tests (511 → 533; `tests/test_rule_engine_r8.py`, 22)
+- **Both zones visible:** apical first passes; `wrong_order`; `simultaneous`; one placement
+  missing → `placement_missing`; both missing → `placement_missing`; pending in the catalogue.
+- **One zone (LL-like):**
+  - at the first placement time → Pass – Inferred;
+  - clearly later → inferred mistake (undecided → Unable to Verify, flagged);
+  - the setting decided as fail → `wrong_order`, and as unable → Unable to Verify;
+  - clearly before → `contradictory`;
+  - no placement in the visible zone → `placement_missing`;
+  - sternal zone only;
+  - no first placement → not determinable.
+- **Zone windows:** a zone in view only after the placement phase, or for only part of it, does
+  not count as visible.
+- **Fallback:** off by default → Unable to Verify; on → assumed, and the overall result is
+  Incomplete; it never overrides evidence.
+- **Gate:** approved → derived placements used, flagged `derived_placement`; not approved →
+  withheld, so `placement_missing` (zones in view).
+- **Parallel placement:**
+  - approved gate → **R2 and R8 both Fail `simultaneous`**, both flagged
+    `possible_parallel_placement` and `derived_placement`, overall Fail with two mistakes;
+  - not approved → R2 `first_placement_not_observed`, R8 `placement_missing`, no parallel flag.
+
+Full suite: **533 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-015 built; P-032's parallel branch flags.
+- **`pathways.md`:** the P-015 table; W-17, W-18 and W-23 marked built; W-57 (parallel fails
+  both), W-58 (LL one-zone inference), W-59 (zone windows).
+- **`diagrams.md`:** (f).
+- **Registers:** `decisions.md` (D-098, D-099); `open_questions.md` (OQ-059).
+- **Other docs:** `anomalies.md` (rule-result flags), `output_contract.md` (v5),
+  `rules_status.md`, `methods.md`, `implementation_plan.md` (row 12), `progress.md`,
+  `ai_usage_log.md`.
+
+### Open questions
+- **New:** OQ-059 (supervisor: one mistake or two).
+- **Still open for R8:** OQ-005 (inferred Fail), OQ-006 (match window; the fallback), OQ-015
+  (final IDs).
+- **For your review:** D-099 (the placement-phase window).
+
+### Next
+Increment 13 (R5). Nothing is committed; commit only when Arnikan says so.
+
+**Review (Arnikan, 2026-10-17):** D-099 approved as interim. The final export's validation report
+will show whether it discards real placements (as P06_T might), and it will be refined then.
+**Committed** with the proposed message and pushed (on Arnikan's instruction).

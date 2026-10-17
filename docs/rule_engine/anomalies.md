@@ -136,16 +136,17 @@ that timeline (`rules/engine.py`).
 |---|---|---|
 | `annotation_coverage_assumed` | Annotation adapter (P-001, Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result carries this flag, and the overall result is marked `development_data` (D-066), so it is never mistaken for a real assessment |
 
-## Planned flags (later increments)
+## Rule-result flags (`rules/video_rules.py` `FLAGS`, Increments 11 and 12)
 
-The decision points that will raise these are P-015 and P-018 in
-[decision_flow.yaml](decision_flow.yaml).
+Raised by R2 and R8 (P-032, P-015). R2 and R8 report pending until they are approved.
 
-| Code | Step | Meaning |
+| Code | Raised by | Meaning |
 |---|---|---|
-| `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
-| `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
-| `placement_missing` | R8 (Increment 12; D-058) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
+| `possible_parallel_placement` | R2 and R8 | **Shared cause flag** (D-098). Derived placements, past the gate, show both paddles placed at the same time. R2 and R8 are separate checklist criteria, so **both fail with `simultaneous`**, and both carry this flag so the feedback can explain that one action caused both failures. Not a dependency cascade: R8 is evaluated on its own (the apical paddle was not placed first). One mistake or two: OQ-059 |
+| `derived_placement` | R2 and R8 | The result rests on a placement derived from the annotated boxes (D-081), used only past the gate (D-088) |
+| `placement_missing` | R8 (D-058) | A paddle's zone was in view during the placement phase (D-099), but its placement event is missing: either the one visible zone's paddle, or one of two visible placements. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
+| `contradictory` | R8 | The only visible paddle was placed clearly before the first placement; Unable to Verify |
+| `inferred_fail_policy_undecided` | R8 (D-015) | The one-zone inference shows the sternal paddle first (an inferred mistake). It is Unable to Verify until `inferred_fail_outcome` is decided (OQ-005) |
 
 ## Annotation export and audit codes (Step 9b; not rule-engine codes)
 
@@ -170,9 +171,8 @@ learner, and never reach a rule result or the report.
 (every derived event; it is direct evidence with the method in metadata, D-081) and
 `possible_parallel_placement` (T1 not tagged and both placements within
 `simultaneous_window_seconds`, D-086; enough for R2/R8 to Fail `simultaneous` once the gate is
-approved, D-091). They are exporter flags. `derived_placement`
-becomes a rule-engine flag, in the decision flow and the output contract, when R8 uses it
-(Increment 12, D-088). The reasons for "no event" (zone unknown, never settled, T1 missing) are
+approved, D-091). They start as exporter flags. Since Increment 12, R2 and R8 carry both onto
+their results as rule-result flags (see above; output contract v5). The reasons for "no event" (zone unknown, never settled, T1 missing) are
 in `placement_validation.csv`, not export issues.
 
 **Audit review list (`issues.csv`, P-029):**
@@ -199,7 +199,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 |---|---|
 | R1 Gel applied twice | `missing`, `applied_once`, `outside_time_period` |
 | R2 Second paddle after first placed (**built**, Increment 11, P-032; reported pending until approved) | `simultaneous` (also a possible parallel placement once the gate is approved, D-091), `taken_before_first_placed`, `first_placement_not_observed` (no first placement seen while both zones were visible throughout the window: either a parallel placement or the second paddle taken first, A-019, D-097; it replaces the brief's original "first missing" code) |
-| R8 Apical before sternal (P-015) | `wrong_order`, `simultaneous` |
+| R8 Apical before sternal (**built**, Increment 12, P-015; reported pending until approved) | `wrong_order` (direct, or inferred once the inferred-fail setting is decided as fail, D-015), `simultaneous` (also a parallel placement past the gate, with the cause flag, D-098) |
 | R3 Paddles firmly on chest (P-016) | `not_in_zone`, `placed_after_shock` |
 | R4 Both discharge buttons pressed (P-016) | `before_placement`, `not_pressed` |
 | R5 Shock confirmed on screen | `missing`, `wrong_order` |

@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 4
+**Report version:** 5
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -30,6 +30,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (D-072). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
 | 3 | 2026-10-17 | `context.header` gains two fields (Increment 10): `visibility` (each placement zone's visible intervals in seconds, `{"region:apical_zone": [[start, end], ...]}`, D-092) and `flags` (a list; `annotation_coverage_assumed` for annotation data). The rule flag `annotation_coverage_assumed` is now built: every result of an annotation timeline carries it, and `development_data` is then true (D-066). `context.zone_visibility` is unchanged (the whole-recording status) |
 | 4 | 2026-10-17 | **Meaning changed:** `no_shock` now means no shock seen on the screen. The shock time is never inferred (D-093), so a paddle removal no longer gives a shock time. `shock_time_from_removal` and `command_before_removal` appear only if `shock_time_fallback` is set to `removal`, which is not the decided setting. **New region:** `screen` (the defibrillator screen, D-094) appears in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R2 is implemented (Increment 11), so `simultaneous` and `taken_before_first_placed` are now built. **New failure code** `first_placement_not_observed` (R2, D-097). It replaces the planned "first missing" code, which is removed, because R2 never produces it. R2 still reports `pending` until it is approved |
+| 5 | 2026-10-17 | **Two rule flags added** (R8, Increment 12): `possible_parallel_placement` is the **shared cause flag**. One parallel placement fails both R2 and R8 with `simultaneous`, and both results carry it, so the feedback can explain that one action caused both (D-098). `derived_placement` marks a result resting on placements derived from the boxes (D-088). R8 is implemented, so `wrong_order` (R8), `placement_missing`, `contradictory` and `inferred_fail_policy_undecided` are now built. R8 still reports `pending` until it is approved |
 
 ## How to get the report
 
@@ -90,7 +91,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 4,
+  "report_version": 5,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -193,9 +194,11 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `no_shock_time` | built | No shock time, so a command or the restart could not be placed |
 | `unresolved_commands` | built | An ambiguous command could not be classified, so the continue or restart time may be incomplete |
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
-| `placement_missing` | planned (Increment 12) | R8: a placement event is missing, so the order cannot be judged (D-058) |
-| `contradictory` | planned | The evidence contradicts itself |
-| `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: an inferred mistake, reported as Unable to Verify until decided |
+| `placement_missing` | built (R8) | R8: a paddle's zone was in view during the placement phase but its placement was not observed, so the order cannot be judged; R3 reports the missing placement (D-058) |
+| `contradictory` | built (R8) | R8: the only visible paddle was placed clearly before the first placement; the evidence contradicts itself, so Unable to Verify |
+| `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: the one-zone inference shows the sternal paddle first, an inferred mistake; reported as Unable to Verify until it is decided whether an inferred mistake is a Fail |
+| `possible_parallel_placement` | built (v5) | **Shared cause flag.** Both paddles were placed at the same time, a learner mistake seen in the derived placements (only once the gate is approved). It appears on **both R2 and R8**, each failed with `simultaneous`. They are separate checklist criteria, but **one action caused both failures**, so the feedback can say so (D-098). Whether this counts as one mistake or two is OQ-059 |
+| `derived_placement` | built (v5) | The result rests on a paddle placement derived from the annotated boxes by the exporter (direct evidence, method recorded), not on a tag (D-081, D-088) |
 | `annotation_coverage_assumed` | built (v3) | The timeline comes from annotation data (its header is flagged so). Every result carries it, and the report is development data, not an assessment (D-066) |
 
 ### Flags on the overall result (`overall.flags`)
@@ -228,10 +231,10 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `missing` | planned | R1, R5, R6, A1–A5, R7/A6 | The required step or command was not done |
 | `applied_once` | planned | R1 | Gel applied only once |
 | `outside_time_period` | planned | R1 | The two gel applications were not within the approved period |
-| `simultaneous` | built (R2; R8 planned) | R2, R8 | Two actions happened at the same time where order matters. For R2, it also covers both paddles placed together (a possible parallel placement, once the gate is approved, D-091) |
+| `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
 | `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
 | `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
-| `wrong_order` | planned | R5, R8, A4, A7 | Steps or commands in the wrong order |
+| `wrong_order` | built (R8; R5, A4, A7 planned) | R5, R8, A4, A7 | Steps or commands in the wrong order. For R8: the sternal paddle was placed before the apical (directly, or by inference once `inferred_fail_outcome` is decided as fail) |
 | `not_in_zone` | planned | R3 | A paddle was outside its approved zone |
 | `placed_after_shock` | planned | R3 | Paddles placed after the shock |
 | `before_placement` | planned | R4 | Buttons pressed before the paddles were placed |

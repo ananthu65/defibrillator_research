@@ -143,8 +143,9 @@ decision_points:
     inputs: [first_paddle_taken, first_paddle_placed anchor, second_paddle_taken, derived placements (only past the gate), placement-zone coverage over a window]
     branches:
       - condition: Derived placements flagged possible_parallel_placement (present only once the gate is approved, D-088)
-        outcome: Fail simultaneous (D-091)
+        outcome: Fail simultaneous (D-091), with the shared cause flag; R8 fails too, separately (D-098)
         failure_codes: [simultaneous]
+        flags: [possible_parallel_placement, derived_placement]
       - condition: No confident second paddle taken
         outcome: Unable to Verify; the order cannot be checked
       - condition: First placement before the second paddle is taken (outside the simultaneous window)
@@ -167,9 +168,9 @@ decision_points:
         outcome: Unable to Verify
     config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
     code: rules/video_rules.py (second_paddle_after_first_placed)
-    decisions: [D-051, D-091, D-092, D-095, D-097]
+    decisions: [D-051, D-091, D-092, D-095, D-097, D-098]
     assumptions: [A-019]
-    open_questions: []
+    open_questions: [OQ-059]
 
   - id: P-001
     name: Annotation timeline adapter
@@ -574,39 +575,45 @@ decision_points:
     open_questions: []
 
   - id: P-015
-    name: R8 apical-before-sternal inference
+    name: R8 apical before sternal (direct and one-zone inference)
     stage: rule
-    status: planned
-    decides: Which paddle was placed first (Increment 12)
-    inputs: [apical and sternal placement times, first placement time, zone visibility]
+    status: built
+    decides: Which paddle was placed first (Increment 12); runs only when R8 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [apical and sternal placement anchors (derived placements only past the gate), first placement time, zone coverage over the placement phase (D-099)]
     branches:
-      - condition: Both zones visible and both placements observed
-        outcome: Compare the placement times; Pass – Direct, or Fail
+      - condition: Derived placements flagged possible_parallel_placement (past the gate)
+        outcome: Fail simultaneous, with the shared cause flag; R2 fails too, separately, not as a dependency (D-091, D-098)
+        failure_codes: [simultaneous]
+        flags: [possible_parallel_placement, derived_placement]
+      - condition: Both placements observed
+        outcome: Compare the placement times; apical first → Pass – Direct; within the simultaneous window → Fail simultaneous; sternal first → Fail wrong_order; derived placements carry derived_placement
         failure_codes: [wrong_order, simultaneous]
-      - condition: Both zones visible but one paddle's placement event missing (D-058)
+        flags: [derived_placement]
+      - condition: A paddle's zone was visible throughout the placement phase but its placement is missing (both zones visible with one or both missing, or the one visible zone without its placement) (D-058)
         outcome: Unable to Verify, not wrong_order; R3 reports the missing placement
         flags: [placement_missing]
-      - condition: One zone visible and its placement matches the first placement
+      - condition: One placement observed, the other zone not visible during the placement phase, and the visible placement within placement_match_window_seconds of the first placement
         outcome: That paddle was first (apical → Pass – Inferred; sternal → inferred mistake)
-        flags: [inferred_fail_policy_undecided]
-      - condition: One zone visible and its placement is clearly after the first placement
+      - condition: One placement observed, the other zone not visible, the visible placement clearly after the first placement
         outcome: The other paddle was first (inferred)
+      - condition: Inferred mistake (sternal first), inferred_fail_outcome undecided
+        outcome: Unable to Verify (D-015)
         flags: [inferred_fail_policy_undecided]
-      - condition: One zone visible but its paddle has no placement event (D-058)
-        outcome: Unable to Verify, no inference; R3 reports the missing placement
-        flags: [placement_missing]
-      - condition: The visible paddle is placed clearly before the first placement
+      - condition: Inferred mistake, inferred_fail_outcome decided
+        outcome: Fail wrong_order (fail) or Unable to Verify (unable_to_verify)
+        failure_codes: [wrong_order]
+      - condition: The visible paddle placed clearly before the first placement
         outcome: Unable to Verify
         flags: [contradictory]
-      - condition: Not determinable (no zone visible, or no first placement), fallback off
+      - condition: Not determinable (no placement and no zone visible, or no first placement), fallback off (default)
         outcome: Unable to Verify
-      - condition: Not determinable, fallback on
-        outcome: Result assumed (apical first), to be checked by the evaluator; the overall result cannot be Pass (D-060)
-    config: [engine.yaml placement_match_window_seconds, engine.yaml assume_first_taken_is_apical, engine.yaml inferred_fail_outcome]
-    code: rules/video_rules.py (Increment 12)
-    decisions: [D-013, D-014, D-015, D-003, D-058, D-060]
+      - condition: Not determinable, fallback on (assume_first_taken_is_apical)
+        outcome: Result assumed (apical first), to be checked by the evaluator; the overall result cannot be Pass (D-014, D-060)
+    config: [engine.yaml placement_match_window_seconds, engine.yaml simultaneous_window_seconds, engine.yaml assume_first_taken_is_apical, engine.yaml inferred_fail_outcome]
+    code: rules/video_rules.py (apical_before_sternal)
+    decisions: [D-013, D-014, D-015, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099]
     assumptions: [A-009]
-    open_questions: [OQ-004, OQ-005, OQ-006]
+    open_questions: [OQ-004, OQ-005, OQ-006, OQ-059]
 
   - id: P-016
     name: R3/R4 inferred pass from shock or removal
