@@ -106,7 +106,7 @@ decision_points:
     inputs: [paddle_apical and paddle_sternal boxes (all tracks of each label), zone boxes, tags first_paddle_firmly_on_the_chest (T1) and paddles_firmly_on_chest (T2), engine.yaml simultaneous_window_seconds]
     branches:
       - condition: The paddle box has at least 0.5 of its area inside its zone, steady for 5 frames with the centre moving under 2% of the diagonal
-        outcome: A placement starts on that frame; it lasts until the paddle has been out of its zone on exit_frames (5) frames with no in frame between them, after which a re-placement can start
+        outcome: A placement starts on that frame; it lasts until the paddle has been out of its zone on exit_frames (5) frames with no in frame between them, after which a re-placement can start. Each event records end_frame, end_seconds (its last frame in the zone) and ended_by_exit (a real exit, not the end of the video), used by R6 (D-104)
       - condition: One box of the paddle, but its zone not visible on the frame (occlusion)
         outcome: Unknown, neither in nor out; it doesn't start or end a placement, and in on both sides of the gap is the same placement (A-020, D-090); counted per paddle in the validation report
       - condition: A track of the paddle ends and another track of the same label continues it
@@ -131,7 +131,7 @@ decision_points:
         outcome: The Increment 10 adapter does not pass derived placements to the engine; R8 cannot use them (D-088)
     config: [annotation_export.yaml derived_placements (min_overlap_of_paddle, steady_frames, max_centre_motion_of_diagonal, exit_frames, tag_agreement_window_frames, reviewed_for_r8), engine.yaml simultaneous_window_seconds]
     code: annotation/derive_paddle_placements.py (derive_placements, derived_placements_approved), called by annotation/export_rule_engine_records.py
-    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091]
+    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091, D-104]
     assumptions: [A-019, A-020]
     open_questions: [OQ-004]
 
@@ -171,6 +171,47 @@ decision_points:
     decisions: [D-039, D-093, D-094, D-100, D-101]
     assumptions: []
     open_questions: [OQ-013]
+
+  - id: P-034
+    name: R6 paddles removed after the shock
+    stage: rule
+    status: built
+    decides: R6's result (Increment 14); runs only when R6 is approved in rules.yaml, pending until the supervisor confirms its definition. paddles_removed_after_shock means the paddles were removed; it doesn't prove a shock (D-104)
+    inputs: [shock anchor (screen only, D-093), paddles_removed_after_shock events, derived placements with end_seconds and ended_by_exit (past the gate), placement zone coverage from the shock to the end of the recording, rules.yaml shock_to_removal_seconds]
+    branches:
+      - condition: No shock time (no shock on the screen, or several)
+        outcome: Not evaluable because of R5, even if a removal is tagged
+        next: P-020
+      - condition: Shock time taken from the removal itself (shock_time_fallback removal)
+        outcome: Unable to Verify; the removal can't be judged against its own time
+        flags: [shock_time_from_removal]
+      - condition: A removal clearly before the shock (more than simultaneous_window_seconds)
+        outcome: Fail removed_before_shock
+        failure_codes: [removed_before_shock]
+      - condition: Past the gate, a derived placement episode ended by a real exit clearly before the shock, with no placement of that paddle on at the shock
+        outcome: Fail removed_before_shock
+        flags: [derived_placement]
+        failure_codes: [removed_before_shock]
+      - condition: A removal after the shock, or before it but within simultaneous_window_seconds (treated as at the shock)
+        outcome: Pass – Direct; the time limit is checked (P-024); unset, so flagged timing_not_checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: A removal later than an approved shock_to_removal_seconds
+        outcome: Fail too_late
+        failure_codes: [too_late]
+      - condition: No removal, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No removal; both placement zones visible throughout from the shock to the end of the recording (A-022)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No removal; a placement zone not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify, never Fail
+    config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
+    code: rules/video_rules.py (paddles_removed_after_shock)
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104]
+    assumptions: [A-022]
+    open_questions: [OQ-016, OQ-057]
 
   - id: P-032
     name: R2 second paddle taken after the first is placed
@@ -664,16 +705,16 @@ decision_points:
       - condition: Direct evidence shows the mistake
         outcome: Fail
         failure_codes: [not_in_zone, placed_after_shock, before_placement, not_pressed]
-      - condition: Direct evidence weak or missing; shock on screen or removal confidently confirmed
-        outcome: Pass – Inferred, naming the supporting event
+      - condition: Direct evidence weak or missing; an event in inference_sources (the shock on screen or the removal) confidently confirmed
+        outcome: Pass – Inferred, naming the supporting event. A removal can happen without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102)
       - condition: Neither
         outcome: Missing-event outcome
         next: P-008
-    config: []
+    config: [configs/rules.yaml R3/R4 parameters.inference_sources]
     code: rules/video_rules.py (Increments 15 and 16)
-    decisions: [D-004, D-057]
-    assumptions: []
-    open_questions: [OQ-012]
+    decisions: [D-004, D-057, D-102]
+    assumptions: [A-021]
+    open_questions: [OQ-012, OQ-060]
 
   - id: P-017
     name: Overall result policy
@@ -835,9 +876,14 @@ decision_points:
     decides: Whether a measured interval is within the approved clinical limit
     inputs: [interval in seconds (Elapsed), clinical value record]
     branches:
-      - condition: No limit (null)
+      - condition: No limit (null), not decided yet
         outcome: Timing not checked; the rule judges presence and order only; the overall result cannot be Pass (D-062)
         flags: [timing_not_checked]
+      - condition: Approved "no limit" (no_limit true with approved_by)
+        outcome: Timing checked and within; the rule passes fully on presence and order, with no timing_not_checked (D-103)
+      - condition: Unapproved "no limit" (no_limit true without approved_by)
+        outcome: Not used; timing not checked (D-061, D-103)
+        flags: [timing_not_checked, limit_not_approved]
       - condition: A value that is not approved
         outcome: Not used; timing not checked (D-061); the overall result cannot be Pass (D-062)
         flags: [timing_not_checked, limit_not_approved]
@@ -851,7 +897,7 @@ decision_points:
         failure_codes: []
     config: [configs/rules.yaml timing_limits]
     code: rules/checks.py (time_limit, timed)
-    decisions: [D-005, D-016, D-061, D-062]
+    decisions: [D-005, D-016, D-061, D-062, D-103]
     assumptions: [A-017]
     open_questions: [OQ-016]
 

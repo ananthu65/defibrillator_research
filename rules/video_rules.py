@@ -4,7 +4,7 @@ Registered rules run only when their status in configs/rules.yaml is `approved`;
 are reported as pending (D-043). Definitions and failure codes: docs/rule_engine/rules_status.md.
 """
 from rules import checks
-from rules.context import MULTIPLE_SHOCKS
+from rules.context import MULTIPLE_SHOCKS, SHOCK_FROM_REMOVAL
 from rules.coverage import COVERED, LOW_CONFIDENCE_FLAG
 from rules.outcome import assumed, failed, passed, unable
 from rules.registry import rule
@@ -187,6 +187,98 @@ def _shock_missing(ctx):
                       f"({found.coverage.basis})", uses=(found,))
     return unable("R5", f"no shock seen on the screen {where}, but the screen was not visible throughout it "
                   f"(coverage {found.coverage.status}; D-094, D-101)", uses=(found,))
+
+
+# ---- R6 ---------------------------------------------------------------------------------------------
+
+@rule("R6", requires=(REMOVAL, SHOCK, APICAL, STERNAL), description="Paddles removed after the shock")
+def paddles_removed_after_shock(ctx, definition, results):
+    """R6 (P-034). paddles_removed_after_shock means the paddles were removed; it doesn't prove a shock.
+
+    1. No shock time (it comes only from the screen, D-093) -> Not evaluable because of R5, even if a
+       removal is tagged. A shock time taken from the removal itself (fallback removal) -> Unable to
+       Verify: the removal can't be judged against its own time.
+    2. A removal clearly before the shock (more than simultaneous_window_seconds) -> Fail
+       `removed_before_shock` (the proposal: "a paddle is visibly removed before shock").
+    3. Past the gate, a derived placement episode that ended (by a real exit) clearly before the
+       shock, with no placement of that paddle on at the shock -> Fail `removed_before_shock`.
+    4. A removal at the shock (within the window: annotation timing) or after it -> Pass, with the
+       shock_to_removal_seconds limit: unset -> timing_not_checked; approved "no limit" -> checked
+       (D-103); exceeded -> Fail `too_late`.
+    5. No removal -> Fail `missing` only if both placement zones were visible throughout from the
+       shock time to the end of the recording; otherwise Unable to Verify (D-104).
+    """
+    shock = ctx.shock
+    blocked = checks.requires("R6", shock, "R5")
+    if blocked is not None:
+        return blocked
+    if SHOCK_FROM_REMOVAL in shock.flags:
+        return unable("R6", "the shock time was taken from the paddle removal itself (shock_time_fallback removal), "
+                      "so the removal cannot be judged against it", uses=(shock,))
+    window = checks.simultaneous_window(ctx)
+    removals = ctx.named(REMOVAL)
+    if removals and removals[0].start < shock.time - window:
+        removal = removals[0]
+        return failed("R6", "removed_before_shock", f"paddles removed at {removal.start:g} s, before the shock on "
+                      f"the screen at {shock.time:g} s", evidence=(removal.event_id, shock.event_id), uses=(shock,),
+                      timestamps={REMOVAL: removal.start, SHOCK: shock.time})
+    early = _placements_ended_before(ctx, shock.time, window)
+    if early:
+        names = ", ".join(f"{e.event_name.split('_')[0]} paddle off its zone at {e.metadata['end_seconds']:g} s"
+                          for e in early)
+        return failed("R6", "removed_before_shock", f"a paddle was removed before the shock at {shock.time:g} s "
+                      f"(derived placements: {names})", evidence=(*(e.event_id for e in early), shock.event_id),
+                      uses=(shock,), flags=_evidence_flags(early), timestamps={SHOCK: shock.time})
+    if removals:
+        return _removed_at_or_after(ctx, removals[0], shock)
+    return _removal_missing(ctx, shock)
+
+
+def _placements_ended_before(ctx, shock_time, window):
+    """Derived placement episodes (past the gate) that ended by a real exit clearly before the shock,
+    for a paddle with no placement on at the shock."""
+    evidence = []
+    for name in PLACEMENTS:
+        episodes = [e for e in ctx.named(name) if e.metadata.get("derived_placement") and "end_seconds" in e.metadata]
+        on_at_shock = any(e.start <= shock_time + window and (not e.metadata.get("ended_by_exit")
+                                                             or e.metadata["end_seconds"] >= shock_time - window)
+                          for e in episodes)
+        if on_at_shock:
+            continue
+        evidence += [e for e in episodes if e.start < shock_time and e.metadata.get("ended_by_exit")
+                     and e.metadata["end_seconds"] < shock_time - window]
+    return evidence
+
+
+def _removed_at_or_after(ctx, removal, shock):
+    seconds = max(0.0, removal.start - shock.time)   # within the window before the shock counts as at it
+    check = checks.time_limit(seconds, ctx.config.limit("shock_to_removal_seconds"))
+    evidence = (removal.event_id, shock.event_id)
+    timestamps = {REMOVAL: removal.start, SHOCK: shock.time, "seconds": seconds}
+    if check.checked and not check.within:
+        return failed("R6", "too_late", f"paddles removed {seconds:g} s after the shock: {check.note}", evidence=evidence,
+                      uses=(shock, check), timestamps=timestamps, timing_checked=True)
+    return passed("R6", f"paddles removed at {removal.start:g} s, after the shock at {shock.time:g} s: {check.note}",
+                  evidence, uses=(shock, check), timestamps=timestamps, timing_checked=check.checked)
+
+
+def _removal_missing(ctx, shock):
+    header = ctx.coverage.header
+    ends = [e.end for e in ctx.prepared.events]
+    end = header.duration_seconds if header is not None and header.duration_seconds else (max(ends) if ends else None)
+    window = (shock.time, end) if end is not None and end >= shock.time else None
+    weak = ctx.missing(REMOVAL, window)
+    if LOW_CONFIDENCE_FLAG in weak.flags:
+        return unable("R6", "no confident paddle removal, but a low-confidence one may have been seen",
+                      evidence=weak.low_confidence_event_ids, uses=(shock, weak))
+    zones = [ctx.missing(name, window) for name in PLACEMENTS]
+    where = f"from the shock ({shock.time:g} s) to the end of the recording" + (f" ({end:g} s)" if end else "")
+    if all(z.coverage.status == COVERED and z.outcome == "fail" for z in zones):
+        return failed("R6", "missing", f"no paddle removal {where}, although both placement zones were visible "
+                      "throughout (D-104)", evidence=(shock.event_id,), uses=(shock, *zones))
+    statuses = ", ".join(f"{z.event_name.split('_')[0]} zone {z.coverage.status}" for z in zones)
+    return unable("R6", f"no paddle removal seen {where}, but the placement zones were not visible throughout "
+                  f"({statuses})", evidence=(shock.event_id,), uses=(shock, *zones))
 
 
 # ---- R8 ---------------------------------------------------------------------------------------------

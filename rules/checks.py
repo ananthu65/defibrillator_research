@@ -121,7 +121,13 @@ class TimingCheck:
 
 def time_limit(seconds, limit):
     """P-024: compare an interval with an approved clinical limit. A null (or unapproved) limit means
-    "timing not checked": the rule then judges presence and order only (D-005)."""
+    "timing not checked": the rule then judges presence and order only (D-005). An approved
+    "no limit" (no_limit: true) is a decision that timing doesn't matter: checked and within (D-103)."""
+    if limit.no_limit:
+        if limit.approved:
+            return TimingCheck(True, True, seconds, None, "no time limit applies (approved)")
+        return TimingCheck(False, None, seconds, None, "timing not checked: 'no limit' is not approved",
+                           (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED))
     if limit.value is None:
         return TimingCheck(False, None, seconds, None, "timing not checked: no approved limit", (TIMING_NOT_CHECKED,))
     if not limit.approved:

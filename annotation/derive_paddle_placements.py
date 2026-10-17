@@ -249,12 +249,13 @@ def episodes(states: list[FrameState], settings: PlacementSettings, diagonal: fl
         if _steady_run(states, index, settings, diagonal, settings.steady_frames) < settings.steady_frames:
             index += 1
             continue
-        start, last_in, out_run, cursor = index, index, 0, index
+        start, last_in, out_run, cursor, closed = index, index, 0, index, False
         while cursor < len(states):
             state = states[cursor].state
             if state == OUT:
                 out_run += 1
                 if out_run >= settings.exit_frames:
+                    closed = True   # a real exit, not the end of the video or an occlusion
                     break
             elif state == UNKNOWN:
                 pass   # neither in nor out: it doesn't end the placement or count towards an exit
@@ -264,7 +265,7 @@ def episodes(states: list[FrameState], settings: PlacementSettings, diagonal: fl
                     last_in = cursor
             cursor += 1
         touched = range(max(0, start - settings.exit_frames), last_in + 1)
-        found.append({"start": start, "end": last_in,
+        found.append({"start": start, "end": last_in, "closed": closed,
                       "blocked": any(states[i].state == BLOCKED for i in touched),
                       "overlap": states[start].overlap,
                       "motion": _motion(states, start, settings.steady_frames, diagonal)})
@@ -335,6 +336,11 @@ def derive_placements(source, video, settings: PlacementSettings, issues: list[I
                     "event_name": rule.event, "frame": frame, "timestamp_seconds": round(frame / video.fps, 6),
                     "evidence_type": "direct", "flags": [DERIVED, *paddle["flags"]], "method": METHOD,
                     "metadata": {"paddle_label": rule.paddle, "zone_label": rule.zone, "placement": number + 1,
+                                 # the episode's last frame in the zone, and whether it ended by a real exit
+                                 # (exit_frames out of the zone) rather than at the end of the video (R6, D-104)
+                                 "end_frame": states[episode["end"]].frame,
+                                 "end_seconds": round(states[episode["end"]].frame / video.fps, 6),
+                                 "ended_by_exit": episode["closed"],
                                  "overlap": round(episode["overlap"], 4), "steady_frames": settings.steady_frames,
                                  "centre_motion_of_diagonal": round(episode["motion"], 4),
                                  "t1_frame": t1, "t2_frame": t2, "settings_sha256": settings.digest()}})

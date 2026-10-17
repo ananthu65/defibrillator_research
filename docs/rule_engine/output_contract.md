@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 6
+**Report version:** 7
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -32,6 +32,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 4 | 2026-10-17 | **Meaning changed:** `no_shock` now means no shock seen on the screen. The shock time is never inferred (D-093), so a paddle removal no longer gives a shock time. `shock_time_from_removal` and `command_before_removal` appear only if `shock_time_fallback` is set to `removal`, which is not the decided setting. **New region:** `screen` (the defibrillator screen, D-094) appears in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R2 is implemented (Increment 11), so `simultaneous` and `taken_before_first_placed` are now built. **New failure code** `first_placement_not_observed` (R2, D-097). It replaces the planned "first missing" code, which is removed, because R2 never produces it. R2 still reports `pending` until it is approved |
 | 5 | 2026-10-17 | **Two rule flags added** (R8, Increment 12): `possible_parallel_placement` is the **shared cause flag**. One parallel placement fails both R2 and R8 with `simultaneous`, and both results carry it, so the feedback can explain that one action caused both (D-098). `derived_placement` marks a result resting on placements derived from the boxes (D-088). R8 is implemented, so `wrong_order` (R8), `placement_missing`, `contradictory` and `inferred_fail_policy_undecided` are now built. R8 still reports `pending` until it is approved |
 | 6 | 2026-10-17 | **Rule flag added** (R5, Increment 13): `order_not_checked`. R5 checked the shock's presence but not its order, because the steps that must precede it are not set yet (OQ-013), or one of them was not observed. Like `timing_not_checked`, it makes the overall result Incomplete, never Pass, under the new category "order not checked" in `overall.incomplete` (D-100). R5 is implemented, so `missing` (R5) and `wrong_order` (R5) are now built. R5 still reports `pending` until it is approved |
+| 7 | 2026-10-17 | **Field added:** each entry of `configuration.timing_limits` gains `no_limit` (true or false). `no_limit: true` with an approver is a decision that no time limit applies: the rule passes fully, without `timing_not_checked` (D-103). `value: null` with `no_limit: false` still means "not decided yet" (D-062). R6 is implemented (Increment 14), so `removed_before_shock`, `missing` (R6) and `too_late` (R6, only once an approved limit is exceeded) are now built. `paddles_removed_after_shock` doesn't prove a shock (D-104). R6 still reports `pending` until it is approved |
 
 ## How to get the report
 
@@ -54,7 +55,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | `rules` | list | One entry per enabled rule, in report (display) order |
 | `timeline` | object | The evidence used: events, excluded low-confidence events, anomalies, unknown/unused/unresolved labels, sources |
 | `context` | object | Header, key times (`anchors`: shock, placements, commands), command resolutions, zone visibility |
-| `configuration` | object | Placeholder and undecided settings, clinical limits with approval, rule statuses |
+| `configuration` | object | Placeholder and undecided settings, clinical limits with approval, rule statuses. Each `timing_limits` entry has `value`, `no_limit` (v7: an approved "no limit", D-103), the approval fields and `approved` |
 
 **`overall`:**
 - `result`;
@@ -92,7 +93,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 6,
+  "report_version": 7,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -184,7 +185,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 |---|---|---|
 | `low_confidence_evidence` | built | The event may have happened, but was detected with low confidence. Unable to Verify, never Fail |
 | `coverage_policy_undecided` | undecided (OQ-001) | Whether the event could be observed is unknown; interim Unable to Verify |
-| `timing_not_checked` | built | No approved time limit, so only presence and order were checked. The overall result cannot be Pass (D-062) |
+| `timing_not_checked` | built | No approved time limit, so only presence and order were checked. The overall result cannot be Pass (D-062). Never raised for an approved "no limit" (D-103) |
 | `limit_not_approved` | built | A time limit exists but is not approved, so it was not used (D-061) |
 | `order_not_checked` | built (v6) | Only presence was checked, not the order. For R5: the shock was seen, but the steps that must come before it are not set yet (OQ-013), or one of them was not observed. The overall result cannot be Pass (D-100) |
 | `shock_time_from_removal` | built (only with `shock_time_fallback: removal`, not the decided setting) | No shock on screen; the shock time comes from paddle removal, so delays look shorter than they were (D-023) |
@@ -230,7 +231,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 
 | Code | Status | Rules | Meaning for feedback |
 |---|---|---|---|
-| `missing` | built (R5; the others planned) | R1, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101) |
+| `missing` | built (R5, R6; the others planned) | R1, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
 | `applied_once` | planned | R1 | Gel applied only once |
 | `outside_time_period` | planned | R1 | The two gel applications were not within the approved period |
 | `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
@@ -241,11 +242,11 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `placed_after_shock` | planned | R3 | Paddles placed after the shock |
 | `before_placement` | planned | R4 | Buttons pressed before the paddles were placed |
 | `not_pressed` | planned | R4 | Buttons not pressed |
-| `removed_before_shock` | planned | R6 | Paddles removed before the shock |
+| `removed_before_shock` | built (R6) | R6 | Paddles removed before the shock on the screen: a removal tagged more than the simultaneous window before it, or (once the gate is approved) a derived placement that ended before it, flagged `derived_placement` (D-104) |
 | `after_shock` | planned | A1, A3, A4 | The command came after the shock |
 | `wrong_stage` | planned | A2 | "Continue compressions" at the wrong stage |
 | `before_shock` | planned | R7/A6 | The restart command came before the shock |
-| `too_late` | planned | R7/A6 | The restart command came after the approved delay |
+| `too_late` | built (R6; R7/A6 planned) | R6, R7/A6 | Done after the approved delay. For R6: the paddles were removed later than an approved `shock_to_removal_seconds` (unset now, so not produced yet). For R7/A6: the restart command came after the approved delay |
 | `pre_shock_pause` | planned | A8 | "Stop CPR" to "Start CPR" took longer than 5 s; mistake label "Pre-Shock Pause" |
 | `unspecified` | built | shared-contract path rules | A rule plugged in through the old `module:function` path reported a Fail without a code |
 

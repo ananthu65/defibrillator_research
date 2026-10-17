@@ -13,7 +13,8 @@ DEFAULT_ENGINE_PATH = "configs/rule_engine/engine.yaml"
 DEFAULT_VOCABULARY_PATH = "configs/rule_engine/vocabulary.yaml"
 RULE_STATUSES = ("pending", "approved")
 RULE_KEYS = {"id", "title", "status", "enabled", "implementation", "same_as", "depends_on", "parameters"}
-VALUE_KEYS = {"value", "approved_by", "approved_on", "date_pending", "provided_by", "provided_on", "source", "note"}
+VALUE_KEYS = {"value", "no_limit", "approved_by", "approved_on", "date_pending", "provided_by", "provided_on",
+              "source", "note"}
 SETTING_KEYS = {"value", "placeholder", "undecided", "note"}
 SOURCES = ("annotation", "video", "audio")
 MODALITIES = ("video", "audio")
@@ -38,10 +39,11 @@ class ClinicalValue:
     source: str | None = None
     note: str | None = None          # human-readable explanation only; never interpreted
     date_pending: bool = False       # approved, but the approval date is still to be confirmed
+    no_limit: bool = False           # a decision that no limit applies (D-103); value is then null
 
     @property
     def approved(self):
-        return self.value is not None and self.approved_by is not None
+        return (self.value is not None or self.no_limit) and self.approved_by is not None
 
 
 @dataclass(frozen=True)
@@ -285,6 +287,11 @@ def _clinical_value(name, value, where):
     pending = value.get("date_pending", False)
     if not isinstance(pending, bool):
         raise ConfigError(f"{where}: date_pending must be true or false")
+    no_limit = value.get("no_limit", False)
+    if not isinstance(no_limit, bool):
+        raise ConfigError(f"{where}: no_limit must be true or false")
+    if no_limit and number is not None:
+        raise ConfigError(f"{where}: no_limit: true means no value applies; value must be null")
     approved_by, approved_on = value.get("approved_by"), value.get("approved_on")
     if approved_on is not None and approved_by is None:
         raise ConfigError(f"{where}: approved_on needs approved_by")
@@ -292,13 +299,13 @@ def _clinical_value(name, value, where):
         raise ConfigError(f"{where}: approved_on may be null only when date_pending: true is set")
     if pending and (approved_by is None or approved_on is not None):
         raise ConfigError(f"{where}: date_pending: true needs approved_by and approved_on: null")
-    if approved_by is not None and number is None:
-        raise ConfigError(f"{where}: an approval needs a value")
-    if number is not None and not value.get("source"):
-        raise ConfigError(f"{where}: a value needs a source")
+    if approved_by is not None and number is None and not no_limit:
+        raise ConfigError(f"{where}: an approval needs a value, or no_limit: true")
+    if (number is not None or no_limit) and not value.get("source"):
+        raise ConfigError(f"{where}: a value (or no_limit) needs a source")
     return ClinicalValue(name, number, *(value.get(k) for k in
                                          ("approved_by", "approved_on", "provided_by", "provided_on", "source", "note")),
-                         pending)
+                         pending, no_limit)
 
 
 def _regions(value, where):

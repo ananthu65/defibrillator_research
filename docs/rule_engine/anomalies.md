@@ -107,8 +107,8 @@ flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`
 
 | Code | On | When | Meaning |
 |---|---|---|---|
-| `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005). It stays a Pass at rule level, but the overall result cannot be Pass (D-062) |
-| `limit_not_approved` | Rule result (P-024) | A time limit has a value but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
+| `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005). It stays a Pass at rule level, but the overall result cannot be Pass (D-062). **Not raised** for an approved "no limit" (`no_limit: true`), which is a decision that timing doesn't matter (D-103) |
+| `limit_not_approved` | Rule result (P-024) | A time limit has a value, or `no_limit: true`, but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
 | `order_not_checked` | Rule result (R5, P-033) | An order requirement is not set (R5's `preceding_steps`, OQ-013), or one of the steps it needs was not observed | The rule checked presence only, or the order against the observed steps only. Like `timing_not_checked`, the overall result cannot be Pass (D-100) |
 
 Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
@@ -204,7 +204,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | R3 Paddles firmly on chest (P-016) | `not_in_zone`, `placed_after_shock` |
 | R4 Both discharge buttons pressed (P-016) | `before_placement`, `not_pressed` |
 | R5 Shock confirmed on screen (**built**, Increment 13, P-033; reported pending until approved) | `missing` (no shock while the screen was visible throughout paddles firmly on chest → paddles removed, D-101), `wrong_order` (shock before a preceding step, once those are set, D-100) |
-| R6 Paddles removed after shock | `removed_before_shock`, `missing` |
+| R6 Paddles removed after shock (**built**, Increment 14, P-034; reported pending until approved) | `removed_before_shock` (a removal more than the simultaneous window before the shock, or, past the gate, a derived placement ended by a real exit before it, D-104), `missing` (no removal while both placement zones were visible from the shock to the end of the recording, A-022), `too_late` (only once an approved removal time limit is exceeded; the limit is unset now) |
 | A1 Oxygen away | `missing`, `after_shock` |
 | A2 Continue compressions | `missing`, `wrong_stage` |
 | A3 All stand clear | `missing`, `after_shock` |

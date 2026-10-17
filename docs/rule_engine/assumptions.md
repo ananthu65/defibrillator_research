@@ -197,3 +197,31 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   `frames_zone_not_visible`.
 - **Status:** decided, D-090.
 - **Related:** D-081, D-089, D-090.
+
+### A-021 A paddle removal shows that the paddles were on the chest (R3/R4 inference)
+- **Assumption (the proposal, kept by D-102):** a confirmed `paddles_removed_after_shock` means
+  the paddles had been placed firmly and both buttons pressed, so it can support Pass – Inferred
+  for R3 and R4, as the shock on the screen can.
+- **Known limitation:** in the videos, the paddles are sometimes removed **without a successful
+  shock**. R3/R4 may then be Pass – Inferred although no successful shock happened.
+- **Why it is acceptable for now:** the overall result can never be Pass in that case. R5 is
+  Fail `missing` when the screen was visible, or Unable to Verify when it wasn't.
+- **Status:** active (follows the proposal despite the observed contradiction).
+- **If wrong:** remove `paddles_removed_after_shock` from `inference_sources` in
+  `configs/rules.yaml` (R3, R4). No code changes.
+- **Detected by:** the supervisor's answer to OQ-060; comparing R3/R4 inferred passes with R5
+  results in the interim runs.
+- **Related:** D-102, D-057, P-016, OQ-060.
+
+### A-022 A removal would have been seen if both placement zones were in view
+- **Assumption:** when both placement zones are visible from the shock to the end of the
+  recording, a paddle removal in that time would have been tagged. A missing removal is then a
+  real absence (R6 `missing`).
+- **Why:** the paddles leave the zones when they are removed, so the zones being in view is the
+  best available coverage for a removal. No region is defined for the removal itself.
+- **Status:** active.
+- **If wrong:** R6 could fail `missing` when a removal happened but wasn't visible or wasn't
+  tagged. Then R6 should give Unable to Verify instead (change `_removal_missing` in
+  `rules/video_rules.py`).
+- **Detected by:** reviewing R6 `missing` results in the interim runs against the videos.
+- **Related:** D-104, D-092, P-034.

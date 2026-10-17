@@ -275,8 +275,10 @@ elapsed times and checks it used.
 #### P-024 Time-limit check
 | Condition | Outcome | Flags |
 |---|---|---|
-| No approved limit (null) | **Timing not checked**: presence and order only | `timing_not_checked` |
+| No approved limit (null): not decided yet | **Timing not checked**: presence and order only | `timing_not_checked` |
 | A value without an approver | Not used; timing not checked (D-061) | `timing_not_checked`, `limit_not_approved` |
+| Approved "no limit" (`no_limit: true` with an approver) | Timing checked and within: the rule **passes fully** on presence and order (D-103) | — |
+| "No limit" without an approver | Not used; timing not checked (D-061, D-103) | `timing_not_checked`, `limit_not_approved` |
 | The interval cannot be measured | Timing not checked | `timing_not_checked` |
 | Within the limit (boundary included) | Pass | the elapsed time's flags |
 | Over the limit | **Fail** with the rule's code (`too_late`, `pre_shock_pause`) | the elapsed time's flags |
@@ -335,6 +337,21 @@ taken to paddles firmly on chest (D-092, D-099). Derived placements are used onl
 | No shock, screen visible throughout paddles firmly on chest → paddles removed (or the whole recording if a tag is missing, D-101) | Fail | `missing` |
 | No shock, screen not visible throughout that window | Unable to Verify, never Fail (D-094) | — |
 
+#### P-034 R6: paddles removed after the shock (built, Increment 14; pending until approved)
+`paddles_removed_after_shock` means the paddles were removed; it doesn't prove a shock (D-104).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| No shock time (no shock on the screen, or several) | **Not evaluable because of R5**, even if a removal is tagged (D-093) | — |
+| Shock time taken from the removal itself (`shock_time_fallback: removal` only) | Unable to Verify | `shock_time_from_removal` |
+| Removal clearly before the shock (more than `simultaneous_window_seconds`) | Fail | `removed_before_shock` |
+| Past the gate: a derived placement ended by a real exit clearly before the shock, that paddle not placed again by the shock | Fail | `removed_before_shock`; `derived_placement` |
+| Removal after the shock, or before it within `simultaneous_window_seconds` (treated as at the shock) | Pass – Direct; limit unset, so the overall result can't be Pass (D-062); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
+| Removal later than an approved `shock_to_removal_seconds` | Fail | `too_late` |
+| No removal, a low-confidence one exists | Unable to Verify | `low_confidence_evidence` |
+| No removal, both placement zones visible throughout from the shock to the end of the recording (A-022) | Fail | `missing` |
+| No removal, a placement zone not visible throughout that window | Unable to Verify, never Fail | — |
+
 #### P-032 R2: second paddle taken after the first is placed (built, Increment 11; pending until approved)
 | Condition | Outcome | Code |
 |---|---|---|
@@ -352,7 +369,7 @@ taken to paddles firmly on chest (D-092, D-099). Derived placements are used onl
 |---|---|---|
 | Direct evidence in time | Pass – Direct | — |
 | Direct evidence shows the mistake | Fail | `not_in_zone`, `placed_after_shock`, `before_placement`, `not_pressed` |
-| Direct evidence weak **or missing**; shock on screen or removal confirmed | Pass – Inferred (D-057) | — |
+| Direct evidence weak **or missing**; an event in `inference_sources` confirmed (the shock on screen or the removal) | Pass – Inferred (D-057). A removal can happen without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102, OQ-060) | — |
 | Neither | → P-008 | — |
 
 ### Stage: overall policy
@@ -540,6 +557,8 @@ illustration only.)*
 2. P-014: R3 has an approved inference, so it is checked **before** the coverage step.
 3. P-016: paddle removal is confidently confirmed → **Pass – Inferred**, naming the removal
    event. The coverage step (P-008) is not reached.
+4. If no shock appeared on the screen (paddles removed without a successful shock), R5 is Fail
+   `missing` or Unable to Verify, so the overall result is still not Pass (D-102, A-021).
 
 ### W-21 Overall result with a pending rule → Incomplete
 *(Planned, D-055.)*
@@ -904,3 +923,38 @@ illustration only.)*
    shock time.
 2. P-033: **Unable to Verify**, citing both, flagged `multiple_shocks`. The timeline needs review
    (D-065), so the overall result can't be Pass.
+
+### W-63 R6 with the removal after the shock → Incomplete while the limit is unset
+*(Built in Increment 14; D-103, D-104.)*
+1. Shock on the screen at 15 s, paddles removed at 20 s.
+2. P-034: **Pass – Direct**, 5 s after the shock. `shock_to_removal_seconds` is unset → flagged
+   `timing_not_checked` (P-024).
+3. P-017: no Fail → **Incomplete**, "timing not checked for R6" (D-062).
+4. If the supervisor answers "no limit" and it is recorded as approved (`no_limit: true`):
+   **Pass – Direct** with no flag, and the overall result can be Pass (D-103). With an approved
+   limit of 3 s: **Fail `too_late`**.
+
+### W-64 R6 with the removal before the shock
+*(Built in Increment 14; D-104.)*
+1. Shock on the screen at 15 s; `simultaneous_window_seconds` is 0.5 s (placeholder).
+2. Paddles removed at 14.5 s → within the window, treated as at the shock → **Pass – Direct**,
+   0 s.
+3. Paddles removed at 14.4 s → clearly before → **Fail `removed_before_shock`**.
+
+### W-65 R6 from derived placements: a paddle off its zone before the shock
+*(Built in Increment 14; D-088, D-104.)*
+1. Gate approved. The apical paddle is placed at 7 s and leaves its zone at 12 s by a real exit
+   (`ended_by_exit`). Shock on the screen at 15 s, removal tagged at 20 s.
+2. P-034: no apical placement is on at the shock → **Fail `removed_before_shock`**, citing the
+   derived placement and the shock, flagged `derived_placement`.
+3. If the apical paddle was placed again at 12.8 s, it is on at the shock → no early removal →
+   **Pass – Direct** (the tag at 20 s).
+4. Gate not approved: the derived placements never reach R6 → **Pass – Direct** from the tag.
+
+### W-66 R6 with no shock time or no removal
+*(Built in Increment 14; D-093, D-104.)*
+1. No shock on the screen, removal tagged at 20 s → **Not evaluable because of R5**. The removal
+   doesn't prove a shock.
+2. Shock at 15 s, no removal, recording 30 s long:
+   - both placement zones visible from 15 s to 30 s → **Fail `missing`** (A-022);
+   - the zones out of view after 22 s, or no zone tracks → **Unable to Verify**.

@@ -130,6 +130,15 @@ class RePlacement(unittest.TestCase):
         self.assertEqual(frames(events, "apical_paddle_placed"), [20, 47])
         self.assertEqual([e["metadata"]["placement"] for e in events if e["event_name"] == "apical_paddle_placed"], [1, 2])
 
+    def test_episode_end_is_recorded_for_r6(self):
+        """D-104: each placement records its last frame in the zone and whether a real exit ended it."""
+        events, _, _ = run(two_zone(20, 30, t1=21, leave=41, back=47))
+        apical = [e["metadata"] for e in events if e["event_name"] == "apical_paddle_placed"]
+        self.assertEqual([(m["end_frame"], m["end_seconds"], m["ended_by_exit"]) for m in apical],
+                         [(40, 1.6, True), (99, 3.96, False)])                  # the second runs to the end of the video
+        sternal = [e["metadata"] for e in events if e["event_name"] == "sternal_paddle_placed"]
+        self.assertEqual([(m["end_frame"], m["ended_by_exit"]) for m in sternal], [(99, False)])
+
     def test_a_short_dip_is_the_same_placement(self):
         events, _, _ = run(two_zone(20, 30, t1=21, leave=41, back=45))     # out on frames 41-44 (4)
         self.assertEqual(frames(events, "apical_paddle_placed"), [20])

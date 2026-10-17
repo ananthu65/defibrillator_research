@@ -52,13 +52,24 @@ class RepositoryConfig(unittest.TestCase):
 
     def test_unused_clinical_limits_are_kept_null_with_a_note(self):
         for name in ("shock_to_compressions_seconds", "gel_application_period_seconds", "stop_to_shock_seconds",
-                     "shock_command_tolerance_seconds", "shock_to_removal_seconds", "charge_to_shock_seconds"):
+                     "shock_command_tolerance_seconds", "charge_to_shock_seconds"):
             with self.subTest(name=name):
                 limit = self.config.limit(name)
                 self.assertIsNone(limit.value)
                 self.assertFalse(limit.approved)
                 self.assertIn("not used by any rule yet", limit.note)
         self.assertIsNone(self.config.limit("not_in_config").value)
+        removal = self.config.limit("shock_to_removal_seconds")   # used by R6 (Increment 14), still unset
+        self.assertEqual((removal.value, removal.no_limit, removal.approved), (None, False, False))
+        self.assertIn("may be no limit", removal.note)
+
+    def test_r3_r4_inference_sources_follow_the_proposal(self):
+        # D-102: kept as in the proposal despite the observed contradiction (A-021, OQ-060)
+        for rule_id in ("R3", "R4"):
+            with self.subTest(rule_id):
+                sources = self.config.rule(rule_id).parameters["inference_sources"]
+                self.assertEqual(sources, ["shock_delivered_on_screen", "paddles_removed_after_shock"])
+                self.assertTrue(all(s in self.config.vocabulary.events for s in sources))
 
     def test_engine_placeholders_and_undecided_policies_are_marked(self):
         self.assertIn("simultaneous_window_seconds", self.config.engine.placeholders)
@@ -194,6 +205,23 @@ class InvalidRulesConfig(unittest.TestCase):
         config = RuleEngineConfig.from_dict(rules_config(rules=[rule("R7", status="approved",
                                                                      implementation="rules.audio_rules:r7")]))
         self.assertIsNone(config.limit("shock_to_compressions_seconds").value)
+
+    def test_approved_no_limit_is_a_decision(self):
+        # D-103: "no limit" carries the same provenance and approval as a value
+        config = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {
+            "value": None, "no_limit": True, "source": "supervisor", "approved_by": "Dr X", "approved_on": "2026-11-01"}}))
+        limit = config.limit("x")
+        self.assertEqual((limit.value, limit.no_limit, limit.approved), (None, True, True))
+
+    def test_no_limit_validation(self):
+        self.assertRejected("value must be null", timing_limits={"x": {
+            "value": 5, "no_limit": True, "source": "s", "approved_by": "Dr X", "approved_on": "2026-11-01"}})
+        self.assertRejected("needs a source", timing_limits={"x": {"no_limit": True}})
+        self.assertRejected("no_limit must be true or false", timing_limits={"x": {"no_limit": "yes", "source": "s"}})
+        self.assertRejected("only when date_pending: true", timing_limits={"x": {
+            "no_limit": True, "source": "s", "approved_by": "Dr X"}})
+        unapproved = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {"no_limit": True, "source": "s"}}))
+        self.assertFalse(unapproved.limit("x").approved)
 
     def test_approved_limit(self):
         config = RuleEngineConfig.from_dict(rules_config(timing_limits={"x": {

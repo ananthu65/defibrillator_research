@@ -3570,3 +3570,98 @@ None new. OQ-013 (supervisor: which steps must precede the shock) now feeds the 
 
 ### Next
 Increment 14 (R6). Nothing is committed; commit only when Arnikan says so.
+
+## Increment 14: R6, paddles removed after the shock; "no limit"; R3/R4 inference sources (2026-10-17)
+
+Increment 13 was committed and pushed on instruction (eaa9a3c) before this work.
+
+### Decisions recorded (Arnikan)
+- **D-102, R3/R4 inference from removal:** the proposal is followed despite an observed
+  contradiction. Paddles are sometimes removed without a successful shock, but both sources are
+  kept.
+  - The list is the setting R3/R4 `parameters.inference_sources` in `configs/rules.yaml`.
+  - **Risk:** R3/R4 may be Pass – Inferred without a successful shock (A-021). The overall result
+    can't be Pass then, because R5 is Fail (screen visible) or Unable to Verify (not visible).
+  - **OQ-060** asks the supervisor whether removal should still count.
+- **OQ-057 note:** the same observation (removal without a successful shock) supports D-093,
+  which stays.
+- **D-103, "no limit":** a clinical value can state `no_limit: true` with the same provenance and
+  approval fields as an approved value.
+  - Approved → the rule checks presence and order and passes fully, without
+    `timing_not_checked`.
+  - Unapproved → not used (`timing_not_checked`, `limit_not_approved`).
+  - `null` still means "not decided" (D-062).
+  - The R6, A1 and A3 records and OQ-016 note that the answer may be "no limit".
+- **D-104, R6:** a removal means only that the paddles were removed; it doesn't prove a shock.
+  - No shock time → Not evaluable because of R5, even with a removal.
+  - A removal clearly before the shock → `removed_before_shock`; within the simultaneous window
+    before it → treated as at the shock.
+  - Past the gate, a derived placement ending (by a real exit) before the shock →
+    `removed_before_shock`.
+  - Missing removal → `missing` only if both placement zones were visible from the shock to the
+    end of the recording; otherwise Unable to Verify.
+  - `shock_to_removal_seconds` stays unset, so a Pass is flagged `timing_not_checked`.
+
+### What was done
+- **R6 in `rules/video_rules.py` (P-034)**, in this order:
+  1. no shock time → Not evaluable because of R5;
+  2. a shock time taken from the removal itself (only with `shock_time_fallback: removal`) →
+     Unable to Verify, because a removal can't be judged against its own time (an agent proposal,
+     in D-104);
+  3. the earliest removal clearly before the shock → `removed_before_shock`;
+  4. derived placements: a paddle whose placements all ended by a real exit clearly before the
+     shock (none on at the shock) → `removed_before_shock`, flagged `derived_placement`;
+  5. a removal at or after the shock → Pass, through the time-limit check (P-024): unset →
+     `timing_not_checked`; approved no limit → fully checked; approved value exceeded →
+     `too_late`;
+  6. no removal → low confidence → Unable to Verify; both zones covered from the shock to the end
+     (header duration, else the last event) → `missing`; otherwise Unable to Verify.
+- **Derived placements (9c):** each event now records `end_frame`, `end_seconds` and
+  `ended_by_exit` (a real exit of `exit_frames`, not the end of the video). `events.jsonl` and
+  Ananth's files are untouched; the change is in the rule engine's own exporter only.
+- **"No limit":** `ClinicalValue.no_limit`; validation (must be true/false; not with a value; an
+  approval needs a value or no limit; either needs a source); `checks.time_limit` handles it.
+- **R3/R4 `inference_sources`** in `rules.yaml` (read by R3/R4 in Increments 15-16).
+- **Output contract version 7:** `configuration.timing_limits` entries gain `no_limit`;
+  `removed_before_shock`, `missing` (R6) and `too_late` (R6) are built.
+- **R6 stays pending** in `rules.yaml`.
+- **A-022 (new):** both placement zones in view means a removal would have been seen.
+
+### Tests (546 → 570)
+- **`tests/test_rule_engine_r6.py` (18):**
+  - with a shock time: removal after → Pass, `timing_not_checked`, overall Incomplete; just
+    before, within the window → Pass at 0 s; clearly before → `removed_before_shock`; approved
+    limit exceeded → `too_late`, within → full Pass; approved no limit → full Pass, overall Pass;
+    unapproved no limit → not used; pending in the catalogue;
+  - without a shock time: removal only → Not evaluable (R5); two shocks → Not evaluable (R5);
+    fallback removal → Unable to Verify;
+  - missing removal: zones visible to the end → `missing`; out of view before the end → Unable to
+    Verify; no zone tracks → Unable to Verify; low-confidence removal → Unable to Verify;
+  - derived placements: gate approved, episode ended before the shock → `removed_before_shock`;
+    gate not approved → withheld, Pass from the tag; the paddle placed again before the shock →
+    Pass; an episode ending within the window of the shock → Pass.
+- **Config (3):** the inference-sources setting; approved no limit; no-limit validation. The
+  unused-limits test now checks `shock_to_removal_seconds` stays unset and notes "may be no
+  limit".
+- **Checks (2):** approved no limit → checked and passed; unapproved no limit → not used.
+- **Derived placements (1):** episode end and `ended_by_exit` recorded.
+
+Full suite: **570 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-034 (new); P-024 (no-limit branches); P-016 (inference sources,
+  D-102); P-031 (episode end metadata).
+- **`pathways.md`:** the P-034 table, P-024 and P-016 rows; W-20 step 4; W-63 to W-66.
+- **`diagrams.md`:** (k) R6 (new); (j) end metadata and R6 as a user of derived placements.
+- **Registers:** `decisions.md` (D-102, D-103, D-104); `assumptions.md` (A-021, A-022);
+  `open_questions.md` (OQ-060 new; OQ-057 note; OQ-016 "no limit" and A1/A3).
+- **Other docs:** `anomalies.md`, `output_contract.md` (v7), `rules_status.md`, `methods.md`,
+  `implementation_plan.md` (row 14), `configs/rules.yaml`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **OQ-060 (supervisor, new):** should paddle removal still support an inferred Pass for R3/R4?
+
+### Next
+Increment 15 (R3). Nothing is committed; commit only when Arnikan says so.
+

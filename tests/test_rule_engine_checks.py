@@ -223,6 +223,21 @@ class Timing(unittest.TestCase):
     def test_unmeasurable_interval(self):
         self.assertEqual(checks.time_limit(None, APPROVED_5).flags, ("timing_not_checked",))
 
+    def test_approved_no_limit_checks_and_passes_fully(self):
+        no_limit = ClinicalValue("x", None, approved_by="Dr X", approved_on="2026-10-10", source="s", no_limit=True)
+        for seconds in (3, 300, None):
+            with self.subTest(seconds=seconds):
+                check = checks.time_limit(seconds, no_limit)
+                self.assertEqual((check.checked, check.within, check.flags), (True, True, ()))
+        ctx = context([SHOCK, cmd("stop_compressions_command", 27, "stop"), cmd("start_compressions_command", 90, "start")])
+        outcome = checks.timed("A8", ctx.elapsed("stop_compressions", "start_compressions"), no_limit,
+                               code="pre_shock_pause", what="stop to restart", evidence=("stop", "start"))
+        self.assertEqual((outcome.kind, outcome.timing_checked, outcome.flags), (PASS_DIRECT, True, ()))   # D-103
+
+    def test_unapproved_no_limit_is_not_used(self):
+        check = checks.time_limit(3, ClinicalValue("x", None, source="s", no_limit=True))
+        self.assertEqual((check.checked, check.flags), (False, ("timing_not_checked", "limit_not_approved")))
+
     def test_within_at_and_over_the_limit(self):
         self.assertEqual([checks.time_limit(s, APPROVED_5).within for s in (4.9, 5, 5.1)], [True, True, False])
 

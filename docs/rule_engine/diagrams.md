@@ -301,11 +301,36 @@ flowchart TD
     PP -->|no| N2["No events"]
     K --> T2{"T2 tagged?"}
     KP --> T2
-    T2 -->|"no: not checked"| EV["Events: direct evidence,<br/>flagged derived_placement,<br/>method in metadata"]
+    T2 -->|"no: not checked"| EV["Events: direct evidence,<br/>flagged derived_placement,<br/>method, end_seconds and<br/>ended_by_exit in metadata (R6)"]
     T2 -->|yes| T2c{"First placement at or<br/>before T2 + 15?"}
     T2c -->|yes| EV
     T2c -->|no| N3["No event for that paddle<br/>(both if parallel)"]
     EV --> G{"Gate (D-088): reviewed for this<br/>export_id and these settings?"}
-    G -->|yes| R8["Adapter passes them on;<br/>R8 may use them"]
+    G -->|yes| R8["Adapter passes them on;<br/>R2, R8 and R6 may use them"]
     G -->|no| HOLD["Kept in records.jsonl,<br/>not passed to the engine"]
+```
+
+## (k) R6: paddles removed after the shock (P-034, built in Increment 14; pending until approved)
+
+`paddles_removed_after_shock` means the paddles were removed; it doesn't prove a shock (D-104).
+The window `w` is `simultaneous_window_seconds`.
+
+```mermaid
+flowchart TD
+    S{"Shock time?<br/>(screen only, D-093)"} -->|"none, or several shocks"| NE["Not evaluable<br/>because of R5<br/>(even with a removal)"]
+    S -->|"from the removal itself<br/>(fallback removal only)"| U0["Unable to Verify<br/>shock_time_from_removal"]
+    S -->|yes| RB{"Removal tagged more than<br/>w before the shock?"}
+    RB -->|yes| F1["Fail<br/>removed_before_shock"]
+    RB -->|no| DE{"Past the gate: a derived placement<br/>ended by a real exit more than w<br/>before the shock, that paddle<br/>not on again at the shock?"}
+    DE -->|yes| F2["Fail removed_before_shock<br/>derived_placement"]
+    DE -->|no| RM{"Removal tagged?"}
+    RM -->|"yes: after the shock, or<br/>within w before it (at the shock)"| L{"shock_to_removal_seconds<br/>(P-024)"}
+    L -->|"unset (now)"| P1["Pass – Direct<br/>timing_not_checked<br/>overall Incomplete (D-062)"]
+    L -->|"approved no limit (D-103)"| P2["Pass – Direct<br/>fully checked"]
+    L -->|approved value, within| P2
+    L -->|approved value, exceeded| F3["Fail too_late"]
+    RM -->|"no; low-confidence one"| U1["Unable to Verify"]
+    RM -->|no| Z{"Both placement zones visible<br/>from the shock to the end<br/>of the recording? (A-022)"}
+    Z -->|yes| F4["Fail missing"]
+    Z -->|"no: partly, never, unknown"| U2["Unable to Verify"]
 ```

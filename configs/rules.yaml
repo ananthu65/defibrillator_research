@@ -12,13 +12,16 @@ engine: configs/rule_engine/engine.yaml           # engineering placeholders and
 # approved_on cannot be given without approved_by, and may be null only when date_pending: true
 # is set. note is a human-readable explanation only; the engine never reads it. Quote dates
 # ("YYYY-MM-DD") so the configuration stays JSON-serialisable in pipeline reports.
+# "No limit" is a decision too (D-103): {value: null, no_limit: true, approved_by, approved_on, source}.
+# A rule with an approved no_limit checks presence and order and passes fully (no timing_not_checked);
+# plain null keeps meaning "not decided yet" (D-062).
 timing_limits:
   charge_to_shock_seconds:          {value: null, note: "pre-existing key; not used by any rule yet"}
   shock_to_compressions_seconds:    {value: null, note: "shock -> start/resume compressions command (planned for R7/A6); not used by any rule yet"}
   gel_application_period_seconds:   {value: null, note: "period for the two gel applications (planned for R1); not used by any rule yet"}
   stop_to_shock_seconds:            {value: null, note: "stop-compressions command -> shock (planned for A4); not used by any rule yet"}
   shock_command_tolerance_seconds:  {value: null, note: "verbal shock command may precede the shock by this (planned for A5); not used by any rule yet"}
-  shock_to_removal_seconds:         {value: null, note: "shock -> paddles removed (planned for R6); not used by any rule yet"}
+  shock_to_removal_seconds:         {value: null, note: "shock -> paddles removed (R6, Increment 14); unset, so timing not checked; the supervisor's answer may be no limit (no_limit: true, D-103)"}
   pre_shock_pause_seconds:               # A8: stop CPR -> start CPR
     value: 5
     approved_by: Dr. Senani Samarasinghe
@@ -37,13 +40,21 @@ rules:
   - {id: R1, title: Gel applied twice, status: pending, implementation: null, parameters: {}}
   - {id: R2, title: Second paddle taken after the first is placed, status: pending, implementation: null, parameters: {}}
   - {id: R8, title: Apical paddle placed before sternal, status: pending, implementation: null, parameters: {}}
-  - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {}}
-  - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {}}
+  # R3/R4 inference_sources: confirmed events that support Pass - Inferred (the proposal: the shock on
+  # screen or the paddle removal). Removal is kept although paddles are sometimes removed without a
+  # successful shock (D-102, A-021, OQ-060); the overall result then can't be Pass, because R5 fails or
+  # is Unable to Verify. Read by R3/R4 (Increments 15-16).
+  - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
+  - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
   # R5 preceding_steps: canonical events that must come before the shock on screen (D-100). Unset
   # (null) until the supervisor answers OQ-013; while unset R5 checks presence only and flags
   # order_not_checked, which keeps the overall result from being Pass.
   - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {preceding_steps: null}}
+  # R6: paddles_removed_after_shock means the paddles were removed; it does not prove a shock (D-104).
+  # Its removal time limit is timing_limits.shock_to_removal_seconds (unset; possibly no limit, D-103).
   - {id: R6, title: Paddles removed after shock, status: pending, implementation: null, parameters: {}}
+  # A1 and A3: any time limit (for example how long before the shock) is for the supervisor; the answer
+  # may be "no limit" (D-103). No limit record exists for them yet.
   - {id: A1, title: Oxygen away, status: pending, implementation: null, parameters: {}}
   - {id: A2, title: Continue compressions, status: pending, implementation: null, parameters: {}}
   - {id: A3, title: All stand clear, status: pending, implementation: null, parameters: {}}

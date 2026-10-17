@@ -92,6 +92,25 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   part of a step was never assessed.
 - **Affects:** every timed rule (R1, R6, R7/A6, A4, A5, A8); P-017, P-024; Increment 8.
 
+### D-103 "No limit" is a decision, recorded like an approved value
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** a clinical value record in `configs/rules.yaml` can state **`no_limit: true`**
+  (with `value: null`), with the same provenance and approval fields as an approved value
+  (`approved_by`, `approved_on` or `date_pending`, `source`).
+  - **Approved no limit:** the rule checks presence and order and **passes fully**. It is not
+    flagged `timing_not_checked`, and the result says "no time limit applies (approved)".
+  - **Unapproved no limit** (no `approved_by`) is not used, like an unapproved value (D-061):
+    `timing_not_checked` and `limit_not_approved`.
+  - **`null` still means "not decided yet"** (D-062): timing not checked, and no overall Pass.
+  - **Validation:** `no_limit` must be true or false; `no_limit: true` with a value is an error;
+    an approval needs a value or `no_limit: true`; a value or `no_limit` needs a source.
+  - **Where the answer may be "no limit":** R6 (shock → paddles removed), and any time limit
+    for A1 (oxygen away) and A3 (stand clear). No record exists for A1 and A3 yet.
+- **Reason:** "no limit applies" is a clinical answer, not a missing one. Without a way to record
+  it, a rule with no time limit could never pass fully.
+- **Affects:** P-024; R6, A1, A3 and every timed rule; the output contract (v7,
+  `configuration.timing_limits` gains `no_limit`). **Open question:** OQ-016.
+
 ### D-065 Timeline anomalies prevent an overall Pass
 - **Date / by / status:** 2026-10-14 · Arnikan · approved (the list and its place: D-069)
 - **Decision:** When the timeline has a timeline-level anomaly from the review list
@@ -199,6 +218,21 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Reason:** The proposal's inference is for "insufficient" direct evidence, and a single
   camera often cannot see placement or button presses at all.
 - **Affects:** R3, R4; P-014, P-016.
+
+### D-102 R3/R4 inference from removal follows the proposal despite an observed contradiction
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (the supervisor is asked in OQ-060)
+- **Decision:** the proposal lets a confirmed paddle removal (`paddles_removed_after_shock`)
+  support Pass – Inferred for R3 and R4, as the shock on the screen does. Both sources are
+  kept, **although in the videos paddles are sometimes removed without a successful shock**.
+  - **A setting:** the list is `configs/rules.yaml` R3/R4 `parameters.inference_sources`
+    (`[shock_delivered_on_screen, paddles_removed_after_shock]`). R3 and R4 (Increments 15-16)
+    read it. Changing the list needs no code change.
+  - **The risk:** R3/R4 may be Pass – Inferred when no successful shock happened (A-021).
+  - **Why the risk is bounded:** the overall result can never be Pass then. R5 is Fail
+    (`missing`, the screen was visible) or Unable to Verify (the screen was not visible).
+- **Reason:** the proposal is the agreed definition. The contradiction is raised with the
+  supervisor rather than settled by the engine.
+- **Affects:** R3, R4; P-016. **Assumption:** A-021. **Open question:** OQ-060.
 
 ### D-044 R7 and A6 are one check reported under two IDs
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
@@ -543,6 +577,34 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Reason:** the question is whether the zone was in view while the paddles were being placed,
   not at some other time in the recording.
 - **Affects:** R8 (P-015).
+
+### D-104 R6: a removal is judged against the shock on the screen
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (R6 itself stays pending until the
+  supervisor confirms its definition)
+- **Decision:** `paddles_removed_after_shock` means only that the paddles were removed. **It
+  doesn't prove a shock** (paddles are sometimes removed without one).
+  - **No shock time** (no shock on the screen, or several, D-093, D-039) → **Not evaluable
+    because of R5**, even if a removal is tagged.
+  - **A shock time taken from the removal itself** (only with `shock_time_fallback: removal`)
+    → Unable to Verify: a removal can't be judged against its own time.
+  - **With a shock time:**
+    - a removal after the shock → Pass;
+    - a removal before the shock but within `simultaneous_window_seconds` → treated as at the
+      shock (annotation timing), so Pass;
+    - a removal clearly before the shock → **Fail `removed_before_shock`**;
+    - **past the gate,** a derived placement episode that ended by a real exit (`ended_by_exit`)
+      clearly before the shock, with no placement of that paddle on at the shock, is also
+      evidence of **`removed_before_shock`** (flagged `derived_placement`). Each derived
+      placement now records `end_frame`, `end_seconds` and `ended_by_exit`.
+  - **Time limit:** `shock_to_removal_seconds` stays unset, so a Pass is flagged
+    `timing_not_checked`. An approved "no limit" (D-103) passes fully; an approved value that is
+    exceeded is **Fail `too_late`**.
+  - **No removal** → **Fail `missing`** only if both placement zones were visible throughout from
+    the shock time to the end of the recording (D-092, A-022). Otherwise Unable to Verify. Low
+    confidence is never a Fail (D-010).
+- **Reason:** the proposal's failure is "a paddle is visibly removed before shock". Only the
+  screen gives the shock time, and the zones are the best available coverage for a removal.
+- **Affects:** R6 (P-034); P-031 (episode end metadata). **Assumption:** A-022.
 
 ---
 

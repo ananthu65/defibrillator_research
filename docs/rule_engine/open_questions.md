@@ -33,6 +33,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-023 | E-14c | supervisor | Ananth, Arnikan | open | Discharge buttons pressed more than once |
 | OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen (supersedes the proposal's A6 clause) |
 | OQ-059 | new (2026-10-17) | supervisor | Arnikan, Sanjeevan | open | Does a parallel placement count as one mistake or two? |
+| OQ-060 | new (2026-10-17) | supervisor | Arnikan | open | Should paddle removal still support an inferred Pass for R3 and R4? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -158,12 +159,16 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   - **R7/A6:** shock → start/resume compressions command;
   - **A4:** stop-compressions command → shock;
   - **A5:** how long before the shock the verbal shock command may be given;
-  - **R6:** shock → paddles removed (if any limit applies).
-- **Affects:** R1, R6, R7/A6, A4, A5.
+  - **R6:** shock → paddles removed (if any limit applies);
+  - **A1, A3:** whether the oxygen-away and stand-clear commands must come within some time
+    before the shock.
+- **The answer may be "no limit".** That is recorded as a decision too (`no_limit: true`, with
+  the approver), and the rule then checks presence and order and passes fully (D-103).
+- **Affects:** R1, R6, R7/A6, A4, A5, A1, A3.
 - **Why it matters:** Without a limit, these rules can check presence and order but not
   timing.
 - **Interim behaviour:** Each limit is empty. The rule checks presence and order only, and says
-  "timing not checked" (D-005).
+  "timing not checked" (D-005), which keeps the overall result from being Pass (D-062).
 
 ### OQ-021 Gel applied more than twice
 - **Old no.:** E-14a · **Owner:** supervisor · **Also involves:** Ananth (detects each
@@ -205,6 +210,25 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R6, R7/A6, A1–A8; the choice of camera angle (OQ-038).
 - **Interim behaviour:** `shock_time_fallback: none`. The removal fallback is kept behind the
   setting `removal`.
+- **Supporting observation (2026-10-17):** in the videos, the paddles are sometimes removed
+  without a successful shock. A removal therefore doesn't show when, or whether, a shock happened,
+  which supports D-093 (no shock time from removal). D-093 stays.
+
+### OQ-060 Should paddle removal still support an inferred Pass for R3 and R4?
+- **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-17 · **Status:** open
+- **Question:** The proposal lets a confirmed paddle removal (`paddles_removed_after_shock`)
+  support **Pass – Inferred** for R3 (paddles firmly on the chest) and R4 (both buttons pressed),
+  as well as the shock on the screen. In the videos, paddles are sometimes removed **without a
+  successful shock**. Should removal still count as evidence for the inference, or only the
+  shock on the screen?
+- **Affects:** R3, R4 (P-016).
+- **Why it matters:** with removal as evidence, R3/R4 can pass (inferred) when no successful
+  shock happened (A-021). The overall result still can't be Pass then, because R5 is Fail (screen
+  visible) or Unable to Verify (screen not visible).
+- **Interim behaviour:** the proposal is followed (D-102). The list is the setting
+  `configs/rules.yaml` R3/R4 `parameters.inference_sources`; removing
+  `paddles_removed_after_shock` from it is the only change needed.
 
 ### OQ-059 Does a parallel placement count as one mistake or two?
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan, Sanjeevan
