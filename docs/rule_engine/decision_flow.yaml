@@ -185,14 +185,14 @@ decision_points:
       - condition: Shock time taken from the removal itself (shock_time_fallback removal)
         outcome: Unable to Verify; the removal can't be judged against its own time
         flags: [shock_time_from_removal]
-      - condition: A removal clearly before the shock (more than simultaneous_window_seconds)
+      - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
         outcome: Fail removed_before_shock
         failure_codes: [removed_before_shock]
       - condition: Past the gate, a derived placement episode ended by a real exit clearly before the shock, with no placement of that paddle on at the shock
         outcome: Fail removed_before_shock
         flags: [derived_placement]
         failure_codes: [removed_before_shock]
-      - condition: A removal after the shock, or before it but within simultaneous_window_seconds (treated as at the shock)
+      - condition: A removal after the shock, or before it but within removal_before_screen_tolerance_seconds (the screen may show the shock after the discharge; treated as at the shock)
         outcome: Pass – Direct; the time limit is checked (P-024); unset, so flagged timing_not_checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
         flags: [timing_not_checked]
         next: P-024
@@ -207,9 +207,9 @@ decision_points:
         failure_codes: [missing]
       - condition: No removal; a placement zone not visible throughout that window (partly, never, or unknown)
         outcome: Unable to Verify, never Fail
-    config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
+    config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml removal_before_screen_tolerance_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_removed_after_shock)
-    decisions: [D-039, D-088, D-092, D-093, D-103, D-104]
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105]
     assumptions: [A-022]
     open_questions: [OQ-016, OQ-057]
 
@@ -697,24 +697,63 @@ decision_points:
     name: R3/R4 inferred pass from shock or removal
     stage: rule
     status: planned
-    decides: Whether placement (R3) or button pressing (R4) can pass by inference (Increments 15 and 16)
+    decides: Whether placement (R3) or button pressing (R4) can pass by inference. Built for R3 in Increment 15 (its direct evidence and coverage are P-035); R4 is Increment 16
     inputs: [direct placement or button evidence, confident shock or removal]
     branches:
       - condition: Direct evidence in time
         outcome: Pass – Direct
-      - condition: Direct evidence shows the mistake
+      - condition: Direct evidence shows the mistake (R3's codes are in P-035)
         outcome: Fail
-        failure_codes: [not_in_zone, placed_after_shock, before_placement, not_pressed]
+        failure_codes: [before_placement, not_pressed]
       - condition: Direct evidence weak or missing; an event in inference_sources (the shock on screen or the removal) confidently confirmed
         outcome: Pass – Inferred, naming the supporting event. A removal can happen without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102)
       - condition: Neither
         outcome: Missing-event outcome
         next: P-008
     config: [configs/rules.yaml R3/R4 parameters.inference_sources]
-    code: rules/video_rules.py (Increments 15 and 16)
-    decisions: [D-004, D-057, D-102]
+    code: rules/video_rules.py (paddles_firmly_on_chest for R3; R4 in Increment 16)
+    decisions: [D-004, D-057, D-102, D-106]
     assumptions: [A-021]
     open_questions: [OQ-012, OQ-060]
+
+  - id: P-035
+    name: R3 paddles placed firmly on the chest
+    stage: rule
+    status: built
+    decides: R3's result (Increment 15); runs only when R3 is approved in rules.yaml, pending until the supervisor confirms its definition. Placement timing and presence only; not_in_zone is not produced until the chest regions are approved (OQ-012, D-106)
+    inputs: [paddles_firmly_on_chest tags, derived placements (past the gate), shock anchor (screen only, D-093), R3 inference_sources (rules.yaml), placement zone coverage over first paddle taken .. shock]
+    branches:
+      - condition: Shock time; a paddles_firmly_on_chest tag at or before the shock (within simultaneous_window_seconds after it counts as at it)
+        outcome: Pass – Direct
+      - condition: Shock time; past the gate, both derived placements at or before the shock
+        outcome: Pass – Direct
+        flags: [derived_placement]
+      - condition: Shock time; only tags clearly after the shock
+        outcome: Fail placed_after_shock (direct evidence of the mistake comes before the inference)
+        failure_codes: [placed_after_shock]
+      - condition: No direct evidence (or no shock time to judge it against); an event in inference_sources confirmed
+        outcome: Pass – Inferred, naming the supporting event (D-057, D-102)
+        next: P-016
+      - condition: No inference and no shock time
+        outcome: Not evaluable because of R5
+        next: P-020
+      - condition: No inference; a low-confidence paddles_firmly_on_chest
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No inference; both placement zones visible throughout first paddle taken .. shock (the recording's start when first paddle taken is missing)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No inference; a zone not visible throughout that window (for example only one paddle visible, when the tag is not made, A-019)
+        outcome: Unable to Verify, never Fail
+      - condition: A paddle outside its approved zone
+        outcome: Not checked until the supervisor approves the chest regions (OQ-012)
+      - condition: inference_sources is not a list of canonical events
+        outcome: engine_error (a configuration error, D-063)
+    config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
+    code: rules/video_rules.py (paddles_firmly_on_chest)
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-102, D-106]
+    assumptions: [A-019, A-021]
+    open_questions: [OQ-012, OQ-022, OQ-060]
 
   - id: P-017
     name: Overall result policy

@@ -313,7 +313,8 @@ flowchart TD
 ## (k) R6: paddles removed after the shock (P-034, built in Increment 14; pending until approved)
 
 `paddles_removed_after_shock` means the paddles were removed; it doesn't prove a shock (D-104).
-The window `w` is `simultaneous_window_seconds`.
+The tolerance `w` is `removal_before_screen_tolerance_seconds` (the screen may show the shock after
+the discharge, D-105).
 
 ```mermaid
 flowchart TD
@@ -333,4 +334,29 @@ flowchart TD
     RM -->|no| Z{"Both placement zones visible<br/>from the shock to the end<br/>of the recording? (A-022)"}
     Z -->|yes| F4["Fail missing"]
     Z -->|"no: partly, never, unknown"| U2["Unable to Verify"]
+```
+
+## (l) R3: paddles placed firmly on the chest (P-035, built in Increment 15; pending until approved)
+
+Placement timing and presence only; `not_in_zone` waits for the approved chest regions (OQ-012,
+D-106). `w` is `simultaneous_window_seconds`.
+
+```mermaid
+flowchart TD
+    S{"Shock time?<br/>(screen only, D-093)"} -->|yes| T{"paddles_firmly_on_chest<br/>at or before shock + w?"}
+    T -->|yes| P1["Pass – Direct"]
+    T -->|no| D{"Past the gate: both derived<br/>placements before shock + w?"}
+    D -->|yes| P2["Pass – Direct<br/>derived_placement"]
+    D -->|no| L{"Tagged only after<br/>the shock?"}
+    L -->|yes| F1["Fail placed_after_shock"]
+    L -->|no| I
+    S -->|no| I{"An event in inference_sources?<br/>(shock on screen, removal; D-102)"}
+    I -->|yes| P3["Pass – Inferred"]
+    I -->|no| N{"Shock time?"}
+    N -->|no| NE["Not evaluable<br/>because of R5"]
+    N -->|yes| W{"Low-confidence<br/>firm placement?"}
+    W -->|yes| U1["Unable to Verify"]
+    W -->|no| Z{"Both placement zones visible<br/>first paddle taken → shock?"}
+    Z -->|yes| F2["Fail missing"]
+    Z -->|"no (e.g. one paddle visible,<br/>no tag then, A-019)"| U2["Unable to Verify"]
 ```

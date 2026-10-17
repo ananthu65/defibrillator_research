@@ -26,7 +26,8 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   - simultaneous window: 0.5 s;
   - minimum gap between two gel applications: 1.0 s;
   - R8 placement-match window: 0.5 s;
-  - header duration tolerance: 0.5 s.
+  - header duration tolerance: 0.5 s;
+  - R6 removal-before-screen tolerance: 0.5 s (D-105).
 - **Why:** The brief says engineering values are chosen in pilot validation, not given by the
   supervisor.
 - **Status:** active (all marked `placeholder: true` in `engine.yaml`).

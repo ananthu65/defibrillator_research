@@ -606,6 +606,51 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   screen gives the shock time, and the zones are the best available coverage for a removal.
 - **Affects:** R6 (P-034); P-031 (episode end metadata). **Assumption:** A-022.
 
+### D-105 R6 tolerates a removal shortly before the shock appears on the screen
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (the value is a placeholder)
+- **Decision:** the defibrillator screen may show the shock slightly **after** the discharge, so a
+  correct learner can remove the paddles before the screen updates. R6 uses its own setting,
+  **`removal_before_screen_tolerance_seconds`** in `engine.yaml` (placeholder), instead of
+  `simultaneous_window_seconds`.
+  - A removal tag, or the end of a derived placement, up to this long before the shock on the
+    screen counts as at the shock (Pass). More than this before it is `removed_before_shock`.
+  - **Placeholder value: 0.5 s**, the same as the simultaneous window it replaces, so results
+    don't change until a value is chosen.
+- **Evidence (interim export of 2026-10-16, LS and T videos with both tags, n = 20):** the
+  removal tag came **after** the shock on the screen in all 20, by 0.13 to 1.40 s (median
+  0.88 s). No removal came before the screen, so this data doesn't show the screen delay, and
+  can't bound the tolerance. The distribution is in progress.md (Increment 15).
+- **Reason:** a screen delay is a property of the device, not annotation timing, so it is tuned
+  separately from the general simultaneous window.
+- **Affects:** R6 (P-034). **Open question:** OQ-018 (engineering placeholder values).
+
+### D-106 R3: placement timing and presence; a missing tag needs both zones in view
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (R3 itself stays pending until the
+  supervisor confirms its definition)
+- **Decision:**
+  - **Direct evidence** (needs a shock time, which comes only from the screen, D-093):
+    - a `paddles_firmly_on_chest` tag at or before the shock → Pass – Direct. A tag within
+      `simultaneous_window_seconds` after it counts as at it (annotation timing);
+    - past the gate, **both** derived placements at or before the shock → Pass – Direct, flagged
+      `derived_placement`;
+    - only tags clearly after the shock → **Fail `placed_after_shock`**. Direct evidence of the
+      mistake comes before the inference.
+  - **Missing direct evidence:** first the inference from `inference_sources` (D-057, D-102) →
+    Pass – Inferred. Then, without a shock time → Not evaluable because of R5. Then coverage.
+  - **Coverage:** `paddles_firmly_on_chest` isn't tagged when only one paddle is visible
+    (A-019). A missing tag is **Fail `missing`** only if both placement zones were visible
+    throughout the placement phase, from first paddle taken to the shock (from the start of the
+    recording when first paddle taken is missing). Otherwise Unable to Verify. Low confidence is
+    never a Fail (D-010).
+  - **`not_in_zone` is not produced** until the supervisor approves the chest regions (OQ-012).
+    Until then R3 checks placement timing and presence only.
+  - **A new code for R3:** `missing`. The brief's R3 codes (`not_in_zone`, `placed_after_shock`)
+    have none for a placement that never happened.
+- **Consequence:** with the proposal's sources, a shock time always means a shock on the screen,
+  which is itself an inference source. The coverage step (and so `missing`) is therefore reached
+  only if `inference_sources` drops the shock on screen.
+- **Affects:** R3 (P-035, P-016). **Open questions:** OQ-012, OQ-060.
+
 ---
 
 ## Shock time and command timing

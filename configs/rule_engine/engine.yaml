@@ -15,6 +15,10 @@ gel_minimum_gap_seconds:        {value: 1.0, placeholder: true}  # R1: two gel e
 placement_match_window_seconds: {value: 0.5, placeholder: true}  # R8: visible-zone placement "same time" as first_paddle_placed
 assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
 duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
+# R6: the screen may show the shock slightly after the discharge, so a correct learner can remove
+# the paddles before the screen updates. A removal (tag or derived placement end) up to this long
+# before the shock on screen counts as at the shock (D-105). Separate from simultaneous_window_seconds.
+removal_before_screen_tolerance_seconds: {value: 0.5, placeholder: true, note: "interim export: 0 of 20 LS/T removals before the screen (D-105)"}
 # Where the shock time comes from when no shock is seen on the screen (D-093): none (decided
 # 2026-10-17: never inferred, so shock-dependent rules are Not evaluable) | removal (the first
 # paddle removal, flagged shock_time_from_removal; D-023, D-024, D-053, D-054, D-059 then apply).

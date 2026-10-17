@@ -231,18 +231,18 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 
 | Code | Status | Rules | Meaning for feedback |
 |---|---|---|---|
-| `missing` | built (R5, R6; the others planned) | R1, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
+| `missing` | built (R3, R5, R6; the others planned) | R1, R3, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R3: the paddles were not seen firmly on the chest, no inference applied, and both placement zones were visible from first paddle taken to the shock (D-106). For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
 | `applied_once` | planned | R1 | Gel applied only once |
 | `outside_time_period` | planned | R1 | The two gel applications were not within the approved period |
 | `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
 | `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
 | `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
 | `wrong_order` | built (R5, R8; A4, A7 planned) | R5, R8, A4, A7 | Steps or commands in the wrong order. For R5: the shock came before one of the preceding steps (once they are set, D-100). For R8: the sternal paddle was placed before the apical (directly, or by inference once `inferred_fail_outcome` is decided as fail) |
-| `not_in_zone` | planned | R3 | A paddle was outside its approved zone |
-| `placed_after_shock` | planned | R3 | Paddles placed after the shock |
+| `not_in_zone` | planned | R3 | A paddle was outside its approved zone. Not produced until the supervisor approves the chest regions (OQ-012); until then R3 checks placement timing and presence only (D-106) |
+| `placed_after_shock` | built (R3) | R3 | Paddles placed firmly on the chest only after the shock on the screen (D-106) |
 | `before_placement` | planned | R4 | Buttons pressed before the paddles were placed |
 | `not_pressed` | planned | R4 | Buttons not pressed |
-| `removed_before_shock` | built (R6) | R6 | Paddles removed before the shock on the screen: a removal tagged more than the simultaneous window before it, or (once the gate is approved) a derived placement that ended before it, flagged `derived_placement` (D-104) |
+| `removed_before_shock` | built (R6) | R6 | Paddles removed before the shock on the screen: a removal tagged more than `removal_before_screen_tolerance_seconds` before it (the screen may lag the discharge, D-105), or (once the gate is approved) a derived placement that ended before it, flagged `derived_placement` (D-104) |
 | `after_shock` | planned | A1, A3, A4 | The command came after the shock |
 | `wrong_stage` | planned | A2 | "Continue compressions" at the wrong stage |
 | `before_shock` | planned | R7/A6 | The restart command came before the shock |

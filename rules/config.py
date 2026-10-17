@@ -89,13 +89,14 @@ class EngineSettings:
         expected = {"schema_version", "confidence_thresholds", "simultaneous_window_seconds",
                     "gel_minimum_gap_seconds", "placement_match_window_seconds", "assume_first_taken_is_apical",
                     "duration_tolerance_seconds", "coverage_policy", "inferred_fail_outcome",
-                    "unable_to_verify_outcome", "review_anomalies", "expected_counts", "shock_time_fallback"}
+                    "unable_to_verify_outcome", "review_anomalies", "expected_counts", "shock_time_fallback",
+                    "removal_before_screen_tolerance_seconds"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
         settings = {name: _setting(name, data[name], where, _nonnegative) for name in
                     ("simultaneous_window_seconds", "gel_minimum_gap_seconds", "placement_match_window_seconds",
-                     "duration_tolerance_seconds")}
+                     "duration_tolerance_seconds", "removal_before_screen_tolerance_seconds")}
         settings["assume_first_taken_is_apical"] = _setting(
             "assume_first_taken_is_apical", data["assume_first_taken_is_apical"], where, _boolean)
         settings["inferred_fail_outcome"] = _setting(

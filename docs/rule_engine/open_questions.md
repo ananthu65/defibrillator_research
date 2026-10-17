@@ -133,11 +133,11 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Question:** R3 fails with `not_in_zone` when a paddle is placed outside its approved zone.
   The supervisor approves the chest regions and what counts as a correct placement. Ananth then
   defines which video event shows a paddle outside its zone.
-- **Affects:** R3; P-016.
+- **Affects:** R3; P-016, P-035.
 - **Why it matters:** Without approved regions, R3 cannot judge where a paddle was placed. It
   can only judge whether it was placed.
 - **Interim behaviour:** R3 cannot produce `not_in_zone` until the regions are approved and an
-  event exists.
+  event exists. R3 (built in Increment 15) checks placement timing and presence only (D-106).
 
 ### OQ-013 Which steps must come before the shock indication (R5)?
 - **Old no.:** E-7 · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
@@ -395,9 +395,13 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   (audio thresholds), Arnikan (rule-engine windows and tolerances) · **Raised:** 2026-10-10 ·
   **Status:** open
 - **Question:** Choose the confidence thresholds, simultaneous window, gel minimum gap, R8
-  placement-match window and duration tolerance from pilot validation.
-- **Affects:** P-004, P-005, P-006, P-011, P-015; R1, R2, R8.
+  placement-match window, duration tolerance and R6 removal-before-screen tolerance from pilot
+  validation.
+- **Affects:** P-004, P-005, P-006, P-011, P-015, P-034; R1, R2, R3, R6, R8.
 - **Interim behaviour:** The placeholder values in A-002.
+- **R6 screen delay (2026-10-17, D-105):** on the interim export, the removal tag came after the
+  shock on the screen in all 20 LS/T videos with both tags (0.13 to 1.40 s, median 0.88 s), so the
+  data doesn't bound the tolerance. Placeholder 0.5 s for now.
 
 ### OQ-019 Which side applies confidence thresholds?
 - **Old no.:** E-12 · **Owner:** team · **Also involves:** Ananth, Sanjeevan, Arnikan ·

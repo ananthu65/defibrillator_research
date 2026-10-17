@@ -115,6 +115,97 @@ def _first_placement_missing(ctx, second):
                   f"({statuses})", evidence=(taken[0].event_id, second.event_id), uses=tuple(zones))
 
 
+# ---- R3 ---------------------------------------------------------------------------------------------
+
+def _inference_sources(ctx, definition, rule_id):
+    """R3/R4 parameters.inference_sources: canonical events that support Pass - Inferred (D-102)."""
+    sources = definition.parameters.get("inference_sources")
+    if not isinstance(sources, list) or [s for s in sources if s not in ctx.config.vocabulary.events]:
+        # a configuration error: recorded as engine_error (D-063), never a result about the learner
+        raise ValueError(f"{rule_id} inference_sources must be a list of canonical events, got {sources!r}")
+    return sources
+
+
+@rule("R3", requires=(BOTH_PLACED, SHOCK, REMOVAL, FIRST_TAKEN, *PLACEMENTS),
+      description="Paddles placed firmly on the chest before the shock")
+def paddles_firmly_on_chest(ctx, definition, results):
+    """R3 (P-035): both paddles placed firmly on the chest before the shock.
+
+    Placement timing and presence only: `not_in_zone` is not produced until the supervisor approves
+    the chest regions (OQ-012, D-106).
+    1. With a shock time (screen only, D-093):
+       - a paddles_firmly_on_chest tag at or before the shock (within simultaneous_window_seconds
+         after it: annotation timing) -> Pass - Direct;
+       - past the gate, both derived placements at or before the shock -> Pass - Direct, flagged
+         `derived_placement`;
+       - only tags clearly after the shock -> Fail `placed_after_shock`.
+    2. Otherwise (no direct evidence, or no shock time to judge it against): the inference first, an
+       event in inference_sources (D-057, D-102) -> Pass - Inferred.
+    3. No shock time -> Not evaluable because of R5.
+    4. Coverage: the tag isn't made when only one paddle is visible (A-019), so a missing tag is
+       Fail `missing` only if both placement zones were visible throughout the placement phase,
+       first paddle taken -> shock (the recording's start when first paddle taken is missing);
+       otherwise Unable to Verify. Low confidence is never a Fail (D-010).
+    """
+    sources = _inference_sources(ctx, definition, "R3")
+    shock = ctx.shock
+    tags = ctx.named(BOTH_PLACED)
+    if shock.present:
+        window = checks.simultaneous_window(ctx)
+        on_time = checks.first_valid(tags, lambda t: t.start <= shock.time + window)
+        if on_time is not None:
+            return passed("R3", f"paddles firmly on the chest at {on_time.start:g} s, before the shock at "
+                          f"{shock.time:g} s", (on_time.event_id, shock.event_id), uses=(shock,),
+                          timestamps={BOTH_PLACED: on_time.start, SHOCK: shock.time})
+        derived = _derived_placements_before(ctx, shock.time + window)
+        if derived:
+            names = ", ".join(f"{_paddle(e.event_name)} at {e.start:g} s" for e in derived)
+            return passed("R3", f"both paddles placed before the shock at {shock.time:g} s (derived placements: "
+                          f"{names})", (*(e.event_id for e in derived), shock.event_id), uses=(shock,),
+                          flags=_evidence_flags(derived), timestamps={**{e.event_name: e.start for e in derived},
+                                                                      SHOCK: shock.time})
+        if tags:
+            return failed("R3", "placed_after_shock", f"paddles firmly on the chest only at {tags[0].start:g} s, after "
+                          f"the shock at {shock.time:g} s", evidence=(tags[0].event_id, shock.event_id), uses=(shock,),
+                          timestamps={BOTH_PLACED: tags[0].start, SHOCK: shock.time})
+    support = checks.infer_from(ctx, sources)
+    if support is not None:
+        return passed("R3", f"paddles firmly on the chest inferred from {support.event_name} at {support.time:g} s",
+                      (support.event_id,), inferred=True, timestamps={support.event_name: support.time})
+    blocked = checks.requires("R3", shock, "R5")
+    if blocked is not None:
+        return blocked
+    return _firm_placement_missing(ctx, shock)
+
+
+def _derived_placements_before(ctx, time):
+    """The earliest derived placement of each paddle, if both are at or before `time` (past the gate)."""
+    first = [next((e for e in ctx.named(name) if e.metadata.get("derived_placement")), None) for name in PLACEMENTS]
+    if all(e is not None and e.start <= time for e in first):
+        return first
+    return []
+
+
+def _firm_placement_missing(ctx, shock):
+    taken = ctx.named(FIRST_TAKEN)
+    start = taken[0].start if taken and taken[0].start <= shock.time else 0.0
+    window = (start, shock.time)
+    where = (f"between taking the first paddle ({start:g} s) and the shock ({shock.time:g} s)" if taken
+             and taken[0].start <= shock.time else f"before the shock ({shock.time:g} s)")
+    weak = ctx.missing(BOTH_PLACED, window)
+    if LOW_CONFIDENCE_FLAG in weak.flags:
+        return unable("R3", "paddles firmly on the chest may have been seen with low confidence",
+                      evidence=weak.low_confidence_event_ids, uses=(shock, weak))
+    zones = [ctx.missing(name, window) for name in PLACEMENTS]
+    if all(z.coverage.status == COVERED and z.outcome == "fail" for z in zones):
+        return failed("R3", "missing", f"paddles not seen firmly on the chest {where}, although both placement "
+                      "zones were visible throughout (D-106)", evidence=(shock.event_id,), uses=(shock, *zones))
+    statuses = ", ".join(f"{_paddle(z.event_name)} zone {z.coverage.status}" for z in zones)
+    return unable("R3", f"paddles not seen firmly on the chest {where}, but the placement zones were not visible "
+                  f"throughout ({statuses}); the tag is not made when only one paddle is visible (A-019)",
+                  evidence=(shock.event_id,), uses=(shock, *zones))
+
+
 # ---- R5 ---------------------------------------------------------------------------------------------
 
 @rule("R5", requires=(SHOCK, BOTH_PLACED, REMOVAL), description="Shock confirmed on screen after the preceding steps")
@@ -198,11 +289,12 @@ def paddles_removed_after_shock(ctx, definition, results):
     1. No shock time (it comes only from the screen, D-093) -> Not evaluable because of R5, even if a
        removal is tagged. A shock time taken from the removal itself (fallback removal) -> Unable to
        Verify: the removal can't be judged against its own time.
-    2. A removal clearly before the shock (more than simultaneous_window_seconds) -> Fail
-       `removed_before_shock` (the proposal: "a paddle is visibly removed before shock").
+    2. A removal clearly before the shock (more than removal_before_screen_tolerance_seconds: the
+       screen may show the shock after the discharge, D-105) -> Fail `removed_before_shock` (the
+       proposal: "a paddle is visibly removed before shock").
     3. Past the gate, a derived placement episode that ended (by a real exit) clearly before the
        shock, with no placement of that paddle on at the shock -> Fail `removed_before_shock`.
-    4. A removal at the shock (within the window: annotation timing) or after it -> Pass, with the
+    4. A removal at the shock (within the tolerance before it) or after it -> Pass, with the
        shock_to_removal_seconds limit: unset -> timing_not_checked; approved "no limit" -> checked
        (D-103); exceeded -> Fail `too_late`.
     5. No removal -> Fail `missing` only if both placement zones were visible throughout from the
@@ -215,7 +307,7 @@ def paddles_removed_after_shock(ctx, definition, results):
     if SHOCK_FROM_REMOVAL in shock.flags:
         return unable("R6", "the shock time was taken from the paddle removal itself (shock_time_fallback removal), "
                       "so the removal cannot be judged against it", uses=(shock,))
-    window = checks.simultaneous_window(ctx)
+    window = ctx.config.engine.value("removal_before_screen_tolerance_seconds")   # D-105
     removals = ctx.named(REMOVAL)
     if removals and removals[0].start < shock.time - window:
         removal = removals[0]
@@ -251,7 +343,7 @@ def _placements_ended_before(ctx, shock_time, window):
 
 
 def _removed_at_or_after(ctx, removal, shock):
-    seconds = max(0.0, removal.start - shock.time)   # within the window before the shock counts as at it
+    seconds = max(0.0, removal.start - shock.time)   # within the tolerance before the shock counts as at it
     check = checks.time_limit(seconds, ctx.config.limit("shock_to_removal_seconds"))
     evidence = (removal.event_id, shock.event_id)
     timestamps = {REMOVAL: removal.start, SHOCK: shock.time, "seconds": seconds}

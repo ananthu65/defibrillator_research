@@ -3665,3 +3665,106 @@ with 0.
 ### Next
 Increment 15 (R3). Nothing is committed; commit only when Arnikan says so.
 
+## Increment 15: R3, paddles firmly on chest; R6's screen-delay tolerance (2026-10-17)
+
+Increment 14 was committed and pushed on instruction (e7cdc8b) before this work.
+
+### Screen delay for R6 (D-105)
+The screen may show the shock slightly after the discharge, so a correct learner can remove the
+paddles before the screen updates. R6 now uses its own setting,
+`removal_before_screen_tolerance_seconds` (`engine.yaml`, placeholder 0.5 s), instead of
+`simultaneous_window_seconds`. It applies to the removal tag and to the end of a derived
+placement.
+
+**Measurement.** Source: the interim export of 2026-10-16 (`smoke-kartheepan`, tags only). Videos:
+LS and T videos with both `shock_delivered_on_screen` and `paddles_removed_after_shock`. Measured:
+the removal tag time minus the shock-on-screen time.
+- **Videos:** 20 of 26 LS/T videos (11 LS, 9 T). The other 6 have a removal but no shock tag:
+  P06_LS, P06_T, P31_T, P32_T, P33_LS, P33_T.
+- **Each tag was present once**, and the videos are about 30 fps (one frame ≈ 0.033 s).
+
+| Screen → removal (s) | Videos |
+|---|---|
+| below 0 (removal before the screen) | **0** |
+| 0 – 0.5 | 2 (0.133, 0.267) |
+| 0.5 – 1.0 | 10 (0.600, 0.767, 0.800, 0.800, 0.800, 0.833, 0.833, 0.867, 0.900, 0.900) |
+| 1.0 – 1.5 | 8 (1.000, 1.066, 1.067, 1.167, 1.233, 1.267, 1.267, 1.401) |
+
+Summary:
+- **Range:** minimum 0.133 s, median 0.884 s, maximum 1.401 s.
+- **By view:** LS median 0.800 s (n = 11); T median 1.000 s (n = 9).
+
+**What it shows:** in this data the removal always came after the screen showed the shock, so a
+screen delay longer than the learner's removal time was never observed. The data doesn't bound
+the tolerance from below. The placeholder stays 0.5 s (the value it replaces, so no result
+changes). The value is part of OQ-018. Videos where the removal comes before the screen would be
+needed to measure the delay itself.
+
+### Decisions recorded (Arnikan)
+- **D-105:** R6's separate screen-delay tolerance (above).
+- **D-106, R3:**
+  - **Direct evidence:** the firm-placement tag at or before the shock, or past the gate both
+    derived placements before it → Pass – Direct. Only after the shock → `placed_after_shock`.
+  - **Missing direct evidence:** first the inference from `inference_sources`, then (no shock
+    time) Not evaluable because of R5, then coverage. A missing tag fails `missing` only if both
+    placement zones were visible from first paddle taken to the shock; otherwise Unable to Verify.
+  - **`not_in_zone`** is not produced until the chest regions are approved (OQ-012). R3 checks
+    placement timing and presence only until then.
+
+### What was done
+- **R3 in `rules/video_rules.py` (P-035):**
+  - `inference_sources` is validated (a list of canonical events, else `engine_error`).
+  - A tag within `simultaneous_window_seconds` after the shock counts as at it (annotation timing,
+    as in R2 and R8).
+  - Without a shock time the tag can't be judged against the shock (D-093: R3's direct check needs
+    the shock time), so the inference decides, else Not evaluable because of R5.
+  - Without `first_paddle_taken`, the placement phase starts at the recording's start.
+  - A new code for R3, `missing`; the brief's R3 codes had none for a placement that never
+    happened.
+- **Finding:** with the proposal's sources, a shock time always means a shock on the screen,
+  which is itself an inference source. R3's coverage step (and `missing`) is reached only if
+  `inference_sources` drops the shock on screen.
+- **R6:** uses the new tolerance. `engine.yaml` and `config.py` gained the required setting.
+- **R3 stays pending** in `rules.yaml`.
+- **Output contract:** still version 7. `placed_after_shock` and `missing` (R3) became built, and
+  the meanings of `removed_before_shock` and `not_in_zone` were clarified. No field or code was
+  added, removed or renamed.
+
+### Tests (570 → 594)
+- **`tests/test_rule_engine_r3.py` (23):**
+  - **direct evidence:** tag before the shock → Pass, overall Pass; within the window after →
+    Pass; only after → `placed_after_shock`; before and after → Pass with the earliest;
+    `placed_after_shock` beats the inference; `not_in_zone` never produced; pending in the
+    catalogue; invalid `inference_sources` → `engine_error`;
+  - **inference:** from the shock; from the removal without a shock; a tag without a shock time
+    (with removal → inferred, alone → Not evaluable); sources are a setting; nothing → Not
+    evaluable (R5);
+  - **coverage (no inference sources):** both zones visible → `missing`; one paddle visible →
+    Unable to Verify; a zone partly visible → Unable to Verify; no first paddle taken → from the
+    recording's start; low confidence → Unable to Verify; with the proposal's sources the shock
+    always infers;
+  - **derived placements:** gate approved → Pass – Direct, `derived_placement`; gate not approved
+    → withheld, inferred from the shock; one derived placement, or one after the shock → not
+    direct evidence.
+- **R6 (1):** the screen-delay tolerance is its own setting.
+
+Full suite: **594 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-035 (new); P-016 (R3 built there, R4 planned); P-034 (tolerance).
+- **`pathways.md`:** the P-035 table; P-034 and P-016 rows; W-20 built; W-64 (tolerance); W-67
+  to W-70.
+- **`diagrams.md`:** (l) R3 (new); (k) the tolerance.
+- **Registers:** `decisions.md` (D-105, D-106); `assumptions.md` (A-002: new placeholder);
+  `open_questions.md` (OQ-018 R6 screen delay; OQ-012 interim behaviour).
+- **Other docs:** `anomalies.md`, `output_contract.md`, `rules_status.md`, `methods.md`,
+  `implementation_plan.md` (row 15), `configs/rules.yaml`, `configs/rule_engine/engine.yaml`,
+  `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+None new. The tolerance value is part of OQ-018; R3's zone check waits on OQ-012.
+
+### Next
+Increment 16 (R4). Nothing is committed; commit only when Arnikan says so.
+

@@ -1,4 +1,4 @@
-"""Increment 14: R6, paddles removed after the shock (P-034; D-093, D-103, D-104)."""
+"""Increment 14: R6, paddles removed after the shock (P-034; D-093, D-103, D-104, D-105)."""
 import copy
 from dataclasses import replace
 import unittest
@@ -35,7 +35,7 @@ def config(limit=None, **settings):
 
 R6 = config()
 REGIONS = tuple(R6.engine.regions)
-WINDOW = R6.engine.value("simultaneous_window_seconds")
+WINDOW = R6.engine.value("removal_before_screen_tolerance_seconds")   # D-105
 
 
 def ev(label, t, event_id=None, confidence=1.0, source="annotation"):
@@ -81,6 +81,12 @@ class WithShockTime(unittest.TestCase):
         outcome = r6([SHOCK, ev("paddles_removed_after_shock", 15 - WINDOW, "removed")])
         self.assertEqual(outcome.kind, "pass_direct")
         self.assertEqual(outcome.timestamps["seconds"], 0)
+
+    def test_the_screen_delay_tolerance_is_its_own_setting(self):
+        """D-105: not simultaneous_window_seconds."""
+        cfg = config(removal_before_screen_tolerance_seconds=1.0, simultaneous_window_seconds=0.5)
+        self.assertEqual(r6([SHOCK, ev("paddles_removed_after_shock", 14.2)], cfg=cfg).kind, "pass_direct")
+        self.assertEqual(r6([SHOCK, ev("paddles_removed_after_shock", 13.9)], cfg=cfg).failure_code, "removed_before_shock")
 
     def test_removal_clearly_before_the_shock_is_removed_before_shock(self):
         outcome = r6([SHOCK, ev("paddles_removed_after_shock", 15 - WINDOW - 0.1, "removed")])
