@@ -45,6 +45,14 @@ from annotation.audit_cvat_backups import (
     read_json_entry,
 )
 from annotation.build_yolo_video_dataset import Track, clip_box, collect_annotations, read_csv, track_box_at
+from annotation.derive_gel_applications import (
+    VALIDATION_COLUMNS as GEL_VALIDATION_COLUMNS,
+    GelSettings,
+    derive_gel,
+    gel_validation_markdown,
+    gel_validation_summary,
+    load_gel_settings,
+)
 from annotation.derive_paddle_placements import (
     VALIDATION_COLUMNS,
     PlacementSettings,
@@ -59,7 +67,7 @@ DEFAULT_CONFIG = ROOT / "configs/rule_engine/annotation_export.yaml"
 DEFAULT_ENGINE_CONFIG = ROOT / "configs/rule_engine/engine.yaml"   # simultaneous_window_seconds (9c)
 DEFAULT_CONVERSION_REPORT = ROOT / "annotation/reports/phase4/video_conversion.csv"
 TRAINING_DATA = ROOT / "data/video"
-EXPORTER_VERSION = 2   # 2: paddle_tracks and paddle_visibility (R4, D-108)
+EXPORTER_VERSION = 3   # 2: paddle_tracks and paddle_visibility (R4, D-108); 3: derived gel applications (9d, D-111)
 RECORD_KIND = "rule_engine_annotation_record"
 TASK_ID = re.compile(r"^P\d{2}_(LL|LS|T)$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -92,6 +100,7 @@ class ExportConfig:
     screen_label: str = "defibrillator_screen"         # CVAT screen track label (D-094)
     screen_event: str = "shock_delivered_on_screen"    # the canonical event the screen governs
     paddle_regions: tuple[tuple[str, str], ...] = ()   # (CVAT paddle label, engine region) for paddle visibility
+    gel: GelSettings | None = None                     # Step 9d (D-111)
 
     def confirmed_not_visible(self, task_id: str) -> set[str]:
         """Zones an annotator confirmed as genuinely not visible in this video."""
@@ -118,7 +127,7 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
     """Load and validate the export/audit config; every problem is a ValueError naming the entry."""
     data = _read_yaml(path)
     expected = {"schema_version", "zone_labels", "paddle_labels", "usual_zone_pattern",
-                "reviewed_zone_exceptions", "audit", "derived_placements", "screen", "paddle_regions"}
+                "reviewed_zone_exceptions", "audit", "derived_placements", "screen", "paddle_regions", "derived_gel"}
     if not isinstance(data, dict) or data.get("schema_version") != 1 or set(data) != expected:
         raise ValueError(f"{path}: expected schema_version: 1 and exactly the keys {sorted(expected)}")
     zones = _labels(data["zone_labels"], f"{path} zone_labels")
@@ -151,8 +160,9 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
     if not isinstance(regions, dict) or set(regions) != set(paddles) or not all(
             isinstance(r, str) and r for r in regions.values()) or len(set(regions.values())) != len(regions):
         raise ValueError(f"{path} paddle_regions: expected each of {list(paddles)} -> a distinct engine region")
+    gel = load_gel_settings(data["derived_gel"], zones, placements, f"{path} derived_gel")
     return ExportConfig(zones, paddles, usual, exceptions, float(motion), window, placements,
-                        screen["label"], screen["event"], tuple((p, regions[p]) for p in paddles))
+                        screen["label"], screen["event"], tuple((p, regions[p]) for p in paddles), gel)
 
 
 def _labels(value, where):
@@ -334,7 +344,8 @@ def _seconds(frame, fps):
 # ---- records ----------------------------------------------------------------------------------------
 
 def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: ExportConfig,
-                  issues: list[Issue], validation: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
+                  issues: list[Issue], validation: list[dict[str, Any]] | None = None,
+                  gel_validation: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     """The rule-engine record for one task, or None (with an issue) when it cannot be timed."""
     where = dict(archive=source.archive, task_path=source.task_path, canonical_task_id=source.canonical_task_id)
     video = videos.get(source.canonical_task_id)
@@ -361,6 +372,9 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
     derived, rows = derive_placements(source, video, config.placements, issues)
     if validation is not None:
         validation.extend(rows)
+    gel_events, gel, gel_rows = derive_gel(source, video, config.gel, derived, issues)
+    if gel_validation is not None:
+        gel_validation.extend(gel_rows)
     return {
         "schema_version": 1,
         "kind": RECORD_KIND,
@@ -387,6 +401,8 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
         "paddle_tracks": {paddle: sum(t.label == paddle for t in source.tracks) for paddle in config.paddle_labels},
         "paddle_visibility": zone_visibility(source, video, config.paddle_labels),
         "derived_events": derived,  # Step 9c: per-paddle placements (D-081, D-086 to D-089)
+        "derived_gel_events": gel_events,   # Step 9d: per-zone gel applications (D-111)
+        "gel": gel,                         # 9d: gel phase, bottle period and each zone's status
     }
 
 
@@ -464,14 +480,17 @@ def annotation_digest(zip_path: Path) -> str:
 
 def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CONVERSION_REPORT,
            config_path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_CONFIG) -> dict[str, Any]:
-    """Write records.jsonl, export_issues.csv, placement_validation.csv/.md and export_manifest.json."""
+    """Write records.jsonl, export_issues.csv, placement_validation.csv/.md, gel_validation.csv/.md and
+    export_manifest.json."""
     output = check_output(output)
     config = load_config(config_path, engine_path)
     videos = load_conversion_report(conversion_report)
     issues: list[Issue] = []
     validation: list[dict[str, Any]] = []
+    gel_validation: list[dict[str, Any]] = []
     sources = unique_tasks(iter_tasks(backup_root, issues), issues)
-    records = [r for r in (export_record(s, videos, config, issues, validation) for s in sources) if r is not None]
+    records = [r for r in (export_record(s, videos, config, issues, validation, gel_validation) for s in sources)
+               if r is not None]
     output.mkdir(parents=True, exist_ok=True)
     # Written as bytes (LF on every OS), so export_id is the SHA-256 of the file exactly as sent.
     lines = "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records).encode("utf-8")
@@ -481,6 +500,10 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
         writer = csv.DictWriter(stream, fieldnames=VALIDATION_COLUMNS)
         writer.writeheader()
         writer.writerows(validation)
+    with (output / "gel_validation.csv").open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=GEL_VALIDATION_COLUMNS)
+        writer.writeheader()
+        writer.writerows(gel_validation)
     severities = {}
     for issue in issues:
         severities[issue.severity] = severities.get(issue.severity, 0) + 1
@@ -491,6 +514,7 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
         # Identifies exactly this export (the records written); the 9c gate names it (D-088).
         "export_id": hashlib.sha256(lines).hexdigest(),
         "placement_settings_sha256": config.placements.digest(),
+        "gel_settings_sha256": config.gel.digest(),   # the 9d gate names it (D-112)
         "exported_on": date.today().isoformat(),
         "backups": backup_list(backup_root),
         "conversion_report": {"path": _display(conversion_report), "sha256": sha256_file(conversion_report)},
@@ -499,13 +523,18 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
                    "zone_intervals": sum(len(r["zone_visibility"]) for r in records),
                    "screen_intervals": sum(len(r["screen_visibility"]) for r in records),
                    "paddle_intervals": sum(len(r["paddle_visibility"]) for r in records),
-                   "derived_events": sum(len(r["derived_events"]) for r in records)},
+                   "derived_events": sum(len(r["derived_events"]) for r in records),
+                   "derived_gel_events": sum(len(r["derived_gel_events"]) for r in records)},
         "issues": dict(sorted(severities.items())),
     }
     summary = validation_summary(validation, config.placements, manifest)
     manifest["placement_validation"] = summary
     (output / "placement_validation.md").write_text(validation_markdown(summary, validation, config.placements),
                                                     encoding="utf-8")
+    gel_summary = gel_validation_summary(gel_validation, config.gel, manifest)
+    manifest["gel_validation"] = gel_summary
+    (output / "gel_validation.md").write_text(gel_validation_markdown(gel_summary, gel_validation, config.gel),
+                                              encoding="utf-8")
     (output / "export_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
 

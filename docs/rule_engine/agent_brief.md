@@ -79,7 +79,7 @@ once, report under both IDs.
 
 | Order | Rule | Pass when | Depends on | Failure codes |
 |---|---|---|---|---|
-| 1 | R1 Gel applied twice | Two separate gel applications within the approved time period. Order relative to paddle placement is NOT checked. | Approved time period (null for now) | `missing`, `applied_once`, `outside_time_period` |
+| 1 | R1 Gel applied twice | Gel applied once to each placement zone (sternal on the chest, apical on the left side of the ribs), in either order, within the approved time period. Gel must come **before** the paddles are placed: a shock without gel harms the patient (changed 2026-10-17, D-109, D-110; replaces "order relative to paddle placement is NOT checked"). | Approved time period (null for now) | `missing`, `applied_once`, `after_placement`, `outside_time_period` |
 | 2 | R2 Second paddle after first is placed | First paddle taken → first paddle placed firmly → second paddle taken. "Taken" = first frame where it is clearly visible. | First paddle placement | `simultaneous`, `taken_before_first_placed`, `first_missing` |
 | 3 | R8 Apical before sternal | Apical paddle placed before sternal paddle. Both zones visible: compare the two placement times (Pass – Direct or Fail). Only one zone visible: inferred from that zone's placement time vs `first_paddle_placed` (see `implementation_plan.md`, Increment 12) | Per-paddle placement events, first placement time, zone visibility | `wrong_order`, `simultaneous` |
 | 4 | R3 Paddles firmly on chest | Both paddles stable in approved zones before shock; else Pass – Inferred if `shock_delivered_on_screen` OR `paddles_removed_after_shock` is confidently confirmed | Shock time | `not_in_zone`, `placed_after_shock` |

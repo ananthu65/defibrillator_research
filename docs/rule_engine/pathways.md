@@ -59,6 +59,23 @@ and T2 is `paddles_firmly_on_chest`, following the annotators' convention (A-019
 | T2 present, a first placement after T2 + 15 | No event for that paddle (both if parallel) | `placement_disagrees_with_tag` |
 | Gate: no review record for this `export_id` and these settings | The Increment 10 adapter doesn't pass derived placements to the engine (D-088) | — |
 
+#### P-037 Derived per-zone gel application (built, Step 9d; D-111, D-112)
+Built in the rule engine's exporter from the `learner_hand` box (only the hand holding the gel
+bottle, A-024) and the zone boxes. Settings are placeholders.
+
+| Condition | Outcome |
+|---|---|
+| Gel phase | From the start to `first_paddle_firmly_on_the_chest`, else the earliest 9c placement, else `first_paddle_taken`, else the end of the recording |
+| A frame: hand box within `gel_hand_zone_max_gap` (5% of the diagonal) of a zone box, the other visible zone at least 2× further | The frame belongs to the nearer zone (proximity, not overlap, A-025) |
+| A frame: about as near to both zones | Ambiguous: belongs to neither |
+| A visit to a zone (dips up to `gel_exit_frames` = 5 allowed) with at least `gel_dwell_frames` = 10 frames | An application, event `apical_gel_applied` / `sternal_gel_applied`, flagged `derived_gel_application`; separate visits count separately |
+| Zone with an application | **gelled** |
+| No application; zone visible and hand tracked on every frame of the bottle period | **not gelled** |
+| No application; zone not visible throughout the bottle period, or the hand hidden in it | **unknown** |
+| No `learner_hand` box in the gel phase | Every zone **unknown**; review issue `gel_hand_not_tracked` |
+| An application without a `Gel applied` tag within 30 frames, or a tag without an application | Reported in `gel_validation.csv`/`.md`; the event is kept |
+| 9d gate not passed | Neither the events nor the zone statuses reach the engine (D-112) |
+
 ### Stage: adapter
 
 #### P-001 Annotation timeline adapter (built, Increment 10)
@@ -71,6 +88,8 @@ timeline file per video for `rules.run`.
 | Zone coverage per region | → P-030 | — |
 | Derived placements, and the gate passes for this export's ID and settings hash (D-088) | They become events and reach the engine | — |
 | Derived placements, gate not passed | Withheld and counted; the engine never sees them | — |
+| Derived gel applications, and the 9d gate passes for this export's ID and gel settings hash (D-112) | They become events; each zone's gel status becomes the coverage of `apical_gel` / `sternal_gel` (gelled or not gelled → covered, unknown → unknown) | — |
+| Derived gel applications, 9d gate not passed, or an export before version 3 | Withheld and counted; R1 uses the tag-count proxy | — |
 
 #### P-030 Zone coverage for an annotated recording (built, Increment 10)
 | Condition | Coverage of the region (whole recording) | Intervals in the header | Decision |
@@ -357,6 +376,24 @@ the chest regions (OQ-012, D-106).
 With the proposal's sources the coverage rows are unreachable: a shock time always means a shock
 on the screen, which is itself an inference source, and without one a removal infers or the rule
 is Not evaluable (D-107, OQ-061).
+
+#### P-038 R1: gel applied twice, once to each zone, before placement (built, Increment 17; pending until approved)
+The gel phase ends at the first placement (else `first_paddle_taken`). The order between the
+zones and more than two applications are not checked (D-110, OQ-021).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Gel only after the first placement | Fail (D-109) | `after_placement` |
+| Past the 9d gate: both zones gelled | Pass – Direct, then the period check (P-024) | `derived_gel_application`; `timing_not_checked` while the period is unset |
+| Past the gate: one gelled, the other not gelled | Fail | `applied_once` |
+| Past the gate: neither gelled | Fail | `missing` |
+| Past the gate: a zone unknown | Unable to Verify | — |
+| Proxy (before the gate): both zones visible throughout the gel phase, 2+ separate tags | Pass – Direct, then the period check | `timing_not_checked` while unset |
+| Proxy: both zones visible, 1 separate tag | Fail | `applied_once` |
+| Proxy: a zone visible, no tag | Fail | `missing` |
+| Proxy: one zone visible and 1+ tags, or no zone visible | Unable to Verify (the tags may all be on one zone, A-026) | — |
+| Proxy: a low-confidence gel tag, no pass | Unable to Verify | `low_confidence_evidence` |
+| A pass, an approved period exceeded | Fail | `outside_time_period` |
 
 #### P-036 R4: both discharge buttons pressed (built, Increment 16; pending until approved)
 The placement is `paddles_firmly_on_chest`, or past the gate the later derived placement. The
@@ -1066,3 +1103,51 @@ illustration only.)*
 2. Both paddles visible from 10 s to 15 s → **Fail `not_pressed`**.
 3. The sternal paddle visible only until 12 s, out of view, or no paddle tracks → **Unable to
    Verify**.
+
+### W-75 R1 by the tag-count proxy, both zones in view
+*(Built in Increment 17; D-109, D-113, A-026. Before the 9d gate.)*
+1. LS view: both zones visible from 0 s; first placement tagged at 10 s, so the gel phase is 0–10 s.
+2. `Gel applied` at 3 s and 6 s → two separate applications → **Pass – Direct**,
+   `timing_not_checked` (period unset); the overall result is Incomplete.
+3. Only one tag, or two tags 0.3 s apart (under `gel_minimum_gap_seconds`, 0.4 s) → **Fail
+   `applied_once`**. No tag → **Fail `missing`**.
+4. The risk: the learner's arm can hide the nozzle while the zone is visible (A-026).
+
+### W-76 R1 by the proxy with one zone in view
+*(Built in Increment 17; D-113.)*
+1. LL view: only the apical zone is visible in the gel phase.
+2. No tag → **Fail `missing`**. One or two tags → **Unable to Verify**: they may all be on the
+   apical zone.
+
+### W-77 Gel only after the paddles were placed
+*(Built in Increment 17; D-109.)*
+1. First placement at 10 s; the only `Gel applied` tag at 12 s.
+2. **Fail `after_placement`**, whatever the zones show. With a tag at 3 s as well, the late tag
+   doesn't matter: the 3 s tag is counted, and the proxy decides (one application → `applied_once`).
+
+### W-78 Step 9d on one video
+*(Built in Step 9d; D-111.)*
+1. Gel phase 0–80 frames; the bottle hand is tracked from frame 5 to 70.
+2. Frames 20–35: the hand touches the apical zone; the sternal zone is far away → one apical
+   application (16 frames ≥ 10). Frames 45–60 near the sternal zone → one sternal application.
+   Both zones gelled.
+3. The hand only 30 px from each of two neighbouring zones → ambiguous frames, no application.
+4. The hand marked out of view on frames 50–55, and the sternal zone had no application →
+   sternal **unknown**.
+5. No hand box in the gel phase → both zones unknown, review issue `gel_hand_not_tracked`.
+
+### W-79 R1 per zone, past the 9d gate
+*(Built in Increment 17; D-110, D-112, D-113.)*
+1. The 9d gate is approved for this export; regions `apical_gel` and `sternal_gel` are set.
+2. Derived applications on both zones before the placement → **Pass – Direct**,
+   `derived_gel_application`.
+3. Apical gelled, sternal not gelled → **Fail `applied_once`**, even with two `Gel applied` tags
+   (the per-zone status wins over the tag count).
+4. Apical gelled, sternal unknown (hand hidden) → **Unable to Verify**.
+5. Gate not approved → the same video uses the proxy (W-75).
+
+### W-80 R1's time period
+*(Built in Increment 17; D-103, D-110.)*
+1. Applications at 3 s and 6 s.
+2. Period unset → Pass with `timing_not_checked`. An approved 2 s → **Fail
+   `outside_time_period`**. An approved "no limit" → Pass, fully checked.

@@ -27,6 +27,11 @@ becomes one timeline file in the format ``rules.run`` reads: ``{"header": ..., "
 - **Derived placements (Step 9c)** reach the engine only when ``derived_placements_approved()``
   passes for the export's ID and settings hash, and every event carries that settings hash
   (D-088). Otherwise they are withheld and counted.
+- **Derived gel applications (Step 9d)** follow their own gate, ``derived_gel_approved()`` (D-112).
+  Past it, the per-zone gel events are added, and each zone's gel status becomes the coverage of
+  its region (`apical_gel`, `sternal_gel`): gelled or not gelled -> covered (an application there
+  would have been seen), unknown -> unknown. Before it, neither is passed on, and R1 uses the
+  tag-count proxy (D-113).
 
 Exported records stay in the gitignored data folder and are never committed (D-084).
 """
@@ -40,6 +45,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from annotation.derive_gel_applications import GELLED, NOT_GELLED, derived_gel_approved
 from annotation.derive_paddle_placements import derived_placements_approved
 from annotation.export_rule_engine_records import DEFAULT_CONFIG as DEFAULT_EXPORT_CONFIG, load_config as load_export_config
 from rules.config import DEFAULT_PATH, ROOT, load_rules_config
@@ -69,6 +75,9 @@ class AdaptedRecord:
     derived_included: int
     derived_withheld: int
     gate: str
+    gel_included: int = 0
+    gel_withheld: int = 0
+    gel_gate: str = "not in this export"
 
     def timeline(self) -> dict[str, Any]:
         """The record as a timeline file for rules.run."""
@@ -143,6 +152,20 @@ def gate_status(record: dict[str, Any], manifest: dict[str, Any] | None, export_
     return True, "approved"
 
 
+def gel_gate_status(record: dict[str, Any], manifest: dict[str, Any] | None, export_config) -> tuple[bool, str]:
+    """D-112: the 9d gate, like the 9c one, for the export's gel settings."""
+    if "gel" not in record:
+        return False, "not in this export (made before exporter version 3)"
+    if manifest is None:
+        return False, "not approved: no export_manifest.json beside the records"
+    if not derived_gel_approved(export_config.gel, manifest):
+        return False, "not approved: no review recorded for this export_id and these gel settings"
+    settings = manifest.get("gel_settings_sha256")
+    if any(e["metadata"].get("settings_sha256") != settings for e in record["derived_gel_events"]):
+        return False, "not approved: a derived gel event was made with other settings than the export's"
+    return True, "approved"
+
+
 def adapt_record(record: dict[str, Any], rules_config, export_config, manifest: dict[str, Any] | None = None) -> AdaptedRecord:
     if not isinstance(record, dict) or record.get("kind") != RECORD_KIND or record.get("schema_version") != 1:
         raise ValueError("not a rule-engine annotation record (kind rule_engine_annotation_record, schema_version 1)")
@@ -158,8 +181,24 @@ def adapt_record(record: dict[str, Any], rules_config, export_config, manifest: 
             events.append(Event(derived["event_name"], derived["timestamp_seconds"], derived["timestamp_seconds"],
                                 SOURCE, 1.0, evidence_type=derived["evidence_type"], camera_angle=view,
                                 event_id=derived["id"], metadata=metadata))
+    gel_approved, gel_gate = gel_gate_status(record, manifest, export_config)
+    gel_events = record.get("derived_gel_events", [])
+    if gel_approved:
+        for derived in gel_events:
+            metadata = {**_metadata(record, derived["frame"], "derived_from_annotation"), "derived_gel_application": True,
+                        "flags": list(derived["flags"]), "method": derived["method"], **derived["metadata"]}
+            events.append(Event(derived["event_name"], derived["timestamp_seconds"], derived["timestamp_seconds"],
+                                SOURCE, 1.0, evidence_type=derived["evidence_type"], camera_angle=view,
+                                event_id=derived["id"], metadata=metadata))
     confirmed = export_config.confirmed_not_visible(task)
     coverage, visibility, zones = {}, {}, []
+    if gel_approved:   # each zone's gel status as the coverage of its region (D-111)
+        for zone in record["gel"]["zones"]:
+            if zone["region"] in rules_config.engine.regions:
+                status = COVERED if zone["status"] in (GELLED, NOT_GELLED) else UNKNOWN
+                coverage[f"region:{zone['region']}"] = status
+                zones.append(ZoneCoverage(zone["region"], zone["zone_label"], status, f"gel {zone['status']}"
+                                          + (f": {zone['reason']}" if zone["reason"] else "")))
     for label, region, keys in visibility_regions(export_config, rules_config):
         status, reason, intervals = zone_coverage(record, label, confirmed, keys)
         coverage[f"region:{region}"] = status
@@ -171,7 +210,8 @@ def adapt_record(record: dict[str, Any], rules_config, export_config, manifest: 
                             visibility=visibility, flags=(ANNOTATION_COVERAGE_ASSUMED,))
     count = len(record["derived_events"])
     return AdaptedRecord(task, tuple(events), header, tuple(zones), count if approved else 0,
-                         0 if approved else count, gate)
+                         0 if approved else count, gate, len(gel_events) if gel_approved else 0,
+                         0 if gel_approved else len(gel_events), gel_gate)
 
 
 def load_records(path: Path) -> list[dict[str, Any]]:
@@ -214,9 +254,11 @@ def main(argv: list[str] | None = None) -> int:
         (output / f"{item.task_id}.json").write_text(json.dumps(item.timeline(), indent=2) + "\n", encoding="utf-8")
         summary.append({"task": item.task_id, "events": len(item.events), "derived_included": item.derived_included,
                         "derived_withheld": item.derived_withheld, "gate": item.gate,
+                        "gel_included": item.gel_included, "gel_withheld": item.gel_withheld, "gel_gate": item.gel_gate,
                         "zones": [asdict(z) for z in item.zones]})
         zones = ", ".join(f"{z.region} {z.status}" for z in item.zones)
-        print(f"{item.task_id}: {len(item.events)} events; {zones}; derived placements: {item.gate}")
+        print(f"{item.task_id}: {len(item.events)} events; {zones}; derived placements: {item.gate}; "
+              f"derived gel: {item.gel_gate}")
     (output / "adapter_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"{len(adapted)} timelines written to {output}" + (f" (excluded: {', '.join(args.exclude)})" if args.exclude else ""))
     return 0

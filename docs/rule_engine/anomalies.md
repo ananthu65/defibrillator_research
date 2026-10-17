@@ -137,9 +137,9 @@ that timeline (`rules/engine.py`).
 |---|---|---|
 | `annotation_coverage_assumed` | Annotation adapter (P-001, Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result carries this flag, and the overall result is marked `development_data` (D-066), so it is never mistaken for a real assessment |
 
-## Rule-result flags (`rules/video_rules.py` `FLAGS`, Increments 11 to 16)
+## Rule-result flags (`rules/video_rules.py` `FLAGS`, Increments 11 to 17)
 
-Raised by R2, R8, R3 and R4 (P-032, P-015, P-035, P-036). They report pending until they are approved.
+Raised by R2, R8, R3, R4 and R1 (P-032, P-015, P-035, P-036, P-038). They report pending until they are approved.
 
 | Code | Raised by | Meaning |
 |---|---|---|
@@ -147,6 +147,7 @@ Raised by R2, R8, R3 and R4 (P-032, P-015, P-035, P-036). They report pending un
 | `derived_placement` | R2 and R8 | The result rests on a placement derived from the annotated boxes (D-081), used only past the gate (D-088) |
 | `placement_missing` | R8 (D-058) | A paddle's zone was in view during the placement phase (D-099), but its placement event is missing: either the one visible zone's paddle, or one of two visible placements. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
 | `contradictory` | R8, R4 | R8: the only visible paddle was placed clearly before the first placement. R4: the buttons were pressed only after the shock on the screen (D-108). Unable to Verify |
+| `derived_gel_application` | R1 (D-111, D-112) | The result rests on a per-zone gel application derived from the `learner_hand` and zone boxes, used only past the 9d gate |
 | `inferred_from_removal` | R3, R4 (D-107) | Pass – Inferred from the paddle removal. Paddles are sometimes removed without a successful shock (A-021, D-102), so the inference may be wrong; the overall result then can't be Pass, because R5 fails or is Unable to Verify |
 | `inferred_fail_policy_undecided` | R8 (D-015) | The one-zone inference shows the sternal paddle first (an inferred mistake). It is Unable to Verify until `inferred_fail_outcome` is decided (OQ-005) |
 
@@ -168,6 +169,7 @@ learner, and never reach a rule result or the report.
 | `unrecognized_task_name`, `invalid_cvat_json`, `missing_annotations_json`, `no_tasks_in_archive`, `no_zip_archives`, `unreadable_zip` | error | The backup cannot be read as a CVAT task |
 | `placement_duplicate_paddle_box` | review | Step 9c (P-031): two boxes of one paddle label overlap during its placement, so no event for that paddle (D-087). Ananth fixes the tracks, which also affect the training labels |
 | `placement_disagrees_with_tag` | review | Step 9c: a derived placement contradicts T1 or T2 (D-086), so no event (for both paddles when the earlier one disagrees with T1) |
+| `gel_hand_not_tracked` | review | Step 9d (P-037): no `learner_hand` box in the gel phase, so every zone's gel is unknown (D-111) |
 
 **Flags on derived placement events (`derived_events[].flags`, Step 9c):** `derived_placement`
 (every derived event; it is direct evidence with the method in metadata, D-081) and
@@ -176,6 +178,11 @@ learner, and never reach a rule result or the report.
 approved, D-091). They start as exporter flags. Since Increment 12, R2 and R8 carry both onto
 their results as rule-result flags (see above; output contract v5). The reasons for "no event" (zone unknown, never settled, T1 missing) are
 in `placement_validation.csv`, not export issues.
+
+**Flags on derived gel events (`derived_gel_events[].flags`, Step 9d):** `derived_gel_application`
+(every derived gel event; direct evidence with the zone, method and settings in metadata, D-111).
+R1 carries it onto its results. Disagreements with the `Gel applied` tags are in
+`gel_validation.csv`, not export issues.
 
 **Audit review list (`issues.csv`, P-029):**
 
@@ -187,6 +194,7 @@ in `placement_validation.csv`, not export issues.
 | `zone_pattern_off` | Zone tracks differ from the view's usual pattern (config), including no zone; missing zones excused by a reviewed exception don't count (D-077, D-082) |
 | `zone_exception_contradicted` | A reviewed "not visible" exception for a zone that is visible |
 | `zone_pattern_unknown_view` | No usual pattern is configured for the view |
+| `gel_hand_not_tracked` | No `learner_hand` box before the first-placement tag (else `first_paddle_taken`): gel applications can't be derived (9d, D-111) |
 
 **Audit information only (`info.csv`), never annotation issues:** `tag_sequence` (the learner's
 order), `repeated_tag` (the same tag further apart than 15 frames), `first_placement_tag_missing`,
@@ -199,7 +207,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 
 | Rule | Failure codes |
 |---|---|
-| R1 Gel applied twice | `missing`, `applied_once`, `outside_time_period` |
+| R1 Gel applied twice, once to each zone, before placement (**built**, Increment 17, P-038; reported pending until approved) | `after_placement` (gel only after the first placement, D-109), `applied_once` (one zone gelled and the other not, or one separate tag with both zones visible), `missing` (no gel while it could have been seen), `outside_time_period` (only once an approved period is exceeded; unset now) (D-110, D-113) |
 | R2 Second paddle after first placed (**built**, Increment 11, P-032; reported pending until approved) | `simultaneous` (also a possible parallel placement once the gate is approved, D-091), `taken_before_first_placed`, `first_placement_not_observed` (no first placement seen while both zones were visible throughout the window: either a parallel placement or the second paddle taken first, A-019, D-097; it replaces the brief's original "first missing" code) |
 | R8 Apical before sternal (**built**, Increment 12, P-015; reported pending until approved) | `wrong_order` (direct, or inferred once the inferred-fail setting is decided as fail, D-015), `simultaneous` (also a parallel placement past the gate, with the cause flag, D-098) |
 | R3 Paddles firmly on chest (**built**, Increment 15, P-035; reported pending until approved) | `placed_after_shock` (a firm placement tagged only after the shock), `missing` (no firm placement and no inference, while both placement zones were visible from first paddle taken to the shock, D-106); `not_in_zone` is not produced until the chest regions are approved (OQ-012) |

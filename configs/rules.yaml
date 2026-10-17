@@ -18,7 +18,7 @@ engine: configs/rule_engine/engine.yaml           # engineering placeholders and
 timing_limits:
   charge_to_shock_seconds:          {value: null, note: "pre-existing key; not used by any rule yet"}
   shock_to_compressions_seconds:    {value: null, note: "shock -> start/resume compressions command (planned for R7/A6); not used by any rule yet"}
-  gel_application_period_seconds:   {value: null, note: "period for the two gel applications (planned for R1); not used by any rule yet"}
+  gel_application_period_seconds:   {value: null, note: "period for the two gel applications, one per zone (R1, Increment 17); unset, so timing not checked; the answer may be no limit (D-103)"}
   stop_to_shock_seconds:            {value: null, note: "stop-compressions command -> shock (planned for A4); not used by any rule yet"}
   shock_command_tolerance_seconds:  {value: null, note: "verbal shock command may precede the shock by this (planned for A5); not used by any rule yet"}
   shock_to_removal_seconds:         {value: null, note: "shock -> paddles removed (R6, Increment 14); unset, so timing not checked; the supervisor's answer may be no limit (no_limit: true, D-103)"}
@@ -37,6 +37,8 @@ timing_limits:
 # status: pending | approved. Only approved rules with an implementation are evaluated and
 # counted; pending rules are reported as pending.
 rules:
+  # R1: gel once on each placement zone, either order, before the paddles are placed (D-109, D-110);
+  # per zone past the 9d gate, the tag-count proxy before it (D-113).
   - {id: R1, title: Gel applied twice, status: pending, implementation: null, parameters: {}}
   - {id: R2, title: Second paddle taken after the first is placed, status: pending, implementation: null, parameters: {}}
   - {id: R8, title: Apical paddle placed before sternal, status: pending, implementation: null, parameters: {}}

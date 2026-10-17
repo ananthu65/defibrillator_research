@@ -48,3 +48,25 @@ derived_placements:
   # Fill all four after reviewing placement_validation.md of that export: export_id and
   # placement_settings_sha256 are copied from its export_manifest.json.
   reviewed_for_r8: {reviewed_by: null, reviewed_on: null, export_id: null, placement_settings_sha256: null}
+
+# Step 9d: per-zone gel applications derived from the learner_hand and zone boxes (D-111, D-112).
+# learner_hand covers only the hand holding the gel bottle and is tracked during gel application
+# (A-024). Gel is applied on or near a zone, not strictly inside it (A-023, A-025), so proximity is
+# used, not overlap. The gel phase ends at derived_placements.first_placement_tag, else the earliest
+# 9c placement of the same export, else first_paddle_taken_tag (9d's settings hash includes 9c's).
+derived_gel:
+  hand_label: learner_hand
+  zones:   # CVAT zone label -> its canonical gel event and the engine region carrying its gel status (R1)
+    apical_placement_zone:  {event: apical_gel_applied,  region: apical_gel}
+    sternal_placement_zone: {event: sternal_gel_applied, region: sternal_gel}
+  gel_tag: Gel applied                     # CVAT tag, used to cross-check (gel_validation.csv)
+  first_paddle_taken_tag: first_paddle_taken
+  gel_hand_zone_max_gap:    {value: 0.05, placeholder: true}   # gap between hand and zone boxes / frame diagonal
+  gel_dwell_frames:         {value: 10,   placeholder: true}   # frames near the zone for one application
+  gel_zone_nearer_ratio:    {value: 2.0,  placeholder: true}   # the other zone must be this many times further
+  gel_exit_frames:          {value: 5,    placeholder: true}   # a dip out of range this short stays in the visit
+  gel_tag_agreement_frames: {value: 30,   placeholder: true}   # a Gel applied tag this close agrees
+  # The 9d gate (D-112): R1 may use derived gel applications only for the export and settings reviewed
+  # here. Fill all four after reviewing gel_validation.md: copy export_id and gel_settings_sha256 from
+  # that export's export_manifest.json.
+  reviewed_for_r1: {reviewed_by: null, reviewed_on: null, export_id: null, gel_settings_sha256: null}

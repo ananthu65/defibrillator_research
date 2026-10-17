@@ -249,7 +249,8 @@ class ThroughTheEngine(unittest.TestCase):
         self.assertTrue(result.overall.development_data)
         self.assertEqual(result.overall.result, "incomplete")
         self.assertEqual({r: s.status for r, s in result.context.zone_visibility.items()},
-                         {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown"})
+                         {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown",
+                          "apical_gel": "unknown", "sternal_gel": "unknown"})
 
     def test_header_validation(self):
         regions = tuple(RULES.engine.regions)

@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 8
+**Report version:** 9
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -34,6 +34,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 6 | 2026-10-17 | **Rule flag added** (R5, Increment 13): `order_not_checked`. R5 checked the shock's presence but not its order, because the steps that must precede it are not set yet (OQ-013), or one of them was not observed. Like `timing_not_checked`, it makes the overall result Incomplete, never Pass, under the new category "order not checked" in `overall.incomplete` (D-100). R5 is implemented, so `missing` (R5) and `wrong_order` (R5) are now built. R5 still reports `pending` until it is approved |
 | 7 | 2026-10-17 | **Field added:** each entry of `configuration.timing_limits` gains `no_limit` (true or false). `no_limit: true` with an approver is a decision that no time limit applies: the rule passes fully, without `timing_not_checked` (D-103). `value: null` with `no_limit: false` still means "not decided yet" (D-062). R6 is implemented (Increment 14), so `removed_before_shock`, `missing` (R6) and `too_late` (R6, only once an approved limit is exceeded) are now built. `paddles_removed_after_shock` doesn't prove a shock (D-104). R6 still reports `pending` until it is approved |
 | 8 | 2026-10-17 | **Rule flag added** (R3/R4): `inferred_from_removal`. A Pass – Inferred from the paddle removal, which can happen without a successful shock (A-021, D-107). **New regions:** `apical_paddle` and `sternal_paddle` (each paddle's visibility, R4's coverage, D-108) appear in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R3 and R4 are implemented (Increments 15-16), so `placed_after_shock`, `missing` (R3), `before_placement` and `not_pressed` are built. `contradictory` and `order_not_checked` can also come from R4. R3 and R4 still report `pending` until they are approved |
+| 9 | 2026-10-17 | **Failure code added** (R1): `after_placement`, gel applied only after the first paddle placement (D-109). **Rule flag added:** `derived_gel_application`, a result resting on a gel application derived from the boxes (D-111). **New regions:** `apical_gel` and `sternal_gel` (whether gel on that zone could have been seen; set only past the 9d gate, D-112) appear in `context.zone_visibility` and `context.header.coverage`. **Meaning changed:** R1's `applied_once` and `missing` are now per zone (one gel application on each placement zone, D-110). R1 is implemented (Increment 17), so `applied_once`, `outside_time_period` and `missing` (R1) are built. R1 still reports `pending` until it is approved |
 
 ## How to get the report
 
@@ -94,7 +95,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 8,
+  "report_version": 9,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -200,6 +201,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
 | `placement_missing` | built (R8) | R8: a paddle's zone was in view during the placement phase but its placement was not observed, so the order cannot be judged; R3 reports the missing placement (D-058) |
 | `contradictory` | built (R8, R4) | The evidence contradicts itself, so Unable to Verify. R8: the only visible paddle was placed clearly before the first placement. R4: the buttons were pressed only after the shock on the screen |
+| `derived_gel_application` | built (v9) | R1: the result rests on a per-zone gel application derived from the annotated hand and zone boxes (only past the 9d gate, D-112), not on a tag |
 | `inferred_from_removal` | built (v8) | R3/R4 passed by inference from the paddle removal. Paddles are sometimes removed **without a successful shock** (A-021), so the step may not have been done properly; R5 then fails or is Unable to Verify, so the overall result is not Pass (D-102, D-107) |
 | `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: the one-zone inference shows the sternal paddle first, an inferred mistake; reported as Unable to Verify until it is decided whether an inferred mistake is a Fail |
 | `possible_parallel_placement` | built (v5) | **Shared cause flag.** Both paddles were placed at the same time, a learner mistake seen in the derived placements (only once the gate is approved). It appears on **both R2 and R8**, each failed with `simultaneous`. They are separate checklist criteria, but **one action caused both failures**, so the feedback can say so (D-098). Whether this counts as one mistake or two is OQ-059 |
@@ -233,9 +235,10 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 
 | Code | Status | Rules | Meaning for feedback |
 |---|---|---|---|
-| `missing` | built (R3, R5, R6; the others planned) | R1, R3, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R3: the paddles were not seen firmly on the chest, no inference applied, and both placement zones were visible from first paddle taken to the shock (D-106). For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
-| `applied_once` | planned | R1 | Gel applied only once |
-| `outside_time_period` | planned | R1 | The two gel applications were not within the approved period |
+| `missing` | built (R1, R3, R5, R6; the others planned) | R1, R3, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R1: no gel on either zone, while it could have been seen (D-113). For R3: the paddles were not seen firmly on the chest, no inference applied, and both placement zones were visible from first paddle taken to the shock (D-106). For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
+| `applied_once` | built (R1) | R1 | Gel applied to one placement zone only: the other zone had none, although it could have been seen (D-110, D-113) |
+| `after_placement` | built (R1, v9) | R1 | Gel applied only after the first paddle was placed. A shock without gel harms the patient (D-109) |
+| `outside_time_period` | built (R1) | R1 | The two gel applications were further apart than the approved period (unset now, so not produced yet) |
 | `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
 | `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
 | `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |

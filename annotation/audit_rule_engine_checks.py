@@ -10,6 +10,8 @@ Review list (``issues.csv``): problems an annotator should look at:
   repeated_incident_tag     one tag twice within the window (15 frames): possibly the same incident tagged twice
   zone_pattern_off          zone tracks that differ from the view's usual pattern (configured), including none
   zone_exception_contradicted  a reviewed "not visible" exception for a zone that is visible
+  gel_hand_not_tracked      no learner_hand box in the gel phase (before the first placement tag, else
+                            first_paddle_taken), so whether gel was applied can't be derived (9d, D-111)
 Information only (``info.csv``), never annotation issues: the learner's procedure order, tags repeated
 further apart than the window, a missing first-placement tag, a zone track that is never visible
 (not covered), and confirmed zone exceptions.
@@ -34,6 +36,7 @@ from typing import Any
 
 from annotation.audit_cvat_backups import Issue
 from annotation.build_yolo_video_dataset import shape_box, track_box_at
+from annotation.derive_gel_applications import gel_phase, hand_frames
 from annotation.export_rule_engine_records import (
     DEFAULT_CONFIG,
     DEFAULT_CONVERSION_REPORT,
@@ -82,6 +85,7 @@ def audit_task(source: TaskSource, video: VideoInfo | None, config: ExportConfig
     else:
         _duplicate_paddle_boxes(source, config, issues, where)
         _moving_zones(source, video, config, issues, where)
+        _gel_hand(source, video, config, issues, where)
     return _zone_pattern(source, video, config, issues, info, where)
 
 
@@ -109,6 +113,16 @@ def _tag_information(source, info, where):
                       or "no tags", **where))
     if not any(label == FIRST_PLACEMENT_TAG for _, label in ordered):
         info.append(Issue("info", "first_placement_tag_missing", label=FIRST_PLACEMENT_TAG, **where))
+
+
+def _gel_hand(source, video, config, issues, where):
+    """9d (D-111): the bottle hand must be tracked in the gel phase. The audit has no derived
+    placements, so the phase ends at the first-placement tag, else first_paddle_taken."""
+    end, ended_by = gel_phase(source, config.gel)
+    if not hand_frames(source, video, config.gel, end):
+        issues.append(Issue("review", "gel_hand_not_tracked", label=config.gel.hand_label,
+                            details=f"no {config.gel.hand_label} box before frame {end} ({ended_by}); gel "
+                            "applications can't be derived for this video", **where))
 
 
 def _duplicate_paddle_boxes(source, config, issues, where):

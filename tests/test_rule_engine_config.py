@@ -51,8 +51,8 @@ class RepositoryConfig(unittest.TestCase):
         self.assertTrue(limit.approved)
 
     def test_unused_clinical_limits_are_kept_null_with_a_note(self):
-        for name in ("shock_to_compressions_seconds", "gel_application_period_seconds", "stop_to_shock_seconds",
-                     "shock_command_tolerance_seconds", "charge_to_shock_seconds"):
+        for name in ("shock_to_compressions_seconds", "stop_to_shock_seconds", "shock_command_tolerance_seconds",
+                     "charge_to_shock_seconds"):
             with self.subTest(name=name):
                 limit = self.config.limit(name)
                 self.assertIsNone(limit.value)
@@ -62,6 +62,9 @@ class RepositoryConfig(unittest.TestCase):
         removal = self.config.limit("shock_to_removal_seconds")   # used by R6 (Increment 14), still unset
         self.assertEqual((removal.value, removal.no_limit, removal.approved), (None, False, False))
         self.assertIn("may be no limit", removal.note)
+        period = self.config.limit("gel_application_period_seconds")   # used by R1 (Increment 17), still unset
+        self.assertEqual((period.value, period.no_limit, period.approved), (None, False, False))
+        self.assertIn("may be no limit", period.note)
 
     def test_r3_r4_inference_sources_follow_the_proposal(self):
         # D-102: kept as in the proposal despite the observed contradiction (A-021, OQ-060)
@@ -75,9 +78,9 @@ class RepositoryConfig(unittest.TestCase):
         self.assertIn("simultaneous_window_seconds", self.config.engine.placeholders)
         self.assertIn("placement_match_window_seconds", self.config.engine.placeholders)
         self.assertEqual(self.config.engine.undecided, [
-            "coverage_policy.outcomes.unknown", "expected_counts.both_paddle_buttons_pressed",
-            "expected_counts.gel_applied", "expected_counts.paddles_firmly_on_chest", "inferred_fail_outcome",
-            "unable_to_verify_outcome"])
+            "coverage_policy.outcomes.unknown", "expected_counts.apical_gel_applied",
+            "expected_counts.both_paddle_buttons_pressed", "expected_counts.gel_applied", "expected_counts.paddles_firmly_on_chest",
+            "expected_counts.sternal_gel_applied", "inferred_fail_outcome", "unable_to_verify_outcome"])
         self.assertIs(self.config.engine.value("assume_first_taken_is_apical"), False)
         self.assertIsNone(self.config.engine.value("unable_to_verify_outcome"))
         self.assertEqual(self.config.engine.coverage_outcomes["covered"].value, "fail")

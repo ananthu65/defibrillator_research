@@ -11,7 +11,7 @@ confidence_thresholds:   # events below the threshold are not used as evidence (
   audio:      {value: 0.5, placeholder: true}
 
 simultaneous_window_seconds:    {value: 0.5, placeholder: true}  # two events this close count as simultaneous
-gel_minimum_gap_seconds:        {value: 1.0, placeholder: true}  # R1: two gel events closer than this are one application
+gel_minimum_gap_seconds:        {value: 0.4, placeholder: true}  # R1: two gel events closer than this are one application (0.4 since 2026-10-17, OQ-018)
 placement_match_window_seconds: {value: 0.5, placeholder: true}  # R8: visible-zone placement "same time" as first_paddle_placed
 assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
 duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
@@ -47,6 +47,10 @@ coverage_policy:
     # each paddle region by name (D-108).
     apical_paddle:  []
     sternal_paddle: []
+    # Visibility-only regions for R1: whether a gel application at that zone could have been seen
+    # during the bottle period (Step 9d; the adapter sets them only past the 9d gate, D-111, D-112).
+    apical_gel:     []
+    sternal_gel:    []
 
 inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagged inferred_fail_policy_undecided}
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}
@@ -67,6 +71,8 @@ review_anomalies:
 # Every value is a placeholder until the supervisor answers the repeated-actions questions.
 expected_counts:
   gel_applied:                   {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  apical_gel_applied:            {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  sternal_gel_applied:           {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
   first_paddle_taken:            {value: {exactly: 1}, placeholder: true}
   first_paddle_placed:           {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
   second_paddle_taken:           {value: {exactly: 1}, placeholder: true}

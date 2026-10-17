@@ -92,6 +92,7 @@ agree; it can be a small wrapper around the event list, so the `Event` schema do
 | `sternal_paddle_placed` | **Per-paddle placement**: sternal paddle placed in its zone | R8, R3 | Required |
 | `paddles_firmly_on_chest` | Both paddles stable in the approved zones | R3 | Required |
 | `both_paddle_buttons_pressed` | Both discharge buttons pressed | R4 | Required |
+| `apical_gel_applied`, `sternal_gel_applied` | Gel applied to that placement zone, one event per application (D-111) | R1 | Required for a per-zone R1 (otherwise R1 falls back to counting `gel_applied`) |
 | `shock_delivered_on_screen` | New shock indication on the approved screen (exactly one per recording expected) | R5, R3/R4 inference, shock time | Required |
 | `paddles_removed_after_shock` | Paddles removed from the chest | R6, R3/R4 inference, shock-time fallback | Required |
 | `apical_paddle_taken`, `sternal_paddle_taken` *(proposed names)* | **Per-paddle taken**: which paddle was taken | Future checks on R2/R8 | If feasible |
@@ -121,6 +122,23 @@ Ananth runs the rule engine's exporter and audit on the final backups and sends 
 records, the export manifest and the audit outputs, never media (D-083, D-085). Instructions and
 the items to fix in the backups:
 [docs/annotation/rule_engine_export_howto.md](../annotation/rule_engine_export_howto.md).
+
+### Per-zone gel applications (D-111)
+
+Video postprocessing should produce **per-zone gel application events**, `apical_gel_applied` and
+`sternal_gel_applied`, from the `learner_hand` and zone detections, using the same logic as the
+rule engine's exporter (Step 9d, `annotation/derive_gel_applications.py`). This mirrors the
+per-paddle placements.
+- **Proximity:** the hand box near a zone box (gap over the frame diagonal), not overlap.
+- **Nearest zone:** the nearer zone only when the other is clearly further.
+- **Visits and dwell:** a minimum number of frames near the zone; short dips allowed.
+- **Gel phase:** before the first paddle placement.
+
+It should also report, per zone, whether an application **could have been seen** (zone and bottle
+hand in view during the bottle period), as the visibility of regions `apical_gel` and
+`sternal_gel`. Without these, R1 falls back to counting `gel_applied` events against zone
+visibility, a weaker proxy (D-113, A-026). The exporter's settings are placeholders, to be tuned
+from `gel_validation.md` before they are reused.
 
 ### Sanity checks needed from video postprocessing
 
@@ -169,7 +187,9 @@ provisional** until the medical-faculty supervisor confirms them.
 ## Open items to agree
 
 1. **Per-paddle placement:** how video postprocessing will produce `apical_paddle_placed` and
-   `sternal_paddle_placed`. CVAT has no per-paddle placement tags today.
+   `sternal_paddle_placed`. CVAT has no per-paddle placement tags today. Likewise the per-zone gel
+   applications (`apical_gel_applied`, `sternal_gel_applied`) from the `learner_hand` and zone
+   detections (D-111).
 2. **Zone visibility:** the format, and for annotation timelines, where it comes from
    (`events.jsonl` has no zone tracks).
 3. **Per-paddle taken events:** whether they are feasible, and their final names.

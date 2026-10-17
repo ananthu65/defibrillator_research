@@ -3888,3 +3888,167 @@ with 0.
 
 ### Next
 Increment 17 (R1). Nothing is committed; commit only when Arnikan says so.
+
+## Step 9d and Increment 17: derived gel applications and R1 (2026-10-17)
+
+Increment 16 was committed and pushed on instruction (c309b92). The how-to update for exporter
+version 2 was not committed; it is superseded here by version 3.
+
+### Decisions recorded (Arnikan)
+- **D-109:** gel must be applied before the paddles are placed (a shock without gel harms the
+  patient). Gel only after the first placement → `after_placement` (new code). Replaces D-018's
+  "order versus placement not checked".
+- **D-110:** gel twice means once on each placement zone (sternal on the chest, apical on the left
+  side of the ribs), in either order. Replaces D-018's "two separate applications".
+- **D-111 (Step 9d):** per-zone gel applications derived in the rule engine's exporter from the
+  `learner_hand` and zone boxes: gel phase, proximity (not overlap), nearest-zone matching, visits
+  and dips, per-zone status (gelled, not gelled, unknown), `gel_hand_not_tracked`, cross-check with
+  the tags in `gel_validation.csv`/`.md`.
+- **D-112:** the 9d gate (`derived_gel.reviewed_for_r1`, export ID and 9d settings hash). R1 uses
+  derived gel only past it.
+- **D-113 (R1):** per zone past the gate, the tag-count proxy before it, and the time period
+  unset (`timing_not_checked`).
+- **Assumptions:** A-023 (`Gel applied` tagged when the nozzle is on or near a zone), A-024 (the
+  `learner_hand` box is only the bottle hand, tracked during gel in every video), A-025 (the hand
+  is near the zone, sometimes overlapping, rarely further), A-026 (the proxy's risk: an arm can
+  hide the nozzle while the zone is visible).
+
+### What was done
+- **`annotation/derive_gel_applications.py` (new, P-037):**
+  - **Settings:** the `derived_gel` section of `annotation_export.yaml` (placeholders: gap 0.05 of
+    the diagonal, dwell 10 frames, nearer ratio 2.0, exit 5 frames, tag window 30 frames), with the
+    `reviewed_for_r1` gate.
+  - **Settings hash:** includes the 9c settings hash, because the gel phase may end at a 9c
+    placement. The exporter can't check the 9c gate itself: the export ID is the hash of its own
+    output.
+- **Exporter (version 3):**
+  - **Records:** `derived_gel_events` and `gel` (the phase, bottle period and each zone's status).
+  - **New files:** `gel_validation.csv`/`.md`.
+  - **Manifest:** `gel_settings_sha256`, the `derived_gel_events` count and the `gel_validation`
+    summary.
+  - **Issues:** `gel_hand_not_tracked` in the export issues.
+- **Audit:** `gel_hand_not_tracked` on the review list. The audit has no derived placements, so
+  its gel phase ends at the first-placement tag, else `first_paddle_taken`.
+- **Engine and adapter:**
+  - **Vocabulary:** new canonical events `apical_gel_applied` and `sternal_gel_applied`, with
+    undecided counts (OQ-021).
+  - **Regions:** visibility-only `apical_gel` and `sternal_gel`.
+  - **Adapter:** passes the gel events, and each zone's status as region coverage, only past the 9d
+    gate.
+- **R1 (`gel_applied_twice`, P-038):**
+  - `after_placement` first;
+  - then per zone when the gel regions are in the header;
+  - otherwise the tag-count proxy;
+  - a pass goes through the period check.
+  - The first placement is `first_paddle_placed` or the earliest per-paddle placement. A gel tag
+    within the simultaneous window after it still counts. Without a placement time,
+    `after_placement` isn't judged and the phase ends at `first_paddle_taken`.
+- **Output contract version 9:** new failure code `after_placement`, new flag
+  `derived_gel_application`, new regions `apical_gel` and `sternal_gel`. R1's `applied_once` and
+  `missing` are now per zone; `applied_once`, `outside_time_period` and `missing` (R1) are built.
+- **R1 stays pending** in `rules.yaml`.
+- **Re-export needed:** the interim export has no hand geometry, so derived gel needs a re-export
+  with exporter version 3. The how-to now asks for version 3 and the gel validation files.
+  Ananth's files are untouched.
+
+### Proxy check on the interim export (item 12)
+Source: the interim export of 2026-10-16 (38 videos), tags and zone visibility only. Gel phase:
+start → `first_paddle_firmly_on_the_chest` (37 videos), else `first_paddle_taken` (1). Separate
+applications: `Gel applied` tags in the gel phase, merged when closer than
+`gel_minimum_gap_seconds`.
+
+**17 videos** have both zones visible throughout the gel phase (13 LS, 4 T). The other 21 are the
+12 LL videos (no sternal zone) and 9 T videos. No gel tag came after the first placement in any
+video.
+
+**First run, with the 1.0 s placeholder:** 0 videos with no application, 10 with one, 7 with two
+or more. Six of the ten (P03_LS, P03_T, P04_LS, P12_LS, P13_LS, P14_LS) had two tags 0.5–0.97 s
+apart, merged by the 1.0 s gap.
+
+**Rerun with 0.4 s (set by Arnikan on 2026-10-17, still a placeholder, OQ-018):**
+
+| Separate applications | Videos |
+|---|---|
+| 0 | 0 |
+| 1 | **4** (P15_LS, P31_LS, P33_LS, P33_T) |
+| 2 or more | 13 |
+
+Per video (the `Gel applied` tags in the gel phase, frame and seconds):
+
+| Video | Tags | Separate applications |
+|---|---|---|
+| P01_LS | 288 (9.60), 323 (10.77) | 2 |
+| P01_T | 260 (8.67), 296 (9.87) | 2 |
+| P03_LS | 198 (6.60), 226 (7.53) | 2 (0.93 s apart; for Arnikan's review) |
+| P03_T | 166 (5.53), 193 (6.43) | 2 |
+| P04_LS | 101 (3.37), 126 (4.20) | 2 |
+| P05_LS | 223 (7.43), 261 (8.70) | 2 |
+| P06_LS | 226 (7.53), 259 (8.63), 260 (8.67) | 2 (259 and 260 are 0.03 s apart, the audit's near-duplicate, merged) |
+| P07_LS | 259 (8.63), 303 (10.10) | 2 |
+| P07_T | 197 (6.57), 250 (8.33) | 2 |
+| P12_LS | 164 (5.47), 179 (5.97) | 2 (0.50 s apart, also on the audit's list as a possible duplicate; for Arnikan's review) |
+| P13_LS | 170 (5.67), 199 (6.63) | 2 |
+| P14_LS | 186 (6.20), 211 (7.03) | 2 |
+| P15_LS | 236 (7.87) | **1** (for Arnikan's review) |
+| P31_LS | 194 (6.46) | **1** (for Arnikan's review) |
+| P32_LS | 179 (5.96), 210 (7.00) | 2 |
+| P33_LS | 466 (15.53) | **1** (for Arnikan's review) |
+| P33_T | 427 (14.24) | **1** (for Arnikan's review) |
+
+**What it shows:**
+- **The four single-tag videos:** under the proxy, R1 would fail them `applied_once`. Either the
+  second application wasn't visible (A-026's risk), or the learner gelled one zone.
+- **P12_LS:** its pair, 0.5 s apart, now counts as two applications. Arnikan reviews whether it is
+  one zone each or the same application tagged twice.
+
+### Tests (628 → 679)
+- **`tests/test_rule_engine_derived_gel.py` (24):**
+  - **proximity:** touching; at the threshold and just beyond; near without overlap;
+  - **nearest zone:** clearly nearer; ambiguous; the ratio deciding; the other zone not visible;
+  - **visits:** a short dip stays one visit; a longer dip makes two; too short a visit; both zones
+    in either order;
+  - **missed applications:** hidden hand frames → unknown; zone not visible → unknown; no hand
+    track → unknown and the review issue;
+  - **gel phase:** T1, else derived placement, else `first_paddle_taken`, else the end; no
+    application after the phase;
+  - **tag agreement:** a tag in the window agrees; disagreements both ways, the event kept;
+  - **settings and gate:** repository values; the digest (the settings and 9c's, not the review);
+    the gate; invalid settings;
+  - **validation report:** the summary and markdown.
+- **`tests/test_rule_engine_r1.py` (26):**
+  - **proxy:** both zones visible with 2, 1 and 0 applications; the minimum gap; one zone visible;
+    no zone visible; a zone partly visible; `after_placement`; no placement time; gel before and
+    after the placement; no placement → `first_paddle_taken`; low confidence; more than two;
+    pending in the catalogue;
+  - **time period:** unset, set (exceeded and within), approved no limit, derived applications;
+  - **per zone:** both gelled (either order); one gelled; neither; a zone unknown;
+    `after_placement`;
+  - **gate through the adapter:** approved → per zone; unknown status → unknown coverage; not
+    approved → proxy; an export before version 3 → proxy.
+- **Audit (1):** the bottle hand must be tracked in the gel phase.
+- **Updated:** the exporter tests (the `gel_hand_not_tracked` review issue on synthetic tasks
+  without a hand, the seven output files, the new counts), the region lists, the undecided counts,
+  and the R1 period no longer "unused".
+
+Full suite: **679 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-037 (new, 9d); P-038 (new, R1); P-001 (the 9d gate); P-030 (gel
+  regions).
+- **`pathways.md`:** the P-037 and P-038 tables; P-001 rows; W-75 to W-80.
+- **`diagrams.md`:** (n) Step 9d and (o) R1 (new).
+- **Registers:** `decisions.md` (D-109 to D-113; D-018 marked replaced); `assumptions.md` (A-023
+  to A-026); `open_questions.md` (OQ-016, OQ-018 and OQ-021 notes).
+- **Other docs:** `anomalies.md`, `output_contract.md` (v9), `rules_status.md`, `agent_brief.md`
+  (R1), `implementation_plan.md` (rows 9d and 17), `methods.md`, `upstream_requirements.md`
+  (per-zone gel events from production), the how-to for Ananth (exporter version 3, gel
+  validation files), `configs/rules.yaml`, the engine config, the vocabulary and
+  `annotation_export.yaml`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+None new. OQ-016 (the period, possibly no limit), OQ-018 (the 9d settings and the gel gap, now 0.4 s) and
+OQ-021 (more than two applications) apply.
+
+### Next
+The audio rules (Increment 18, A1 and A3). Nothing is committed; commit only when Arnikan says so.

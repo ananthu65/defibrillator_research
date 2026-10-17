@@ -10,7 +10,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 
 | Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
 |---|---|---|---|---|---|---|---|
-| **R1** Gel applied twice | Gel is applied twice, as two separate applications at least a minimum gap apart, within the approved period. Order versus paddle placement is not checked (D-018) | gel applied (every occurrence) | P-014, P-008 | `missing`, `applied_once`, `outside_time_period` | 17 | pending | OQ-016 (period), OQ-021 (more than twice), OQ-018 (gap) |
+| **R1** Gel applied twice | Gel once on each placement zone (either order) before the paddles are placed (D-109, D-110). Gel only after the first placement → `after_placement`. Past the 9d gate, per zone: both gelled → Pass, one → `applied_once`, neither → `missing`, unknown → Unable to Verify. Before it, the tag-count proxy: separate tags against the zones' visibility in the gel phase (D-113, A-026). Period unset → `timing_not_checked` | gel applied tags, per-zone gel applications (past the 9d gate), the gel regions, first placement, zone visibility in the gel phase | P-038, P-037, P-024, P-007 | `after_placement`, `applied_once`, `missing`, `outside_time_period` | 17 | **implemented** (Increment 17); pending until the supervisor confirms its definition | OQ-016 (period), OQ-021 (more than twice), OQ-018 (9d settings, gap) |
 | **R2** Second paddle taken after the first is placed | First paddle taken → first paddle placed firmly → second paddle taken (D-051) | first paddle taken, first placement, second paddle taken; zone coverage over that window; derived placements past the gate | P-032, P-012, P-007 | `simultaneous`, `taken_before_first_placed`, `first_placement_not_observed` (D-097) | 11 | **implemented** (Increment 11); pending until the supervisor confirms its definition | OQ-022 |
 | **R8** Apical before sternal | Apical placed before sternal. With one zone visible, inferred from the first placement (D-013); inferred mistakes undecided (D-015); a missing placement gives Unable to Verify, `placement_missing` (D-058); the apical-first fallback gives an assumed result that blocks an overall Pass (D-060) | apical and sternal placements (derived ones past the gate), first placement, zone coverage over the placement phase (D-099) | P-015, P-012, P-007 | `wrong_order`, `simultaneous` (a parallel placement, with the cause flag shared with R2, D-098) | 12 | **implemented** (Increment 12); pending until the supervisor confirms its definition | OQ-004, OQ-005, OQ-006, OQ-015, OQ-059 |
 | **R3** Paddles firmly on chest | Paddles firmly on chest at or before the shock on the screen, or (past the gate) both derived placements before it → Pass – Direct; only after the shock → `placed_after_shock`. Otherwise Pass – Inferred if an event in `inference_sources` is confirmed: the shock on screen or the paddle removal (the proposal, kept although paddles are sometimes removed without a successful shock, D-102, A-021). Then no shock time → Not evaluable because of R5; a missing tag fails only if both zones were visible from first paddle taken to the shock (the tag isn't made with one paddle visible, A-019). **Placement timing and presence only** until the chest regions are approved (D-106) | paddles firmly on chest, derived placements, shock time, `inference_sources`, zone coverage over the placement phase | P-035, P-016, P-009, P-007 | `placed_after_shock`, `missing` (D-106; unreachable while either source is listed, D-107); `not_in_zone` not produced until OQ-012 | 15 | **implemented** (Increment 15); pending until the supervisor confirms its definition | OQ-012, OQ-022, OQ-060, OQ-061 |
@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–16, with 9a, 9b and 9c)
+## What is built so far (Increments 0–17, with 9a to 9d)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -107,6 +107,13 @@ approved (D-091).
 - **R4 (Increment 16, P-036):** implemented and tested; pending until the supervisor confirms its
   definition. The exporter and adapter now give each paddle's visibility (D-108).
 
-All 16 rules still report "pending" (R2, R8, R3, R4, R5 and R6 are implemented but not yet
-approved). On the interim annotation data the engine gives Incomplete, marked as development
-data. Next: R1 (Increment 17).
+- **Derived gel applications (Step 9d, P-037):** the exporter derives a gel application per zone
+  from the `learner_hand` and zone boxes, with each zone's status and its own gate (D-111, D-112).
+  It needs a re-export with exporter version 3.
+- **R1 (Increment 17, P-038):** implemented and tested; pending until the supervisor confirms its
+  definition. Gel once on each zone, before the placement (D-109, D-110); per zone past the 9d
+  gate, the tag-count proxy before it (D-113).
+
+All 16 rules still report "pending" (R1 to R6 and R8 are implemented but not yet approved). On
+the interim annotation data the engine gives Incomplete, marked as development data. Next: the
+audio rules, A1 and A3 (Increment 18).

@@ -6,10 +6,11 @@ docs/rule_engine/output_contract.md. REPORT_VERSION changes whenever that struct
 """
 from dataclasses import asdict
 
-REPORT_VERSION = 8   # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
+REPORT_VERSION = 9   # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
 #                      screen (D-093, D-094); 5: R8 flags possible_parallel_placement, derived_placement (D-098);
 #                      6: order_not_checked (D-100); 7: timing_limits no_limit (D-103); 8: inferred_from_removal,
-#                      paddle regions (D-107, D-108)
+#                      paddle regions (D-107, D-108); 9: after_placement, derived_gel_application, gel regions
+#                      (D-109, D-111)
 REPORT_KIND = "rule_engine_report"
 
 

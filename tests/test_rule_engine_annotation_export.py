@@ -107,6 +107,9 @@ def codes(issues):
     return sorted(i["code"] if isinstance(i, dict) else i.code for i in issues)
 
 
+NO_HAND = "gel_hand_not_tracked"   # 9d: these synthetic tasks have no learner_hand track (D-111)
+
+
 class ZoneVisibilityMatchesTrainingBoxes(unittest.TestCase):
     """D-079: visibility is computed with the training code itself; these tests pin its behaviour."""
 
@@ -154,9 +157,11 @@ class Records(unittest.TestCase):
         self.assertEqual(record["zone_visibility"], [{"label": APICAL, "start_frame": 20, "end_frame": 99,
                                                       "start_seconds": 0.8, "end_seconds": 3.96}])
         self.assertEqual(record["derived_events"], [])
-        self.assertEqual(issues, [])
+        self.assertEqual((record["derived_gel_events"], [z["status"] for z in record["gel"]["zones"]]),
+                         ([], ["unknown", "unknown"]))
+        self.assertEqual(codes(issues), [NO_HAND])
         self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1, "screen_intervals": 0,
-                                              "paddle_intervals": 0, "derived_events": 0})
+                                              "paddle_intervals": 0, "derived_events": 0, "derived_gel_events": 0})
         self.assertEqual(manifest["backups"][0]["archive"], "kartheepan/P01_LL.zip")
 
     def test_zone_intervals_close_at_outside_keyframes_and_merge_across_tracks_and_jobs(self):
@@ -199,32 +204,32 @@ class Records(unittest.TestCase):
         _, records, issues = Backups(self).add("P04_T.zip", task("P04_T", shapes=[
             {"type": "rectangle", "frame": 12, "label": APICAL, "points": [1, 1, 50, 50]}])).export()
         self.assertEqual(records["P04_T"]["zone_visibility"], [])
-        self.assertEqual(codes(issues), ["zone_shape_without_track"])
-        self.assertEqual(issues[0]["frame"], "12")
+        self.assertEqual(codes(issues), [NO_HAND, "zone_shape_without_track"])
+        self.assertEqual([i["frame"] for i in issues if i["code"] == "zone_shape_without_track"], ["12"])
 
     def test_video_missing_from_the_conversion_report_is_an_export_issue(self):
         backups = Backups(self).add("P05_LL.zip", task("P05_LL"), fps=None).add("P06_LL.zip", task("P06_LL"))
         _, records, issues = backups.export()
         self.assertEqual(sorted(records), ["P06_LL"])
         self.assertEqual([(i["code"], i["severity"], i["canonical_task_id"]) for i in issues],
-                         [("fps_missing", "error", "P05_LL")])
+                         [("fps_missing", "error", "P05_LL"), (NO_HAND, "review", "P06_LL")])
 
     def test_frame_count_disagreeing_with_the_conversion_report_is_a_warning(self):
         _, records, issues = Backups(self).add("P07_LL.zip", task("P07_LL", stop=99), frames=120).export()
         self.assertIn("P07_LL", records)
-        self.assertEqual(codes(issues), ["frame_count_mismatch"])
+        self.assertEqual(codes(issues), ["frame_count_mismatch", NO_HAND])
 
     def test_tag_outside_the_frame_range_is_kept_and_reported(self):
         _, records, issues = Backups(self).add("P08_LL.zip", task("P08_LL", stop=99, tags=[tag("Gel applied", 150)])).export()
         self.assertEqual(len(records["P08_LL"]["tags"]), 1)
-        self.assertEqual(codes(issues), ["tag_outside_frames"])
+        self.assertEqual(codes(issues), [NO_HAND, "tag_outside_frames"])
 
     def test_project_backup_with_several_tasks_and_duplicates(self):
         backups = Backups(self).add("defib.zip", task("P09_LL"), task("P09_LS")).add("zz/P09_LL.zip", task("P09_LL"))
         _, records, issues = backups.export()
         self.assertEqual(sorted(records), ["P09_LL", "P09_LS"])
         self.assertEqual(records["P09_LL"]["archive"], "defib.zip")  # the first in archive order is kept
-        self.assertEqual(codes(issues), ["duplicate_task"])
+        self.assertEqual(codes(issues), ["duplicate_task", NO_HAND, NO_HAND])
 
     def test_unrecognised_task_name_is_an_error(self):
         backups = Backups(self).add("odd.zip", {"name": "rehearsal", "stop": 9, "jobs": []})
@@ -309,14 +314,14 @@ class OutputIsSeparateFromTraining(unittest.TestCase):
         self.assertEqual(code, EXIT_REFUSED)
         self.assertIn("not empty", message)
 
-    def test_command_line_writes_the_five_files(self):
+    def test_command_line_writes_the_seven_files(self):
         backups = Backups(self).add("P13_LL.zip", task("P13_LL"))
         code, _ = self.run_main("--backup-root", str(backups.backups), "--output", str(backups.root / "run"),
                                 "--conversion-report", str(backups.conversion()), "--config", str(backups.config()))
         self.assertEqual(code, 0)
         self.assertEqual(sorted(p.name for p in (backups.root / "run").iterdir()),
-                         ["export_issues.csv", "export_manifest.json", "placement_validation.csv",
-                          "placement_validation.md", "records.jsonl"])
+                         ["export_issues.csv", "export_manifest.json", "gel_validation.csv", "gel_validation.md",
+                          "placement_validation.csv", "placement_validation.md", "records.jsonl"])
 
 
 class Configuration(unittest.TestCase):
@@ -406,10 +411,22 @@ class AuditChecks(unittest.TestCase):
         self.assertIn("possibly the same incident tagged twice", repeated[0].details)
         self.assertEqual([(i.label, i.frame) for i in info if i.code == "repeated_tag"], [("Gel applied", 10)])
 
+    def test_bottle_hand_must_be_tracked_in_the_gel_phase(self):
+        """9d (D-111): a learner_hand box before the first-placement tag (else first_paddle_taken) is enough."""
+        tracked = task("P16_LS", tracks=[track(APICAL, rect(0)), track("learner_hand", rect(5), rect(20, outside=True))],
+                       tags=[tag("first_paddle_firmly_on_the_chest", 40)])
+        _, issues, _ = audited(self, "P16_LS.zip", tracked)
+        self.assertNotIn(NO_HAND, codes(issues))
+        late = task("P17_LS", tracks=[track(APICAL, rect(0)), track("learner_hand", rect(50))],
+                    tags=[tag("first_paddle_taken", 30)])
+        _, issues, _ = audited(self, "P17_LS.zip", late)
+        hand, = [i for i in issues if i.code == NO_HAND]
+        self.assertIn("before frame 30 (first_paddle_taken)", hand.details)
+
     def test_learner_order_is_information_only(self):
         _, issues, info = audited(self, "P07_LL.zip", task("P07_LL", tracks=[track(APICAL, rect(0))], tags=[
             tag("paddles_removed_after_shock", 5), tag("Gel applied", 60)]))
-        self.assertEqual(issues, [])
+        self.assertEqual(codes(issues), [NO_HAND])
         sequence, = [i for i in info if i.code == "tag_sequence"]
         self.assertEqual(sequence.details, "paddles_removed_after_shock@5; Gel applied@60")
         self.assertIn("first_placement_tag_missing", codes(info))
@@ -431,7 +448,7 @@ class AuditChecks(unittest.TestCase):
         self.assertFalse(pattern.on_review_list)
         self.assertEqual((pattern.present, pattern.visible, pattern.never_visible), (APICAL, "none", APICAL))
         self.assertIn("zone_track_never_visible", codes(info))
-        self.assertEqual(issues, [])
+        self.assertEqual(codes(issues), [NO_HAND])
 
     def test_reviewed_exception_removes_the_video_from_the_review_list(self):
         exception = [{"task": "P14_T", "zone": APICAL, "confirmed_by": "Annotator A", "confirmed_on": "2026-10-16"}]
@@ -439,14 +456,14 @@ class AuditChecks(unittest.TestCase):
                                         reviewed_zone_exceptions=exception)
         self.assertFalse(pattern.on_review_list)
         self.assertEqual(pattern.confirmed_not_visible, APICAL)
-        self.assertEqual(issues, [])
+        self.assertEqual(codes(issues), [NO_HAND])
         self.assertIn("zone_exception_confirmed", codes(info))
 
     def test_exception_contradicted_by_a_visible_zone_is_reviewed(self):
         exception = [{"task": "P15_T", "zone": APICAL, "confirmed_by": "Annotator A", "confirmed_on": "2026-10-16"}]
         _, issues, _ = audited(self, "P15_T.zip", task("P15_T", tracks=[track(APICAL, rect(0)), track(STERNAL, rect(0))]),
                                reviewed_zone_exceptions=exception)
-        self.assertEqual(codes(issues), ["zone_exception_contradicted"])
+        self.assertEqual(codes(issues), [NO_HAND, "zone_exception_contradicted"])
 
 
 class AuditOutput(unittest.TestCase):

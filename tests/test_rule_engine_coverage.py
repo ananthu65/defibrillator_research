@@ -284,7 +284,8 @@ class RepositoryPolicy(unittest.TestCase):
         self.assertEqual(engine.regions, {"apical_zone": ("apical_paddle_placed",),
                                           "sternal_zone": ("sternal_paddle_placed",),
                                           "screen": ("shock_delivered_on_screen",),   # D-094
-                                          "apical_paddle": (), "sternal_paddle": ()})   # visibility only (D-108)
+                                          "apical_paddle": (), "sternal_paddle": (),   # visibility only (D-108)
+                                          "apical_gel": (), "sternal_gel": ()})   # visibility only (D-111)
 
 
 class InvalidCoverageConfig(unittest.TestCase):

@@ -1,12 +1,14 @@
 # Rule-engine export: how to run it on the final backups
 
-**For:** Ananth · **From:** Arnikan · **Date:** 2026-10-16 (updated for Step 9c) · Decisions
-D-074, D-083, D-085 and D-086 to D-089
+**For:** Ananth · **From:** Arnikan · **Date:** 2026-10-16 (updated for Step 9c; for paddle
+visibility and Step 9d gel on 2026-10-17) · Decisions D-074, D-083, D-085, D-086 to D-089, D-108,
+D-111 and D-112
 in [decisions.md](../rule_engine/decisions.md)
 
 The rule engine needs the annotation facts of each video: every tag, the frame range and
-duration, and when each placement zone is visible. Two scripts read these directly from the CVAT
-backups. Please run them once on the **final** backup set and send me the outputs listed below.
+duration, when each placement zone, the defibrillator screen and each paddle is visible, and
+the gel applications derived from the gel-bottle hand (`learner_hand`). Two scripts read these
+directly from the CVAT backups. Please run them once on the **final** backup set and send me the outputs listed below.
 
 ## It changes nothing in your training data
 
@@ -31,6 +33,24 @@ backups. Please run them once on the **final** backup set and send me the output
 | The repo on branch `feature/rule-engine` | The two scripts and `configs/rule_engine/annotation_export.yaml` |
 | Python with PyYAML | The project's usual environment (`requirements.txt`); no extra packages |
 
+## Use exporter version 3 or later
+
+The final export must be run with **exporter version 3 or later**.
+- **Version 2** adds when each paddle is visible (`paddle_tracks`, `paddle_visibility`). The rule
+  engine needs it to judge a missing button press (R4, D-108).
+- **Version 3** adds the gel applications derived from the `learner_hand` and zone boxes, per zone
+  (`derived_gel_events`, `gel`), and `gel_validation.csv`/`.md` (R1, D-111).
+
+With an older export, the paddles and the gel per zone are "unknown". R4 can then never fail a
+missing press, and R1 can only count `Gel applied` tags. The interim export has neither.
+
+- **Before running:** pull the latest `feature/rule-engine`.
+- **After running:** check that `export_manifest.json` says `"exporter_version": 3` (or higher),
+  that its `counts` include `paddle_intervals` and `derived_gel_events`, and that it has
+  `gel_settings_sha256`.
+- **If it says 1 or 2:** the checkout is out of date. Pull, and run again into a new output
+  folder.
+
 ## Commands
 
 Run them from the repository root. Use a new, empty output folder each time; both scripts
@@ -54,7 +74,7 @@ python -m annotation.audit_rule_engine_checks `
 
 | Folder | Files |
 |---|---|
-| `data/rule_engine/annotation_export/final-<date>/` (gitignored) | `records.jsonl` (one line per video, including the per-paddle placements derived from the boxes and when the placement zones and the defibrillator screen were visible), `export_manifest.json` (backup names and sizes, a SHA-256 of each backup's annotation JSON, counts, `export_id`, `placement_settings_sha256`), `export_issues.csv`, `placement_validation.csv` and `placement_validation.md` (how well the derived placements agree with the tags) |
+| `data/rule_engine/annotation_export/final-<date>/` (gitignored) | `records.jsonl` (one line per video, including the per-paddle placements derived from the boxes and when the placement zones, the defibrillator screen and each paddle were visible), `export_manifest.json` (`exporter_version`, backup names and sizes, a SHA-256 of each backup's annotation JSON, counts, `export_id`, `placement_settings_sha256`, `gel_settings_sha256`), `export_issues.csv`, `placement_validation.csv` and `placement_validation.md` (how well the derived placements agree with the tags), `gel_validation.csv` and `gel_validation.md` (the derived gel applications per video and zone, and how well they agree with the `Gel applied` tags) |
 | `annotation/reports/rule_engine_audit/final-<date>/` | `README.md`, `issues.csv` (review list), `info.csv` (information only), `zone_patterns.csv`, `audit_manifest.json` |
 
 ## What to send me
@@ -63,11 +83,13 @@ python -m annotation.audit_rule_engine_checks `
 - `records.jsonl`;
 - `export_manifest.json`;
 - `placement_validation.csv` and `placement_validation.md`;
+- `gel_validation.csv` and `gel_validation.md`;
 - the whole audit folder.
 
-Please send `records.jsonl` and `export_manifest.json` from the same run, unchanged.
-`export_id` is the SHA-256 of that exact `records.jsonl`. My review of the derived placements
-applies only to that export and its settings.
+Please send `records.jsonl` and `export_manifest.json` from the same run, unchanged, made with
+exporter version 3 or later.
+`export_id` is the SHA-256 of that exact `records.jsonl`. My reviews of the derived placements
+and of the derived gel applications apply only to that export and its settings.
 
 **Never send media:** no backup ZIPs, no videos, no frames, no images. Please don't commit
 `records.jsonl`; exported records stay out of git.
@@ -134,3 +156,5 @@ the learner's order of steps is never an annotation problem.
 | `placement_disagrees_with_tag` | A derived placement contradicts `first_paddle_firmly_on_the_chest` or `paddles_firmly_on_chest`; no placement is derived. Worth a look: either a tag or the boxes may be off |
 | "refusing to write inside …data\video" | Choose an output folder outside `data/video/` |
 | "output folder is not empty" | Use a new run folder |
+| `"exporter_version": 1` or `2` in the manifest | An out-of-date checkout: no paddle visibility (1) or no derived gel (1 and 2). Pull `feature/rule-engine` and export again |
+| `gel_hand_not_tracked` (export issues and the audit's review list) | No `learner_hand` box before the first paddle placement, so the gel can't be derived for that video. The hand holding the gel bottle should be tracked during gel application (A-024) |

@@ -156,7 +156,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Old no.:** E-9 · **Owner:** supervisor · **Also involves:** Arnikan (records them in config)
   · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Please give the maximum times (in seconds) for:
-  - **R1:** the period within which the two gel applications must happen;
+  - **R1:** the period within which the two gel applications (one per zone, D-110) must happen;
   - **R7/A6:** shock → start/resume compressions command;
   - **A4:** stop-compressions command → shock;
   - **A5:** how long before the shock the verbal shock command may be given;
@@ -177,8 +177,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Question:** If gel is applied three or more times, is that a Fail, or does "at least twice"
   pass?
 - **Affects:** R1.
-- **Interim behaviour:** R1 is not built yet (Increment 17). Every application is kept (D-012).
-  `expected_counts.gel_applied` is undecided, so repeated gel is not checked as a count (D-071).
+- **Interim behaviour:** R1 (built in Increment 17) passes with more than two applications; 9d
+  counts separate visits to a zone separately (D-111, D-113). Every application is kept (D-012).
+  The counts of `gel_applied`, `apical_gel_applied` and `sternal_gel_applied` are undecided, so
+  repeated gel is not checked as a count (D-071).
 
 ### OQ-022 Paddles lifted and placed again before the shock
 - **Old no.:** E-14b · **Owner:** supervisor · **Also involves:** Ananth (detects re-placement),
@@ -419,6 +421,20 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   validation.
 - **Affects:** P-004, P-005, P-006, P-011, P-015, P-034; R1, R2, R3, R6, R8.
 - **Interim behaviour:** The placeholder values in A-002.
+- **9d gel settings (2026-10-17, D-111):** `gel_hand_zone_max_gap` (0.05), `gel_dwell_frames` (10),
+  `gel_zone_nearer_ratio` (2.0), `gel_exit_frames` (5), `gel_tag_agreement_frames` (30), to be tuned
+  from `gel_validation.md` of the final export.
+- **`gel_minimum_gap_seconds`, set to 0.4 s (Arnikan, 2026-10-17; still a placeholder):**
+  - **Why lower:** on the interim export, 6 of the 10 videos where the R1 proxy found one
+    application had two gel tags 0.5–0.97 s apart, which the 1.0 s placeholder merged. They are
+    probably one application per zone.
+  - **Why not lower still:** the true duplicates found by the audit were within about 0.5 s
+    (P06_LS: 0.03 s).
+  - **Result:** with 0.4 s, 13 of the 17 videos with both zones visible have two separate
+    applications, and 4 have one (P15_LS, P31_LS, P33_LS, P33_T).
+  - **Still to review:** P12_LS's pair (exactly 0.5 s apart, on the audit's duplicate list) now
+    counts as two; Arnikan reviews it with P03_LS and the four single-tag videos (progress.md,
+    Increment 17).
 - **R6 screen delay (2026-10-17, D-105):** on the interim export, the removal tag came after the
   shock on the screen in all 20 LS/T videos with both tags (0.13 to 1.40 s, median 0.88 s), so the
   data doesn't bound the tolerance. Placeholder 0.5 s for now.

@@ -345,7 +345,8 @@ class StartAnchor(unittest.TestCase):
 class ZoneVisibility(unittest.TestCase):
     def test_no_header_means_unknown(self):
         self.assertEqual({r: s.status for r, s in context([SHOCK]).zone_visibility.items()},
-                         {"apical_zone": "unknown", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown"})
+                         {"apical_zone": "unknown", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown",
+                          "apical_gel": "unknown", "sternal_gel": "unknown"})
 
     def test_header_region_coverage(self):
         ctx = context([SHOCK], {"analyses_run": {"video": True}, "coverage": {"region:sternal_zone": "not_covered"}})

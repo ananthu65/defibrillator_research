@@ -17,6 +17,8 @@ schema_version: 1
 #         flagged as unknown. A `prefix` entry matches every label starting with it.
 events:
   gel_applied:                   {modality: video, description: Gel applied}
+  apical_gel_applied:            {modality: video, description: Gel applied to the apical zone (left side of the ribs)}
+  sternal_gel_applied:           {modality: video, description: Gel applied to the sternal zone (on the chest)}
   first_paddle_taken:            {modality: video, description: First frame where the first paddle is clearly visible}
   first_paddle_placed:           {modality: video, description: First paddle placed firmly on the chest}
   second_paddle_taken:           {modality: video, description: First frame where the second paddle is clearly visible}
@@ -47,6 +49,10 @@ labels:
     # rule-engine exporter (Step 9c, D-081). R8 may use them only after the gate review (D-088).
     - {label: apical_paddle_placed,             event: apical_paddle_placed}
     - {label: sternal_paddle_placed,            event: sternal_paddle_placed}
+    # Not CVAT tags: per-zone gel applications derived from the learner_hand and zone boxes (Step 9d,
+    # D-111). R1 may use them only after the 9d gate review (D-112).
+    - {label: apical_gel_applied,               event: apical_gel_applied}
+    - {label: sternal_gel_applied,              event: sternal_gel_applied}
   audio:
     # Names emitted by audio/commands/detect.py from configs/pipeline.yaml `commands`.
     - {label: oxygen_away_command,           event: oxygen_away_command}
@@ -60,6 +66,8 @@ labels:
     # Video postprocessing emits the agreed canonical names directly (D-020, upstream_requirements.md),
     # so they map to themselves. Raw object presence (object_visible:*) is not evidence.
     - {label: gel_applied,                 event: gel_applied}
+    - {label: apical_gel_applied,          event: apical_gel_applied}
+    - {label: sternal_gel_applied,         event: sternal_gel_applied}
     - {label: first_paddle_taken,          event: first_paddle_taken}
     - {label: first_paddle_placed,         event: first_paddle_placed}
     - {label: second_paddle_taken,         event: second_paddle_taken}

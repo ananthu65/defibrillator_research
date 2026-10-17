@@ -387,3 +387,61 @@ flowchart TD
     Z -->|yes| F2["Fail not_pressed"]
     Z -->|"no: partly, never, no track"| U2["Unable to Verify"]
 ```
+
+## (n) Step 9d: derived per-zone gel application (P-037; D-111, D-112)
+
+Built in the rule engine's exporter from the `learner_hand` box (the bottle hand only, A-024) and
+the zone boxes. Settings are placeholders.
+
+```mermaid
+flowchart TD
+    PH["Gel phase: start → first placement tag<br/>(else 9c placement, else first_paddle_taken)"] --> H{"learner_hand box<br/>in the gel phase?"}
+    H -->|no| NH["Every zone unknown<br/>gel_hand_not_tracked"]
+    H -->|yes| B["Bottle period: the hand box's<br/>first to last frame"]
+    B --> F["Each frame: gap from the hand box to<br/>each visible zone box (over the diagonal)"]
+    F --> N{"Nearest zone within<br/>gel_hand_zone_max_gap?"}
+    N -->|no| AW["Away"]
+    N -->|yes| R{"Other zone at least<br/>gel_zone_nearer_ratio × further?"}
+    R -->|no| AM["Ambiguous"]
+    R -->|yes| Z["Frame of that zone"]
+    Z --> V["Visits: dips ≤ gel_exit_frames<br/>stay in one visit"]
+    V --> D{"≥ gel_dwell_frames<br/>frames?"}
+    D -->|yes| APP["Application: apical/sternal_gel_applied<br/>derived_gel_application"]
+    D -->|no| NA["No application"]
+    APP --> G1["Zone gelled"]
+    NA --> S{"Zone visible and hand tracked<br/>throughout the bottle period?"}
+    S -->|yes| G2["Zone not gelled"]
+    S -->|no| G3["Zone unknown"]
+    APP --> T["Cross-check with Gel applied tags<br/>(gel_validation.csv/.md)"]
+    G1 --> GATE{"9d gate: reviewed for this<br/>export_id and gel settings?"}
+    G2 --> GATE
+    G3 --> GATE
+    GATE -->|yes| USE["Adapter: events + gel regions<br/>(gelled/not gelled covered, unknown unknown)"]
+    GATE -->|no| HOLD["Kept in records.jsonl;<br/>R1 uses the tag-count proxy"]
+```
+
+## (o) R1: gel twice, once to each zone, before placement (P-038, built in Increment 17; pending until approved)
+
+```mermaid
+flowchart TD
+    A{"Gel only after the<br/>first placement?"} -->|yes| F0["Fail after_placement"]
+    A -->|no| G{"Gel status per zone known?<br/>(past the 9d gate)"}
+    G -->|yes| Z{"Zones"}
+    Z -->|both gelled| P1["Pass – Direct<br/>derived_gel_application"]
+    Z -->|"one gelled, other not"| F1["Fail applied_once"]
+    Z -->|neither gelled| F2["Fail missing"]
+    Z -->|a zone unknown| U1["Unable to Verify"]
+    G -->|"no: tag-count proxy"| V{"Zones visible throughout<br/>the gel phase?"}
+    V -->|both| C{"Separate gel tags"}
+    C -->|2+| P2["Pass – Direct"]
+    C -->|1| F3["Fail applied_once"]
+    C -->|0| F4["Fail missing"]
+    V -->|one| C1{"Tags?"}
+    C1 -->|0| F4
+    C1 -->|1+| U2["Unable to Verify"]
+    V -->|none or unknown| U2
+    P1 --> T{"gel_application_period_seconds"}
+    P2 --> T
+    T -->|"unset (now)"| TN["timing_not_checked"]
+    T -->|"approved, exceeded"| F5["Fail outside_time_period"]
+```

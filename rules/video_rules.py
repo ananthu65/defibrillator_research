@@ -12,10 +12,14 @@ from rules.registry import rule
 FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN = "first_paddle_taken", "first_paddle_placed", "second_paddle_taken"
 BOTH_PLACED = "paddles_firmly_on_chest"
 BUTTONS = "both_paddle_buttons_pressed"
+GEL = "gel_applied"
 SHOCK, REMOVAL = "shock_delivered_on_screen", "paddles_removed_after_shock"
 APICAL, STERNAL = "apical_paddle_placed", "sternal_paddle_placed"
 PLACEMENTS = (APICAL, STERNAL)
 PADDLE_REGIONS = ("apical_paddle", "sternal_paddle")   # visibility-only regions (engine.yaml, D-108)
+# (zone, per-zone gel event, region carrying its gel status past the 9d gate, placement-zone region) (D-111)
+GEL_ZONES = (("apical", "apical_gel_applied", "apical_gel", "apical_zone"),
+             ("sternal", "sternal_gel_applied", "sternal_gel", "sternal_zone"))
 
 # Rule-result flags raised here (listed in docs/rule_engine/anomalies.md and output_contract.md)
 DERIVED = "derived_placement"              # the result rests on a placement derived from the boxes (D-081, D-088)
@@ -24,15 +28,18 @@ PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while it
 CONTRADICTORY = "contradictory"            # R8: the visible paddle placed clearly before the first placement; R4: a press only after the shock
 INFERRED_UNDECIDED = "inferred_fail_policy_undecided"   # R8: an inferred mistake while D-015 is undecided
 INFERRED_FROM_REMOVAL = "inferred_from_removal"   # R3/R4: inferred from a removal, which can happen without a shock (A-021)
-FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, INFERRED_FROM_REMOVAL)
+DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
+FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, INFERRED_FROM_REMOVAL, DERIVED_GEL)
 
 
 def _evidence_flags(events):
-    """Flags carried by the placement events a result rests on: derived, and the parallel cause flag."""
+    """Flags carried by the events a result rests on: derived placement or gel, and the parallel cause flag."""
     flags = []
     for event in events:
         if event.metadata.get("derived_placement"):
             flags.append(DERIVED)
+        if event.metadata.get("derived_gel_application"):
+            flags.append(DERIVED_GEL)
         if PARALLEL in event.metadata.get("flags", ()):
             flags.append(PARALLEL)
     return tuple(dict.fromkeys(flags))
@@ -47,6 +54,142 @@ def _parallel(ctx, rule_id):
                   "possible_parallel_placement, D-091); one parallel placement fails R2 and R8 (D-098)",
                   evidence=tuple(e.event_id for e in events), flags=_evidence_flags(events),
                   timestamps={e.event_name: e.start for e in events})
+
+
+# ---- R1 ---------------------------------------------------------------------------------------------
+
+@rule("R1", requires=(GEL, *(z[1] for z in GEL_ZONES), FIRST_PLACED, FIRST_TAKEN, *PLACEMENTS),
+      description="Gel applied twice, once to each placement zone, before the paddles are placed")
+def gel_applied_twice(ctx, definition, results):
+    """R1 (P-038): gel applied to each placement zone (either order) before the first placement (D-109, D-110).
+
+    The gel phase ends at the first placement (first_paddle_placed, or the earliest per-paddle
+    placement), else at first_paddle_taken. Annotation lag: an application within
+    simultaneous_window_seconds after the end still counts.
+    1. Gel only after the first placement (no gel before it, a gel tag or per-zone application after)
+       -> Fail `after_placement`.
+    2. Per zone, when each zone's gel status is known (the gel regions are in the header: past the 9d
+       gate, D-112): both gelled -> Pass; one gelled and the other not gelled -> `applied_once`; neither
+       gelled -> `missing`; otherwise (a zone unknown) -> Unable to Verify.
+    3. Otherwise the tag-count proxy (D-113, A-026): separate `gel_applied` tags in the gel phase (closer
+       than gel_minimum_gap_seconds are one application) against the zones' visibility in it. Both
+       zones visible throughout: 2+ -> Pass, 1 -> `applied_once`, 0 -> `missing`. One zone visible: 0 ->
+       `missing`, 1+ -> Unable to Verify. Neither -> Unable to Verify.
+    4. A Pass checks gel_application_period_seconds between the two applications (unset:
+       timing_not_checked; exceeded: `outside_time_period`). The order between the zones and more than
+       two applications are not checked (OQ-021).
+    """
+    window = checks.simultaneous_window(ctx)
+    placement = _first_placement(ctx)
+    taken = ctx.named(FIRST_TAKEN)
+    end = placement.start if placement is not None else (taken[0].start if taken else None)
+
+    def in_phase(event):
+        return end is None or event.start <= end + window
+
+    tags = ctx.named(GEL)
+    zone_events = {name: ctx.named(event) for name, event, _, _ in GEL_ZONES}
+    early = [t for t in tags if in_phase(t)] + [e for events in zone_events.values() for e in events if in_phase(e)]
+    late = [e for e in [*tags, *(e for events in zone_events.values() for e in events)]
+            if placement is not None and e.start > placement.start + window]
+    if placement is not None and late and not early:
+        first = min(late, key=lambda e: (e.start, e.event_id))
+        return failed("R1", "after_placement", f"gel applied only at {first.start:g} s, after the first paddle was "
+                      f"placed ({placement.start:g} s); gel must come before the paddles (D-109)",
+                      evidence=(first.event_id, placement.event_id), flags=_evidence_flags([first, placement]),
+                      timestamps={first.event_name: first.start, "placement": placement.start})
+    where = (f"before the first placement ({end:g} s)" if placement is not None else
+             f"before the first paddle was taken ({end:g} s)" if end is not None else "in the recording")
+    if all(ctx.coverage.region_status(region).scope is not None for _, _, region, _ in GEL_ZONES):
+        return _gel_by_zone(ctx, {name: [e for e in events if in_phase(e)] for name, events in zone_events.items()},
+                            where)
+    return _gel_by_tags(ctx, [t for t in tags if in_phase(t)], end, where)
+
+
+def _first_placement(ctx):
+    """The earliest first-paddle placement: first_paddle_placed or a per-paddle placement."""
+    found = [e for name in (FIRST_PLACED, *PLACEMENTS) for e in ctx.named(name)]
+    return min(found, key=lambda e: (e.start, e.event_id)) if found else None
+
+
+def _gel_by_zone(ctx, applied, where):
+    """D-110, D-113: each zone's gel status (past the 9d gate)."""
+    gelled, not_gelled, unknown, uses = {}, [], [], []
+    for name, event, region, _ in GEL_ZONES:
+        if applied[name]:
+            gelled[name] = applied[name][0]
+            continue
+        found = ctx.coverage.region_missing(region, event)
+        uses.append(found)
+        (not_gelled if found.outcome == "fail" else unknown).append(name)
+    first = list(gelled.values())
+    flags = _evidence_flags(first)
+    if len(gelled) == 2:
+        return _gel_passed(ctx, first, f"gel applied to both zones {where}", flags, uses)
+    if len(gelled) == 1 and len(not_gelled) == 1:
+        return failed("R1", "applied_once", f"gel applied to the {next(iter(gelled))} zone only {where}; none on the "
+                      f"{not_gelled[0]} zone, although an application there would have been seen (D-110)",
+                      evidence=tuple(e.event_id for e in first), uses=tuple(uses), flags=flags,
+                      timestamps={e.event_name: e.start for e in first})
+    if len(not_gelled) == 2:
+        return failed("R1", "missing", f"no gel applied to either zone {where}, although applications there would "
+                      "have been seen", uses=tuple(uses))
+    return unable("R1", f"gel {where}: " + ", ".join([f"{n} zone gelled" for n in gelled] +
+                  [f"{n} zone not gelled" for n in not_gelled] + [f"{n} zone unknown" for n in unknown]),
+                  evidence=tuple(e.event_id for e in first), uses=tuple(uses), flags=flags)
+
+
+def _separate(tags, gap):
+    """Gel tags closer than gap (to the previous tag) are one application (gel_minimum_gap_seconds)."""
+    applications, last = [], None
+    for tag in tags:
+        if last is None or tag.start - last.start >= gap:
+            applications.append(tag)
+        last = tag
+    return applications
+
+
+def _gel_by_tags(ctx, tags, end, where):
+    """D-113: the tag-count proxy. Zone visibility in the gel phase stands for "the gel could have been seen" (A-026)."""
+    applications = _separate(tags, ctx.config.engine.value("gel_minimum_gap_seconds"))
+    window = (0.0, end) if end is not None else None
+    zones = [ctx.coverage.region_missing(region, GEL, window) for _, _, _, region in GEL_ZONES]
+    visible = [z.coverage.status == COVERED for z in zones]
+    low = any(LOW_CONFIDENCE_FLAG in z.flags for z in zones)
+    count = len(applications)
+    evidence = tuple(t.event_id for t in applications)
+    timestamps = {f"{GEL}_{i}": t.start for i, t in enumerate(applications, start=1)}
+    statuses = ", ".join(f"{name} zone {z.coverage.status}" for (name, _, _, _), z in zip(GEL_ZONES, zones))
+    proxy = f"{count} separate {GEL} tag(s) {where}; zones in the gel phase: {statuses} (tag-count proxy, D-113)"
+    if all(visible) and count >= 2:
+        return _gel_passed(ctx, applications[:2], proxy, (), zones)
+    if low:   # low confidence is not absence (D-010)
+        weak = tuple(dict.fromkeys(i for z in zones for i in z.low_confidence_event_ids))
+        return unable("R1", f"{proxy}; a further gel application may have been seen with low confidence",
+                      evidence=weak + evidence, uses=tuple(zones))
+    if all(visible) and count == 1 and all(z.outcome == "fail" for z in zones):
+        return failed("R1", "applied_once", f"{proxy}: gel applied once, although both zones were visible throughout",
+                      evidence=evidence, uses=tuple(zones), timestamps=timestamps)
+    if any(visible) and count == 0 and all(z.outcome == "fail" for z, v in zip(zones, visible) if v):
+        return failed("R1", "missing", f"{proxy}: no gel applied, although "
+                      + ("both zones were" if all(visible) else "a zone was") + " visible throughout", uses=tuple(zones))
+    return unable("R1", f"{proxy}: which zones received gel cannot be established", evidence=evidence,
+                  uses=tuple(zones), timestamps=timestamps)
+
+
+def _gel_passed(ctx, applications, reason, flags, uses):
+    times = sorted(e.start for e in applications)
+    seconds = times[-1] - times[0]
+    check = checks.time_limit(seconds, ctx.config.limit("gel_application_period_seconds"))
+    evidence = tuple(e.event_id for e in applications)
+    timestamps = {**{e.event_name if e.event_name != GEL else f"{GEL}_{i}": e.start
+                     for i, e in enumerate(applications, start=1)}, "seconds": seconds}
+    if check.checked and not check.within:
+        return failed("R1", "outside_time_period", f"{reason}, but {seconds:g} s apart: {check.note}", evidence=evidence,
+                      uses=(*uses, check), flags=flags, timestamps=timestamps, timing_checked=True)
+    return passed("R1", f"{reason}: {check.note}", evidence, uses=(*uses, check), flags=flags, timestamps=timestamps,
+                  timing_checked=check.checked)
+
 
 
 @rule("R2", requires=(FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN, *PLACEMENTS),

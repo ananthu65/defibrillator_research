@@ -24,7 +24,7 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Assumption:** These values are reasonable until pilot validation:
   - confidence thresholds: annotation 1.0, video 0.5, audio 0.5;
   - simultaneous window: 0.5 s;
-  - minimum gap between two gel applications: 1.0 s;
+  - minimum gap between two gel applications: 0.4 s (1.0 s until 2026-10-17, OQ-018);
   - R8 placement-match window: 0.5 s;
   - header duration tolerance: 0.5 s;
   - R6 removal-before-screen tolerance: 0.5 s (D-105).
@@ -228,3 +228,45 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   `rules/video_rules.py`).
 - **Detected by:** reviewing R6 `missing` results in the interim runs against the videos.
 - **Related:** D-104, D-092, P-034.
+
+### A-023 `Gel applied` is tagged when the nozzle is on or near a zone
+- **Assumption (from Arnikan, 2026-10-17):** `Gel applied` was tagged when the bottle's nozzle was
+  clearly visible on or near a placement zone. Gel can be applied near the zone, not strictly
+  inside it.
+- **Why it matters:** 9d uses proximity to the zone, not overlap with it (D-111). A missing tag
+  can also mean the nozzle wasn't clearly visible (A-026).
+- **Status:** active (stated by Arnikan from the annotation videos).
+- **If wrong:** the 9d settings, and the R1 proxy's reading of a tag as one application.
+- **Related:** D-111, D-113, A-026.
+
+### A-024 The `learner_hand` box covers only the hand holding the gel bottle
+- **Assumption (from Arnikan, 2026-10-17):** the `learner_hand` box covers only the hand holding
+  the gel bottle, and it is tracked during gel application in every video.
+- **Why it matters:** the bottle period (the hand box's first to last frame in the gel phase) is
+  when gel could have been applied, and a frame without a hand box inside it is hidden (D-111).
+- **Status:** active.
+- **If wrong:** a hand box of another hand would create false applications; a video without hand
+  tracking gives unknown zones and the review issue `gel_hand_not_tracked`.
+- **Detected by:** `gel_hand_not_tracked` in the audit; disagreements in `gel_validation.md`.
+- **Related:** D-111.
+
+### A-025 During gel application the hand is near the zone, sometimes overlapping, rarely further
+- **Assumption (from Arnikan, 2026-10-17):** during gel application the hand box is usually near
+  the zone box, sometimes overlapping it, and rarely a bit further away.
+- **Why it matters:** `gel_hand_zone_max_gap` (placeholder 5% of the frame diagonal) must be
+  generous enough for "a bit away", and overlap is not required (D-111).
+- **Status:** active.
+- **Detected by:** the distribution of the smallest gaps in `gel_validation.md`.
+- **Related:** D-111, OQ-018.
+
+### A-026 Zone visibility stands for "the gel could have been seen" (R1 proxy)
+- **Assumption:** before the 9d gate, R1 treats a zone visible throughout the gel phase as meaning
+  that a gel application there would have been tagged (D-113).
+- **Known risk:** the learner's arm can hide the nozzle while the zone is visible, so a missing
+  tag may be an application nobody could see. R1 could then wrongly fail `applied_once` or
+  `missing`. The proxy also can't tell which zone a tag was on: two tags with both zones visible
+  are taken as one per zone.
+- **Status:** development only (until the 9d gate is approved).
+- **If wrong:** use only the per-zone path (past the 9d gate), or give Unable to Verify instead.
+- **Detected by:** the proxy check in progress.md (Increment 17) and the 9d validation report.
+- **Related:** D-113, A-023.

@@ -3,7 +3,9 @@
 Status: approved by Arnikan on 2026-10-10 (Step 0 of `agent_brief.md`).
 Sources: `docs/rule_engine/agent_brief.md` (source of truth) and the supervisor document
 *ARTS-DEFIBRILLATION — Proposed Rule-Based Assessment Implementation*. Where they differ, the
-brief wins: R1 = gel applied **twice** (order relative to paddle placement is not checked),
+brief wins: R1 = gel applied **twice**, once to each placement zone, **before** the paddles are
+placed (changed 2026-10-17, D-109, D-110; first written as "order relative to paddle placement is
+not checked"),
 R2 = second paddle taken after the first is **placed**, new rules R8 (apical before sternal)
 and A8 (pre-shock pause ≤ 5 s), and no severity levels (`critical_error` is never used to grade
 mistakes).
@@ -252,7 +254,8 @@ fixtures go in `tests/fixtures/rule_engine/`.
 | 14 | **Built 2026-10-17 (P-034; pending until the supervisor confirms its definition).** R6 paddles removed after shock (`removed_before_shock`, `missing`, `too_late` once an approved limit exists). A removal doesn't prove a shock (D-104): without a shock time (screen only, D-093), Not evaluable because of R5. Within the simultaneous window before the shock counts as at it. Past the gate, a derived placement ending before the shock is also `removed_before_shock` (episode end metadata added to 9c). Missing removal: Fail only if both placement zones were visible from the shock to the end, else Unable to Verify (A-022). `shock_to_removal_seconds` unset → `timing_not_checked`. Also: "no limit" as an approved decision (D-103, output contract v7); R3/R4 `inference_sources` setting (D-102, A-021, OQ-060) | `video_rules.py`, `config.py`, `checks.py`, `derive_paddle_placements.py` | every R6 branch, gate approved and not; no_limit validation and checks | — |
 | 15 | **Built 2026-10-17 (P-035; pending until the supervisor confirms its definition).** R3 paddles firmly on chest: the firm-placement tag at or before the shock, or both derived placements past the gate → Pass – Direct; tag only after → `placed_after_shock`; then the inference from `inference_sources`; no shock time → Not evaluable because of R5; a missing tag fails (`missing`) only with both zones visible from first paddle taken to the shock (D-106). `not_in_zone` not produced until OQ-012: timing and presence only. Before it: R6's own screen-delay tolerance (D-105), measured on the interim export | `video_rules.py`, `engine.yaml`, `config.py` | direct, derived (gate approved and not), inference from each source, one and both zones visible | Evidence for "not in zone" (OQ-012) |
 | 16 | **Built 2026-10-17 (P-036; pending until the supervisor confirms its definition).** R4 both buttons pressed: a press after the placement and at or before the shock → Pass – Direct; clearly before the placement → `before_placement`; then the inference from either source (D-107; removal flagged `inferred_from_removal`); no shock time → Not evaluable because of R5; `not_pressed` only with both paddles visible from the placement to the shock (D-108; unreachable while either source is listed). Paddle visibility derived in the exporter (version 2) and adapter as visibility-only regions. Output contract v8. Also OQ-061 for the supervisor | `video_rules.py`, `coverage.py`, `config.py`, `context.py`, exporter, adapter | every case; each source on its own for R3 and R4; paddles partly visible; gate approved and not | — |
-| 17 | R1 gel twice (`missing`, `applied_once`, `outside_time_period`); minimum gap placeholder | `video_rules.py` | applicable matrix rows | Time period (null) |
+| 9d | **Derived per-zone gel applications (built 2026-10-17; D-111, D-112).** In the rule engine's exporter (version 3), like 9c: gel phase, `learner_hand` proximity to each zone, visits and dips, per-zone status (gelled, not gelled, unknown), cross-check with `Gel applied` tags in `gel_validation.csv`/`.md`, its own gate (`reviewed_for_r1`). Audit issue `gel_hand_not_tracked`. Needs a re-export with exporter version 3 | `annotation/derive_gel_applications.py`, exporter, audit, adapter, `annotation_export.yaml` | every step on synthetic boxes | Re-export by Ananth; review of `gel_validation.md` |
+| 17 | **Built 2026-10-17 (P-038; pending until the supervisor confirms its definition).** R1 gel once on each zone before placement: gel only after the first placement → `after_placement` (D-109); past the 9d gate per zone (both gelled → Pass, one → `applied_once`, neither → `missing`, unknown → Unable to Verify); before it the tag-count proxy against zone visibility in the gel phase (D-113, A-026); period unset → `timing_not_checked`. Output contract v9 | `video_rules.py`, vocabulary, `engine.yaml` | each case, gate approved and not, period unset and set | Time period (OQ-016), repeats (OQ-021) |
 | 18 | A1 oxygen away + A3 stand clear (`missing`, `after_shock`) | `audio_rules.py` | no audio → Unable | — |
 | 19 | A2 continue + A4 stop (`missing`, `wrong_stage`, `after_shock`, `wrong_order`) | `audio_rules.py` | applicable matrix rows | A4 limit (null) |
 | 20 | A5 shock command (`missing`) | `audio_rules.py` | applicable matrix rows | Tolerance (null) |
@@ -271,7 +274,7 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 
 - Confidence threshold per source: annotation 1.0 (human), video 0.5, audio 0.5.
 - Simultaneous window: 0.5 s.
-- Gel minimum gap between two applications: 1.0 s.
+- Gel minimum gap between two applications: 0.4 s (1.0 s until 2026-10-17; OQ-018).
 - R8 placement-match window (`placement_match_window_seconds`): 0.5 s.
 - R8 fallback `assume_first_taken_is_apical`: `false` (off).
 - Header duration tolerance (`duration_tolerance_seconds`): 0.5 s.

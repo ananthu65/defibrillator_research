@@ -245,13 +245,42 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 ## Rule definitions
 
 ### D-018 Gel: applied twice within the approved period; order versus placement not checked
-- **Date / by / status:** 2026-10-10 · Arnikan · approved (the period itself awaits OQ-016)
+- **Date / by / status:** 2026-10-10 · Arnikan · approved (the period itself awaits OQ-016);
+  **replaced by D-109** (gel before placement) **and D-110** (once on each zone) on 2026-10-17
 - **Decision:** R1 passes when gel is applied twice, as two separate applications, within an
   approved time period. Whether gel comes before paddle placement is **not** checked.
 - **Reason:** This is the procedure taught. It replaces the proposal document's "gel before
   placement".
 - **Affects:** R1; Increment 17. **Open questions:** OQ-016 (the period), OQ-021 (more than
   twice).
+
+### D-109 Gel must be applied before the paddles are placed
+- **Date / by / status:** 2026-10-17 · Arnikan · approved. **Replaces D-018's "order versus
+  placement not checked".**
+- **Decision:** gel must be applied **before** the paddles are placed, because a shock without
+  gel harms the patient. A gel application **only after the first placement** (no gel before it)
+  is a **Fail `after_placement`** (a new failure code).
+  - The first placement is `first_paddle_placed` (the CVAT tag `first_paddle_firmly_on_the_chest`)
+    or the earliest per-paddle placement. Without a placement time, `after_placement` isn't judged.
+  - A gel tag within `simultaneous_window_seconds` after the placement still counts as before it
+    (annotation lag).
+- **Reason:** the clinical harm of a shock without gel. It restores the proposal document's
+  "gel before placement".
+- **Affects:** R1 (P-038). **Replaces:** part of D-018.
+
+### D-110 Gel twice means once on each placement zone, in either order
+- **Date / by / status:** 2026-10-17 · Arnikan · approved. **Replaces D-018's "two separate
+  applications".**
+- **Decision:** to pass, gel must be applied **twice: once to each placement zone**. Sternal is on
+  the chest, apical on the left side of the ribs. Either order is fine, and the order between the
+  zones is **not** checked.
+  - One zone gelled and the other not → `applied_once`. Neither → `missing`.
+  - More than two applications stays the supervisor's question (OQ-021); it isn't a mistake for
+    now.
+  - The time period (`gel_application_period_seconds`) stays unset, so a Pass is flagged
+    `timing_not_checked` until the supervisor answers (OQ-016). The answer may be "no limit"
+    (D-103).
+- **Affects:** R1 (P-038). **Replaces:** part of D-018.
 
 ### D-051 R2: second paddle taken only after the first is placed
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
@@ -698,6 +727,78 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Unreachable for now:** like R3's `missing`, `not_pressed` can't be reached while either
   source is in `inference_sources` (D-107).
 - **Affects:** R4 (P-036); P-030, P-007 (paddle regions). **Open questions:** OQ-023, OQ-061.
+
+### D-111 Step 9d: per-zone gel applications derived from the hand and zone boxes
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (the values are placeholders, to be
+  tuned from `gel_validation.md`)
+- **Decision:** the rule engine's exporter (not Ananth's files; CVAT stays frozen) derives a gel
+  application per zone, as 9c does for placements (`annotation/derive_gel_applications.py`).
+  - **Gel phase:** from the start of the recording to the first placement
+    (`first_paddle_firmly_on_the_chest`, else the earliest 9c placement of the same export), else
+    to `first_paddle_taken`. The exporter can't check the 9c gate (the export ID is the hash of its
+    own output), so 9d's settings hash includes 9c's, and the 9d review covers it.
+  - **Application:** the `learner_hand` box stays within `gel_hand_zone_max_gap` of a zone box for
+    at least `gel_dwell_frames` frames. The gap is the distance between the two boxes relative to
+    the frame diagonal (proximity, not overlap, A-025), and the hand needn't be still. A frame goes
+    to the nearest zone only if the other visible zone is at least `gel_zone_nearer_ratio` times
+    further; otherwise it is ambiguous.
+  - **Visits:** separate visits to a zone count separately. A dip out of range of up to
+    `gel_exit_frames` frames stays within one visit.
+  - **Could it have been missed?** The bottle period runs from the hand box's first to its last
+    frame in the gel phase; a frame inside it without a hand box is hidden. Per zone:
+    - an application → **gelled**;
+    - zone visible on every frame of the bottle period, hand never hidden, no application → **not
+      gelled**;
+    - otherwise → **unknown**;
+    - no hand box in the gel phase → every zone **unknown**, plus the review issue
+      `gel_hand_not_tracked` (export issues and the audit).
+  - **Cross-check:** each application should have a `Gel applied` tag within
+    `gel_tag_agreement_frames` of its visit. `gel_validation.csv`/`.md` give, per video and zone:
+    the applications, the smallest gap, the dwell, hidden and ambiguous frames, the tag agreement
+    and every disagreement. The summary gives the distribution of gaps for tuning. Disagreements
+    never drop an event.
+  - **Events:** `apical_gel_applied` / `sternal_gel_applied` (new canonical events), direct
+    evidence, flagged `derived_gel_application`, with the zone, method and settings hash in
+    metadata. Each zone's status is in the record (`gel`). Exporter version 3.
+- **Production:** video postprocessing should produce the same per-zone events from the
+  `learner_hand` and zone detections ([upstream_requirements.md](upstream_requirements.md)).
+- **Affects:** P-037; R1. **Assumptions:** A-023, A-024, A-025. **Open questions:** OQ-018,
+  OQ-021.
+
+### D-112 The 9d gate: R1 uses derived gel only for a reviewed export
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** as for 9c (D-088), a review record in `annotation_export.yaml`
+  (`derived_gel.reviewed_for_r1`) names the export ID and the hash of the 9d settings. Only past it
+  does the Increment 10 adapter pass on the derived gel events, and turn each zone's status into
+  the coverage of the visibility-only regions `apical_gel` and `sternal_gel`: gelled or not gelled
+  → covered (an application there would have been seen), unknown → unknown. Before it, R1 uses the
+  tag-count proxy (D-113).
+- **Affects:** P-001, P-030, P-037; R1.
+
+### D-113 R1: per zone past the 9d gate, the tag-count proxy before it
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (R1 stays pending until the supervisor
+  confirms its definition)
+- **Decision:**
+  - **First:** gel only after the first placement → `after_placement` (D-109).
+  - **Past the 9d gate (each zone's gel status known):**
+    - both zones gelled before the placement → Pass, flagged `derived_gel_application`;
+    - one gelled, the other not gelled → `applied_once`;
+    - neither gelled → `missing`;
+    - otherwise (a zone unknown) → Unable to Verify.
+  - **Before the gate (tag-count proxy):** zone visibility during the gel phase stands for "the
+    gel could have been seen" (A-026). Tags closer than `gel_minimum_gap_seconds` (placeholder
+    0.4 s, lowered from 1.0 s after the interim proxy check, OQ-018) count as one application.
+    - **Both zones visible throughout:** 2 or more separate applications → Pass; 1 →
+      `applied_once`; 0 → `missing`.
+    - **One zone visible:** 0 → `missing`; 1 or more → Unable to Verify, since the tags may all be
+      on one zone.
+    - **No zone visible, or unknown:** Unable to Verify.
+    - **Low confidence** is never a Fail (D-010).
+  - **Time period:** the interval between the two applications is checked against
+    `gel_application_period_seconds`. Unset → `timing_not_checked`; an approved value exceeded →
+    `outside_time_period`; an approved "no limit" → checked (D-103).
+  - **Not checked:** the order between the zones; more than two applications (OQ-021).
+- **Affects:** R1 (P-038). **Assumption:** A-026. **Open questions:** OQ-016, OQ-021.
 
 ---
 
