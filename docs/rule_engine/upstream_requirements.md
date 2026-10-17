@@ -65,6 +65,15 @@ must not blame the learner for missing data, so today it has to treat both cases
 The rule engine will use the header for coverage (Increment 4). The format is a proposal to
 agree; it can be a small wrapper around the event list, so the `Event` schema does not change.
 
+**Optional fields (Increment 10):**
+- **`visibility`:** when each placement zone was in view, as
+  `{"region:apical_zone": [[start, end], ...]}` in seconds, sorted and not overlapping. A rule
+  asking about a time window then gets that window's coverage: visible throughout → covered;
+  visible for part → unknown; never visible → not covered (D-092).
+- **`flags`:** `["annotation_coverage_assumed"]` marks a timeline built from annotation data. The
+  rule-engine annotation adapter sets both fields. A model pipeline can send `visibility` the same
+  way, once zone visibility comes from the video models (OQ-004).
+
 ## From video postprocessing (Ananth)
 
 ### Action events

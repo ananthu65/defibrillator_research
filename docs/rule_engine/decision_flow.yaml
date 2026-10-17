@@ -71,25 +71,28 @@ decision_points:
   - id: P-030
     name: Zone coverage for an annotated recording
     stage: adapter
-    status: planned
-    decides: The header coverage of each placement zone (region) for one annotated recording (Increment 10)
-    inputs: [exporter record (zone_tracks, zone_visibility), reviewed_zone_exceptions]
+    status: built
+    decides: The header coverage and visible intervals of each placement zone (region) for one annotated recording (Increment 10)
+    inputs: [exporter record (zone_tracks, zone_visibility, frame range), reviewed_zone_exceptions]
     branches:
       - condition: The zone is confirmed not visible by an annotator (reviewed exception)
-        outcome: not covered (D-082)
+        outcome: not covered (D-082); no intervals, so every window is not covered too
         next: P-007
-      - condition: Zone track present and visible on some frames
-        outcome: covered
+      - condition: Zone track present and visible on every frame of the recording
+        outcome: covered; its interval goes into header.visibility
+        next: P-007
+      - condition: Zone track present and visible on only part of the recording
+        outcome: unknown for the recording; its intervals go into header.visibility, so a time window gets its own status (D-092)
         next: P-007
       - condition: Zone track present but outside on every frame
-        outcome: not covered (D-080)
+        outcome: not covered (D-080); empty intervals
         next: P-007
       - condition: No zone track
-        outcome: unknown (D-074)
+        outcome: unknown (D-074); no intervals
         next: P-007
     config: [annotation_export.yaml reviewed_zone_exceptions]
-    code: rules/adapters/annotation.py (Increment 10)
-    decisions: [D-074, D-080, D-082]
+    code: rules/adapters/annotation.py (zone_coverage, adapt_record)
+    decisions: [D-074, D-080, D-082, D-092]
     assumptions: []
     open_questions: []
 
@@ -133,22 +136,28 @@ decision_points:
   - id: P-001
     name: Annotation timeline adapter
     stage: adapter
-    status: planned
+    status: built
     decides: How an exporter record becomes a timeline, a header and coverage (Increment 10; reads records.jsonl, not events.jsonl, D-074)
-    inputs: [exporter record (P-028), reviewed_zone_exceptions]
+    inputs: [exporter record (P-028), its export_manifest.json, reviewed_zone_exceptions, derived_placements.reviewed_for_r8]
     branches:
       - condition: Record converted
-        outcome: Events plus header analyses_run {video true, audio false}; every result flagged
+        outcome: Events from every tag under its CVAT name (the vocabulary maps them); header with recording_id, camera_angle and duration_seconds from the record, analyses_run {video true, audio false}; the header is flagged and the engine carries the flag onto every result, so the report is development data (D-066)
         next: P-002
         flags: [annotation_coverage_assumed]
       - condition: Zone coverage per region
         outcome: Decided by P-030
         next: P-030
-    config: []
-    code: rules/adapters/annotation.py (Increment 10)
-    decisions: [D-035, D-074]
+      - condition: Derived placements, and derived_placements_approved() passes for the export's ID and settings hash, with every event made with those settings
+        outcome: They become annotation events (direct, derived_placement in metadata) and reach the engine (D-088)
+      - condition: Derived placements, gate not passed (no review, another export or other settings, no manifest)
+        outcome: Withheld and counted; the engine never sees them
+      - condition: Not a rule-engine annotation record, or the output folder is inside data/video or not empty
+        outcome: Refused; no timelines written
+    config: [annotation_export.yaml reviewed_zone_exceptions, derived_placements.reviewed_for_r8]
+    code: rules/adapters/annotation.py (adapt_record, gate_status), rules/engine.py (header flags onto results)
+    decisions: [D-035, D-066, D-074, D-084, D-088]
     assumptions: [A-001, A-015]
-    open_questions: [OQ-037]
+    open_questions: [OQ-037, OQ-053]
 
   - id: P-002
     name: Timeline validation
@@ -304,7 +313,10 @@ decision_points:
       - condition: No header
         outcome: unknown
         next: P-008
-      - condition: Header states coverage for the event's region (most specific)
+      - condition: The rule asks about a time window and the header has visibility intervals for the event's region (D-092)
+        outcome: covered if the zone is visible throughout the window, unknown if visible for only part of it, not covered if never visible in it
+        next: P-008
+      - condition: Header states coverage for the event's region (most specific; the whole recording)
         outcome: That status
         next: P-008
       - condition: Header states coverage for the single source of the event's modality
@@ -317,10 +329,10 @@ decision_points:
         outcome: unknown
         next: P-008
     config: [engine.yaml coverage_policy.regions]
-    code: rules/coverage.py (Coverage.status)
-    decisions: [D-009, D-036]
+    code: rules/coverage.py (Coverage.status, _windowed)
+    decisions: [D-009, D-036, D-092]
     assumptions: [A-007, A-008, A-009]
-    open_questions: [OQ-007, OQ-020]
+    open_questions: [OQ-020]
 
   - id: P-008
     name: Missing-event outcome

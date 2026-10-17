@@ -544,6 +544,8 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Old no.:** E-16 · **Raised:** 2026-10-13 · **Status:** answered
 - **Answer:** No time windows now. The interface allows them later without rule changes.
 - **Answered:** 2026-10-13 → **D-036**.
+- **Update 2026-10-17:** time windows are now used for placement zones with visibility intervals
+  (D-092, replacing D-036 there). This question stays answered.
 
 ### OQ-028 `analyses_run` for annotation timelines — *answered*
 - **Old no.:** E-17 · **Raised:** 2026-10-13 · **Status:** answered

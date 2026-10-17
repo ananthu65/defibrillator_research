@@ -409,6 +409,23 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   time window per question, so windows can be added later without changing any rule.
 - **Affects:** P-007, P-008. **Resolved:** OQ-027.
 
+### D-092 Partial zone visibility: coverage within a time window
+- **Date / by / status:** 2026-10-17 · Arnikan · approved. **Replaces D-036** for placement zones
+  that have visibility intervals; everything else stays per recording.
+- **Decision:** The exporter's zone intervals are used in coverage, through the existing `window`
+  parameter.
+  - **For a time window:**
+    - covered only if the zone is visible **throughout** the window;
+    - **unknown** if it is visible for only part of it;
+    - **not covered** if it is never visible in it.
+  - **Without a window,** a zone visible for only part of the recording is **unknown**, not
+    covered.
+  - **Where the intervals come from:** the annotation adapter puts them in the timeline header
+    (`visibility`: region → intervals in seconds). No rule changes.
+- **Reason:** a zone out of view at the moment a placement was expected can't show whether the
+  placement happened. A missing placement then is Unable to Verify, never a Fail.
+- **Affects:** P-007, P-030; R3, R8.
+
 ---
 
 ## Shock time and command timing

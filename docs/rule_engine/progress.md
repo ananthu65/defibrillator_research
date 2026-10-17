@@ -3130,3 +3130,127 @@ Arnikan says so.
 - **Docs:** P-031 (new branch), pathways (P-031 table, W-46 updated, W-50 new), diagram (j)
   (unknown state, D-091), anomalies, rules status, plan rows 9c/11/12, registers.
 - **Tests:** 465 → 469.
+
+---
+
+## Increment 10: annotation adapter, with partial zone visibility (2026-10-17)
+
+### Decisions recorded (Arnikan)
+- **D-092 (replaces D-036 for zones with intervals):** partial zone visibility uses the exporter's
+  zone intervals, through the existing `window` parameter:
+  - in a time window, a zone is covered only if visible throughout it; unknown if visible for
+    part of it; not covered if never visible in it;
+  - without a window, partial visibility is unknown.
+
+  OQ-027 stays answered, with an update line.
+- **Already decided and now built:** header from the record; `analyses_run` video true and audio
+  false, flagged `annotation_coverage_assumed`; reviewed exceptions and never-visible tracks →
+  not covered; no track → unknown (D-035, D-066, D-074, D-080, D-082); the gate (D-088).
+
+### What was done
+- **`rules/adapters/annotation.py` (new; P-001, P-030):**
+  - reads `records.jsonl`, never `events.jsonl`;
+  - events from every tag under its CVAT name, with the vocabulary mapping them (D-073);
+  - a header with `recording_id`, `camera_angle`, `duration_seconds`, `analyses_run`, the region
+    coverage per P-030, the visible intervals (`visibility`) and the flag
+    `annotation_coverage_assumed`;
+  - derived placements pass only when `derived_placements_approved()` holds for the export's ID
+    and settings hash, and every derived event carries that settings hash; otherwise they are
+    withheld and counted;
+  - command `python -m rules.adapters.annotation --records … --output … [--task] [--exclude]`
+    writes one timeline per video and `adapter_summary.json`, and refuses `data/video/` and
+    non-empty folders.
+- **`rules/coverage.py`:**
+  - `TimelineHeader` gains `visibility` (sorted, non-overlapping intervals per region scope) and
+    `flags` (header flags, now `annotation_coverage_assumed`);
+  - `status(event, window)` applies D-092;
+  - visibility ending after the duration is a `header_mismatch`.
+- **`rules/engine.py`:** header flags are copied onto every rule result, so
+  `annotation_coverage_assumed` makes the overall result `development_data` (D-066). The constant
+  moved to `coverage.py`, and `policy.py` imports it.
+- **Output contract version 3:** `context.header` gains `visibility` and `flags`; the flag
+  `annotation_coverage_assumed` is now built.
+
+### Methods and design choices
+- **Two header fields, one per purpose:** the header keeps the whole-recording status
+  (`coverage`) and adds the intervals (`visibility`). A rule asking without a window gets the
+  recording status; with a window, the window's status. No rule changes (the window parameter
+  existed since Increment 4).
+- **Zone → region mapping without new names:** each CVAT zone maps to the engine region of the
+  placement event it governs (from the 9c settings and `engine.yaml` regions).
+- **One flag mechanism:** header flags reach every result through the engine, so adapters never
+  touch rule outcomes.
+
+### Tests (469 → 486)
+`tests/test_rule_engine_annotation_adapter.py`, 17 tests:
+- **Events and header (3):** tags become annotation events, which the vocabulary maps; the header
+  comes from the record and is flagged; a non-record is rejected.
+- **P-030 (2):**
+  - covered;
+  - unknown (no track);
+  - partial, with the intervals in the header;
+  - never visible (empty intervals);
+  - a reviewed exception is not covered, even if a track shows the zone.
+- **Windowed coverage (6):**
+  - visible throughout the window → covered, including a window exactly on the interval;
+  - visible for part of it → unknown;
+  - never visible in it → not covered;
+  - no window → unknown;
+  - a placement expected while the zone was out of view → Unable to Verify, never Fail (through
+    `Coverage` and `ProcedureContext`), and Fail when the zone was visible throughout;
+  - events outside regions ignore the window.
+- **Gate (2):** an approved export passes derived placements on. Not approved in four cases: no
+  review, another export, no manifest, an event made with other settings.
+- **Through the engine (2):** every result flagged, development data, Incomplete, zone statuses,
+  and the header surviving the trip to the timeline file and back; header validation (non-region
+  scope, overlapping intervals, unknown flag, visibility after the duration).
+- **Command line (2):** adapter then `rules.run` (excluding P14_LS); non-empty output refused.
+
+Full suite: **486 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Interim data: adapter and `rules.run` on 6 smoke-run records (D-084; P14_LS excluded)
+Output (gitignored): `data/rule_engine/timelines/interim-2026-10-17/` and
+`data/rule_engine/reports/interim-2026-10-17/`.
+
+| Video | Events | Apical zone | Sternal zone | Shock time | Result |
+|---|---|---|---|---|---|
+| P01_LL | 5 | covered (0–18.95 s) | unknown (no track) | from removal, 15.94 s | Incomplete, development data |
+| P01_LS | 9 | covered | covered | on screen, 16.8 s | Incomplete, development data |
+| P01_T | 9 | covered | covered | on screen, 15.91 s | Incomplete, development data |
+| P06_T | 6 | **unknown** (visible only from 10.1 s) | covered | from removal, 21.57 s | Incomplete, development data |
+| P07_T | 9 | covered | covered | on screen, 19.6 s | Incomplete, development data |
+| P12_LS | 9 | covered | covered | on screen, 13.57 s | Incomplete, development data |
+
+**What was checked:**
+- **Headers:** duration and camera from the record; `analyses_run` video true and audio false;
+  flagged.
+- **Labels:** every CVAT label was recognised; `first_paddle_firmly_on_the_chest` maps to
+  `first_paddle_placed`, and its key time is set.
+- **Results:** no timeline anomalies; every rule result carries `annotation_coverage_assumed`.
+- **Per-paddle placements are absent:** this export predates 9c, so P-012's apical and sternal
+  placement anchors are empty.
+- **P06_T:** its first placement (14.03 s) lies inside the apical zone's visible interval, so a
+  rule asking about that time gets covered. This is D-092 at work on real data.
+- **Two LL/T videos have no shock-on-screen tag:** the shock time comes from paddle removal and
+  is flagged. Expected for P01_LL: the screen isn't in that view.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-001 and P-030 built; P-007 window branch.
+- **`pathways.md`:** P-001, P-030 and P-007 tables; W-51 (zone out of view), W-52 (gate), W-53
+  (interim P06_T).
+- **`diagrams.md`:** (b), (h), (i).
+- **Registers:** `decisions.md` (D-092); `open_questions.md` (OQ-027 update).
+- **Other docs:**
+  - `anomalies.md` (header flags);
+  - `output_contract.md` (version 3);
+  - `upstream_requirements.md` (optional header fields);
+  - `implementation_plan.md` (row 10);
+  - `rules_status.md`, `methods.md`, `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+None new. Still open and relevant: OQ-053 (constant frame rate), OQ-054 (final export date),
+OQ-055 (camera view from the file name).
+
+### Next
+Increment 11 (R2). Nothing is committed; commit only when Arnikan says so.

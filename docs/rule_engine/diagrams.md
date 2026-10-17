@@ -35,7 +35,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     A0["P-028 Annotation exporter<br/>(CVAT backups, built; see h)"]
-    A["P-001 Adapter<br/>(annotation now, models later)"]:::planned
+    A["P-001 / P-030 Adapter<br/>(annotation built; models later)"]
     A0 --> A
     B["P-002 Validate timeline"]
     C["P-003 Map names"]
@@ -215,7 +215,7 @@ flowchart LR
         REP["Audit outputs<br/>review list, information"]
         SMOKE[("Interim: smoke-run export<br/>39 corrected backups (D-084)")]
         CFG[/"annotation_export.yaml<br/>zone labels, usual pattern,<br/>reviewed exceptions"/]
-        ADP["P-001 / P-030 adapter<br/>(Increment 10)"]
+        ADP["P-001 / P-030 adapter<br/>header, zone coverage + intervals,<br/>gate for derived placements"]
         ENG["Rule engine<br/>P-002 onward"]
         REC --> ADP --> ENG
         SMOKE -.->|until the final export| ADP
@@ -224,14 +224,13 @@ flowchart LR
     EXP -->|"sent: records + manifest<br/>no media"| REC
     AUD2 -->|sent| REP
     REP -->|items to fix in the backups| CVAT
-    classDef planned stroke-dasharray: 5 5
-    class ADP planned
 ```
 
-## (i) How a zone's coverage is decided for a recording (P-030; D-074, D-080, D-082)
+## (i) How a zone's coverage is decided for a recording (P-030, P-007; D-074, D-080, D-082, D-092)
 
-Decided per zone (apical, sternal) for one annotated recording, in Increment 10. The view's usual
-zone pattern is used only by the audit's review list, never here.
+Decided per zone (apical, sternal) for one annotated recording by the adapter (built, Increment
+10). When a rule asks about a time window, P-007 uses the zone's visible intervals (D-092). The
+view's usual zone pattern is used only by the audit's review list, never here.
 
 ```mermaid
 flowchart TD
@@ -239,15 +238,23 @@ flowchart TD
     X -->|yes| NC1["not covered (D-082)<br/>off the review list"]
     X -->|no| T{"Zone track in<br/>the CVAT backup?"}
     T -->|no| UN["unknown (D-074)<br/>on the review list if the view<br/>usually shows this zone"]
-    T -->|yes| V{"Visible on any frame?<br/>(a training box exists, D-079)"}
-    V -->|yes| CO["covered"]
-    V -->|no, outside on every frame| NC2["not covered (D-080)<br/>audit information only"]
-    NC1 --> P7["→ P-007 coverage status<br/>→ P-008 what a missing<br/>placement means"]
-    UN --> P7
-    CO --> P7
-    NC2 --> P7
-    classDef planned stroke-dasharray: 5 5
-    class Z,X,NC1,T,UN,V,CO,NC2,P7 planned
+    T -->|yes| V{"Visible on which frames?<br/>(a training box exists, D-079)"}
+    V -->|every frame| CO["covered"]
+    V -->|some frames| PART["unknown for the recording<br/>intervals in the header"]
+    V -->|none, outside on every frame| NC2["not covered (D-080)<br/>audit information only"]
+    PART --> W{"P-007: rule asks about<br/>a time window?"}
+    W -->|"visible throughout it"| WC["covered"]
+    W -->|"visible for part of it"| WU["unknown"]
+    W -->|"never visible in it"| WN["not covered"]
+    W -->|no window| PART2["unknown"]
+    NC1 --> P8["→ P-008 what a missing<br/>placement means"]
+    UN --> P8
+    CO --> P8
+    NC2 --> P8
+    WC --> P8
+    WU --> P8
+    WN --> P8
+    PART2 --> P8
 ```
 
 ## (j) Derived per-paddle placement (P-031, Step 9c; D-081, D-086 to D-088, D-090, D-091)

@@ -127,14 +127,22 @@ Flags on the overall result (P-017), not on rule results.
 | `overall_policy_undecided` | No Fail and nothing incomplete, but something is unverified, while `unable_to_verify_outcome` is undecided | The result is `unable_to_verify`, naming the undecided setting (OQ-002) |
 | `no_rules_evaluated` | No rule was evaluated (e.g. every rule disabled) | Incomplete, never Pass (D-068) |
 
+## Header flags (`rules/coverage.py` `HEADER_FLAGS`, Increment 10)
+
+Set in the timeline header by an adapter. The engine copies them onto every rule result of
+that timeline (`rules/engine.py`).
+
+| Code | Raised by | Meaning |
+|---|---|---|
+| `annotation_coverage_assumed` | Annotation adapter (P-001, Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result carries this flag, and the overall result is marked `development_data` (D-066), so it is never mistaken for a real assessment |
+
 ## Planned flags (later increments)
 
-The decision points that will raise these are P-001, P-015 and P-018 in
+The decision points that will raise these are P-015 and P-018 in
 [decision_flow.yaml](decision_flow.yaml).
 
 | Code | Step | Meaning |
 |---|---|---|
-| `annotation_coverage_assumed` | Annotation adapter (Increment 10); read by the overall policy (Increment 8, D-066) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result built on it carries this flag, so it is never mistaken for a real assessment |
 | `inferred_fail_policy_undecided` | R8 (Increment 12) | An inferred Fail gives Unable to Verify until `inferred_fail_outcome` is decided |
 | `contradictory` | Rules (for example R8) | Evidence contradicts itself; Unable to Verify |
 | `placement_missing` | R8 (Increment 12; D-058) | A visible zone's paddle has no placement event, or one of two visible placements is missing. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |

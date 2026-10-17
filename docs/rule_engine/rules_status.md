@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–9a, Steps 9b and 9c)
+## What is built so far (Increments 0–10, with 9a, 9b and 9c)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -63,5 +63,11 @@ report of the final export, and recorded that export and its settings (the gate,
 possible parallel placement is enough for R2 and R8 to Fail with `simultaneous` once the gate is
 approved (D-091).
 
-No individual rule is built yet, so all 16 still report "pending". Next: the annotation input
-adapter (Increment 10).
+- **Annotation adapter:** P-001 and P-030 (Increment 10). Exporter records become timelines with
+  a header (duration, analyses run, zone coverage and visible intervals). Results are marked as
+  development data. A zone visible for only part of the recording is judged per time window
+  (D-092). For example, a placement expected while the zone was out of view gives Unable to
+  Verify, never a Fail. Derived placements reach the engine only past the gate (D-088).
+
+No individual rule is built yet, so all 16 still report "pending". On the interim annotation data
+the engine gives Incomplete, marked as development data. Next: R2 (Increment 11).

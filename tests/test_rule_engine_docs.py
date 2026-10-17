@@ -37,7 +37,8 @@ def raised_in_code():
     source = code_sources()
     return {"rejections": set(re.findall(r'(?:TimelineError|RegistryError)\(\s*"([a-z_]+)"', source)),
             "anomalies": set(re.findall(r'Anomaly\(\s*"([a-z_]+)"', source)),
-            "flags": set(coverage.FLAGS) | set(context.FLAGS) | set(checks.FLAGS) | set(policy.FLAGS),
+            "flags": set(coverage.FLAGS) | set(coverage.HEADER_FLAGS) | set(context.FLAGS) | set(checks.FLAGS)
+                     | set(policy.FLAGS),
             "failure_codes": set(engine.FAILURE_CODES)}
 
 

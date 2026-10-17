@@ -61,19 +61,25 @@ and T2 is `paddles_firmly_on_chest`, following the annotators' convention (A-019
 
 ### Stage: adapter
 
-#### P-001 Annotation timeline adapter (planned, Increment 10)
+#### P-001 Annotation timeline adapter (built, Increment 10)
+`python -m rules.adapters.annotation --records <records.jsonl> --output <folder>` writes one
+timeline file per video for `rules.run`.
+
 | Condition | Outcome | Flags |
 |---|---|---|
-| An exporter record is converted (D-074) | Events, plus a header saying video was analysed and audio was not | `annotation_coverage_assumed` on every result |
+| An exporter record is converted (D-074) | Events from every tag under its CVAT name (the vocabulary maps them). Header: `recording_id`, `camera_angle` and `duration_seconds` from the record; video analysed, audio not | `annotation_coverage_assumed` in the header and on every result; report marked development data (D-066) |
 | Zone coverage per region | → P-030 | — |
+| Derived placements, and the gate passes for this export's ID and settings hash (D-088) | They become events and reach the engine | — |
+| Derived placements, gate not passed | Withheld and counted; the engine never sees them | — |
 
-#### P-030 Zone coverage for an annotated recording (planned, Increment 10)
-| Condition | Coverage of the region | Decision |
-|---|---|---|
-| Annotator confirmed the zone was genuinely not visible (reviewed exception) | **not covered** | D-082 |
-| Zone track present and visible on some frames | **covered** | D-074 |
-| Zone track present but outside on every frame | **not covered** | D-080 |
-| No zone track | **unknown** | D-074 |
+#### P-030 Zone coverage for an annotated recording (built, Increment 10)
+| Condition | Coverage of the region (whole recording) | Intervals in the header | Decision |
+|---|---|---|---|
+| Annotator confirmed the zone was genuinely not visible (reviewed exception) | **not covered** | none | D-082 |
+| Zone track visible on every frame | **covered** | its interval | D-074 |
+| Zone track visible on only part of the recording | **unknown** | its intervals; a time window gets its own status (P-007) | D-092 |
+| Zone track present but outside on every frame | **not covered** | empty | D-080 |
+| No zone track | **unknown** | none | D-074 |
 
 The view's usual zone pattern plays no part here (D-082).
 
@@ -135,7 +141,8 @@ The most specific information wins.
 | Condition | Coverage |
 |---|---|
 | No header | unknown |
-| Header states coverage for the event's camera region (apical or sternal zone) | that status |
+| The rule asks about a time window, and the header has visibility intervals for the event's region (D-092) | **covered** if visible throughout the window; **unknown** if visible for part of it; **not covered** if never visible in it |
+| Header states coverage for the event's camera region (apical or sternal zone) | that status (whole recording) |
 | Header states coverage for the event's source | that status |
 | Header states coverage for the modality, or says whether that analysis ran | covered (ran) / not covered (did not run) / the stated status |
 | Nothing stated | unknown |
@@ -722,3 +729,38 @@ illustration only.)*
 4. Compare: the paddle really lifted off for frames 41 to 46, with the zone visible → 6 out
    frames → **two placements**, at 20 and 47 (a re-placement, D-012; `count_violation` in the
    engine, D-071).
+
+### W-51 A placement expected while the zone was out of view → Unable to Verify, never Fail
+*(Built in Increment 10; D-092.)*
+1. The apical zone is visible from 0 to 1.56 s and from 2.4 to 3.96 s. P-030: the zone is
+   **unknown** for the whole recording, and both intervals go into the header.
+2. A rule expects the apical placement between 1.7 and 2.2 s and finds none.
+3. P-007 with that window: the zone is never visible in it → **not covered**. P-008 → **Unable to
+   Verify** (D-004): the camera couldn't have shown it.
+4. Same rule, window 0.2 to 1.0 s (zone visible throughout) → **covered** → a missing placement is
+   a **Fail**.
+5. Window 1.0 to 2.0 s (visible for only part of it) → **unknown** → Unable to Verify (interim,
+   `coverage_policy_undecided`).
+
+### W-52 Derived placements from an export that hasn't been reviewed → withheld
+*(Built in Increment 10; D-088.)*
+1. The records contain derived placements. The review record in `annotation_export.yaml` is
+   empty, or names another `export_id` or other settings.
+2. P-001: `derived_placements_approved()` fails → the placements are **withheld** and counted in
+   `adapter_summary.json` ("not approved: …"). The engine never sees them, so R8 finds no
+   per-paddle placement → Unable to Verify.
+3. After Arnikan reviews this export's `placement_validation.md` and fills in the review record
+   with its `export_id` and settings hash, they reach the engine, and R8 can use them (D-091 for
+   parallel placements).
+
+### W-53 An interim record through the adapter and the engine (P06_T)
+*(Run on 2026-10-17 on the smoke-run export, D-084.)*
+1. P-001: 6 events, for example `first_paddle_firmly_on_the_chest` mapped to
+   `first_paddle_placed` at 14.03 s. Header: duration 25.0 s, video analysed, audio not, flagged
+   `annotation_coverage_assumed`.
+2. P-030: the sternal zone is visible throughout → covered. The apical zone is visible only from
+   10.1 s → **unknown** for the recording. The first placement (14.03 s) lies inside its visible
+   interval, so a rule asking about that time would get **covered** (D-092).
+3. No shock on screen is tagged → shock time from the removal at 21.57 s
+   (`shock_time_from_removal`).
+4. Every rule is pending → **Incomplete**, `development_data`, every result flagged.

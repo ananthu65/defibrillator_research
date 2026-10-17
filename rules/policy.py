@@ -14,12 +14,12 @@ built on annotation data (annotation_coverage_assumed) is marked as development 
 """
 from dataclasses import dataclass
 from rules.checks import LIMIT_NOT_APPROVED, TIMING_NOT_CHECKED
+from rules.coverage import ANNOTATION_COVERAGE_ASSUMED  # a header flag the engine carries onto every result (P-001)
 from rules.outcome import ASSUMED, ENGINE_ERROR, FAIL, NOT_EVALUABLE, PENDING, UNABLE
 
 PASS, INCOMPLETE, FACULTY_REVIEW, UNVERIFIED = "pass", "incomplete", "faculty_review", "unable_to_verify"
 RESULTS = (PASS, FAIL, INCOMPLETE, FACULTY_REVIEW, UNVERIFIED)
 
-ANNOTATION_COVERAGE_ASSUMED = "annotation_coverage_assumed"  # set on results by the annotation adapter (P-001)
 TIMELINE_NEEDS_REVIEW = "timeline_needs_review"
 DEVELOPMENT_DATA = "development_data"
 OVERALL_POLICY_UNDECIDED = "overall_policy_undecided"

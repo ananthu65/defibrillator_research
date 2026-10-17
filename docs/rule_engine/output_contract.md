@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 2
+**Report version:** 3
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -28,6 +28,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 |---|---|---|
 | 1 | 2026-10-14 | First version (Increment 9) |
 | 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (D-072). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
+| 3 | 2026-10-17 | `context.header` gains two fields (Increment 10): `visibility` (each placement zone's visible intervals in seconds, `{"region:apical_zone": [[start, end], ...]}`, D-092) and `flags` (a list; `annotation_coverage_assumed` for annotation data). The rule flag `annotation_coverage_assumed` is now built: every result of an annotation timeline carries it, and `development_data` is then true (D-066). `context.zone_visibility` is unchanged (the whole-recording status) |
 
 ## How to get the report
 
@@ -88,7 +89,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 2,
+  "report_version": 3,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -135,7 +136,8 @@ the restart command at 33 s, and there was no "oxygen away" command.
   "timeline": {"events": ["..."], "excluded": [], "anomalies": [], "unknown_labels": [],
                "unused_labels": [], "unresolved_labels": [], "sources": ["audio", "video"]},
   "context": {"header": {"recording_id": "P03_LL", "camera_angle": "LL", "duration_seconds": 95.0,
-                         "analyses_run": {"video": true, "audio": true}, "coverage": {}},
+                         "analyses_run": {"video": true, "audio": true}, "coverage": {},
+                         "visibility": {}, "flags": []},
               "anchors": {"shock": {"time": 30.0, "event_id": "ev_shock", "flags": [], "...": "..."}},
               "resolutions": [], "zone_visibility": {"...": "..."}},
   "configuration": {"placeholders": ["..."], "undecided": ["..."], "timing_limits": {"...": "..."}, "rules": ["..."]}
@@ -193,7 +195,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `placement_missing` | planned (Increment 12) | R8: a placement event is missing, so the order cannot be judged (D-058) |
 | `contradictory` | planned | The evidence contradicts itself |
 | `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: an inferred mistake, reported as Unable to Verify until decided |
-| `annotation_coverage_assumed` | planned (Increment 10) | From annotation data; development only (D-066) |
+| `annotation_coverage_assumed` | built (v3) | The timeline comes from annotation data (its header is flagged so). Every result carries it, and the report is development data, not an assessment (D-066) |
 
 ### Flags on the overall result (`overall.flags`)
 

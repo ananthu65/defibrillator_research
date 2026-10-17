@@ -11,7 +11,7 @@ whose dependencies did not pass is not evaluable because of them (D-003). A regi
 raises, or returns something invalid, is recorded as engine_error and never stops the other
 rules (D-063).
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from importlib import import_module
 from rules import checks
 from rules import registry as rule_registry
@@ -54,6 +54,8 @@ def assess(events, config, header=None, registry=None):
     for rule_id in config.evaluation_order():
         results[rule_id] = _evaluate(definitions[rule_id], context, results, registry, events, event_ids, config)
     outcomes = tuple(results[r.id] for r in config.rules if r.enabled)
+    if header is not None and header.flags:  # e.g. annotation_coverage_assumed: every result built on it (P-001)
+        outcomes = tuple(replace(o, flags=tuple(dict.fromkeys(o.flags + header.flags))) for o in outcomes)
     overall = decide(outcomes, config, anomalies=[a.code for a in prepared.anomalies])
     return Assessment(outcomes, prepared, context, config, overall)
 
