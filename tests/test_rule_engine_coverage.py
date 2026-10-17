@@ -282,7 +282,8 @@ class RepositoryPolicy(unittest.TestCase):
         self.assertFalse(engine.coverage_outcomes["covered"].undecided)
         self.assertEqual(engine.coverage_overrides, {})
         self.assertEqual(engine.regions, {"apical_zone": ("apical_paddle_placed",),
-                                          "sternal_zone": ("sternal_paddle_placed",)})
+                                          "sternal_zone": ("sternal_paddle_placed",),
+                                          "screen": ("shock_delivered_on_screen",)})   # D-094
 
 
 class InvalidCoverageConfig(unittest.TestCase):

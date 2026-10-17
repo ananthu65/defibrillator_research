@@ -1,7 +1,10 @@
+"""Shared-check tests. Several use the paddle-removal fallback, so they run with
+shock_time_fallback: removal (D-093); the decided setting (none) is tested in test_rule_engine_context."""
+from dataclasses import replace
 import unittest
 
 from rules import checks
-from rules.config import ClinicalValue, load_rules_config
+from rules.config import ClinicalValue, Setting, load_rules_config
 from rules.context import build_context
 from rules.coverage import TimelineHeader
 from rules.outcome import (ASSUMED, FAIL, NOT_EVALUABLE, PASS_DIRECT, PASS_INFERRED, PENDING, UNABLE, RuleOutcome,
@@ -10,7 +13,9 @@ from rules.prepare import prepare_timeline
 from schemas.event import Event
 from schemas.rule_result import RuleStatus
 
-CONFIG = load_rules_config()
+DEFAULT = load_rules_config()
+CONFIG = replace(DEFAULT, engine=replace(DEFAULT.engine, settings={
+    **DEFAULT.engine.settings, "shock_time_fallback": Setting("shock_time_fallback", "removal")}))
 AUDIO_RAN = {"analyses_run": {"video": True, "audio": True}}
 
 

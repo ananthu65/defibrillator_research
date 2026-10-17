@@ -72,9 +72,11 @@ decision_points:
     name: Zone coverage for an annotated recording
     stage: adapter
     status: built
-    decides: The header coverage and visible intervals of each placement zone (region) for one annotated recording (Increment 10)
-    inputs: [exporter record (zone_tracks, zone_visibility, frame range), reviewed_zone_exceptions]
+    decides: The header coverage and visible intervals of each placement zone and of the defibrillator screen (regions apical_zone, sternal_zone, screen) for one annotated recording (Increment 10; screen D-094)
+    inputs: [exporter record (zone_tracks, zone_visibility, screen_tracks, screen_visibility, frame range), reviewed_zone_exceptions]
     branches:
+      - condition: The screen (region screen, governing shock_delivered_on_screen for R5)
+        outcome: Exactly the zone rules below (no reviewed exceptions for the screen); an export made before the screen fields gives unknown (D-094)
       - condition: The zone is confirmed not visible by an annotator (reviewed exception)
         outcome: not covered (D-082); no intervals, so every window is not covered too
         next: P-007
@@ -91,8 +93,8 @@ decision_points:
         outcome: unknown (D-074); no intervals
         next: P-007
     config: [annotation_export.yaml reviewed_zone_exceptions]
-    code: rules/adapters/annotation.py (zone_coverage, adapt_record)
-    decisions: [D-074, D-080, D-082, D-092]
+    code: rules/adapters/annotation.py (zone_coverage, adapt_record); annotation/export_rule_engine_records.py (screen_visibility)
+    decisions: [D-074, D-080, D-082, D-092, D-094]
     assumptions: []
     open_questions: []
 
@@ -132,6 +134,42 @@ decision_points:
     decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091]
     assumptions: [A-019, A-020]
     open_questions: [OQ-004]
+
+  - id: P-032
+    name: R2 second paddle taken after the first is placed
+    stage: rule
+    status: built
+    decides: R2's result (Increment 11; D-051, D-091, D-095); it runs only when R2 is approved in rules.yaml, pending until then
+    inputs: [first_paddle_taken, first_paddle_placed anchor, second_paddle_taken, derived placements (only past the gate), placement-zone coverage over a window]
+    branches:
+      - condition: Derived placements flagged possible_parallel_placement (present only once the gate is approved, D-088)
+        outcome: Fail simultaneous (D-091)
+        failure_codes: [simultaneous]
+      - condition: No confident second paddle taken
+        outcome: Unable to Verify; the order cannot be checked
+      - condition: First placement before the second paddle is taken (outside the simultaneous window)
+        outcome: Pass – Direct
+      - condition: First placement and second paddle taken within simultaneous_window_seconds
+        outcome: Fail simultaneous
+        failure_codes: [simultaneous]
+      - condition: Second paddle taken before the first placement
+        outcome: Fail taken_before_first_placed
+        failure_codes: [taken_before_first_placed]
+      - condition: First placement not seen, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: First placement not seen, no first paddle taken before the second
+        outcome: Unable to Verify; there is no window
+      - condition: First placement not seen; both placement zones visible throughout the window from first paddle taken to second paddle taken
+        outcome: Fail first_placement_not_observed - either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097); past the gate, derived parallel placements refine it to simultaneous (D-091)
+        failure_codes: [first_placement_not_observed]
+      - condition: First placement not seen; a zone not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify
+    config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
+    code: rules/video_rules.py (second_paddle_after_first_placed)
+    decisions: [D-051, D-091, D-092, D-095, D-097]
+    assumptions: [A-019]
+    open_questions: []
 
   - id: P-001
     name: Annotation timeline adapter
@@ -361,8 +399,8 @@ decision_points:
     name: Shock time
     stage: context
     status: built
-    decides: When the shock happened, if that can be established
-    inputs: [multiple_shocks anomaly, confident shock indications, confident paddle removals]
+    decides: When the shock happened, if that can be established; only from the shock on screen unless shock_time_fallback is removal (D-093)
+    inputs: [multiple_shocks anomaly, confident shock indications, engine.yaml shock_time_fallback, confident paddle removals (fallback removal only)]
     branches:
       - condition: multiple_shocks anomaly present
         outcome: No shock time (not guessed, even if a removal exists); both shocks listed as candidates
@@ -370,18 +408,21 @@ decision_points:
       - condition: One confident shock on screen
         outcome: Shock time is its start
         next: P-010
-      - condition: No shock on screen, but a confident paddle removal
-        outcome: Shock time is the first removal; every timing result using it is flagged
+      - condition: No shock on screen, shock_time_fallback none (the decided setting, D-093)
+        outcome: No shock time, never inferred; shock-dependent rules are not evaluable because of R5, and resume commands stay unresolved
+        flags: [no_shock]
+      - condition: No shock on screen, shock_time_fallback removal, and a confident paddle removal
+        outcome: Shock time is the first removal; every timing result using it is flagged (D-023; D-024, D-053, D-054, D-059 then apply)
         next: P-010
         flags: [shock_time_from_removal, multiple_candidates]
-      - condition: Neither
+      - condition: No shock on screen, shock_time_fallback removal, and no removal either
         outcome: No shock time; shock-dependent rules report not evaluable because of R5
         flags: [no_shock]
-    config: []
+    config: [engine.yaml shock_time_fallback]
     code: rules/context.py (_shock_anchor)
-    decisions: [D-023, D-030, D-039, D-040]
+    decisions: [D-023, D-030, D-039, D-040, D-093]
     assumptions: [A-006]
-    open_questions: []
+    open_questions: [OQ-057]
 
   - id: P-010
     name: Phase of a time
@@ -414,7 +455,7 @@ decision_points:
       - condition: No shock time (no shock, or multiple shocks)
         outcome: Unresolved
         flags: [no_shock_time]
-      - condition: Shock time from removal and the command is before the removal
+      - condition: Shock time from removal (shock_time_fallback removal only, D-093) and the command is before the removal
         outcome: Unresolved
         flags: [command_before_removal, shock_time_from_removal]
       - condition: Within simultaneous_window_seconds of the shock time
@@ -453,11 +494,11 @@ decision_points:
       - condition: A start command at or before a confirmed on-screen shock (start anchor only; each start command is checked on its own, so a later one can still be the restart)
         outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
         flags: [start_command_before_shock]
-      - condition: Shock time from removal and a start command at or before the removal, or an unresolved resume command before it (start anchor only)
+      - condition: Shock time from removal (shock_time_fallback removal only, D-093) and a start command at or before the removal, or an unresolved resume command before it (start anchor only)
         outcome: Timing-ambiguous (the real shock was at an unknown earlier time); not counted, not a mistake; listed as ambiguous; a later start is still used but the anchor stays flagged (D-053, D-059). With no ambiguous command the restart is certain and carries no fallback flag (D-059)
         flags: [command_before_removal, shock_time_from_removal]
       - condition: No shock time (start anchor only)
-        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054)
+        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054). With shock_time_fallback none, every rule needing the restart is already not evaluable because of R5 (D-093)
         flags: [no_shock_time]
       - condition: An ambiguous command is unresolved (continue and start anchors)
         outcome: Anchor may be incomplete

@@ -4,6 +4,10 @@ The context never judges the learner and never guesses: when a fact cannot be es
 (no shock, two shocks, a command too close to the shock), it is left absent and flagged, and
 each rule decides what that means for its own result.
 
+Shock time (D-093): only from shock_delivered_on_screen. With engine.yaml shock_time_fallback set
+to `none` (the decided setting), no shock on screen means no shock time. The paddle-removal
+fallback (D-023, D-024, D-053, D-054, D-059) runs only when the setting is `removal`.
+
 Event time rule: all times are event `start` times (see docs/rule_engine/anomalies.md).
 """
 from dataclasses import dataclass, field, replace
@@ -133,7 +137,7 @@ class ProcedureContext:
 def build_context(prepared, config, header=None):
     coverage = Coverage(prepared, config, header)
     window = config.engine.value("simultaneous_window_seconds")
-    shock = _shock_anchor(prepared)
+    shock = _shock_anchor(prepared, config.engine.value("shock_time_fallback"))
     events, resolutions = [], []
     for event in prepared.events:
         resolution = config.vocabulary.resolution(event.source, event.metadata.get(SOURCE_LABEL_KEY, event.event_name))
@@ -163,7 +167,8 @@ def build_context(prepared, config, header=None):
     return ProcedureContext(prepared, coverage, tuple(events), anchors, tuple(resolutions), zones)
 
 
-def _shock_anchor(prepared):
+def _shock_anchor(prepared, fallback="none"):
+    """The shock time comes only from the shock on screen (D-093), unless shock_time_fallback is removal."""
     if prepared.has_anomaly(MULTIPLE_SHOCKS):
         ids = prepared.anomaly(MULTIPLE_SHOCKS).event_ids
         return Anchor("shock", None, candidates=ids, flags=(MULTIPLE_SHOCKS,),
@@ -171,6 +176,9 @@ def _shock_anchor(prepared):
     shocks = prepared.named(SHOCK_EVENT)
     if shocks:
         return Anchor("shock", shocks[0].start, shocks[0].event_id, SHOCK_EVENT, (shocks[0].event_id,))
+    if fallback != "removal":
+        return Anchor("shock", None, flags=(NO_SHOCK,),
+                      reason="no shock seen on the screen; the shock time is never inferred (D-093)")
     removals = prepared.named(REMOVAL_EVENT)
     if removals:
         flags = (SHOCK_FROM_REMOVAL,) + ((MULTIPLE_CANDIDATES,) if len(removals) > 1 else ())

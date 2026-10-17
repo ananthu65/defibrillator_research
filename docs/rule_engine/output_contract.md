@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 3
+**Report version:** 4
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -29,6 +29,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 1 | 2026-10-14 | First version (Increment 9) |
 | 2 | 2026-10-14 | Two timeline anomalies added (Increment 9a, D-071): `count_violation` and `paddle_identity_conflict`. Both may appear in `overall.timeline_anomalies` and make the overall result Incomplete (D-072). The settings `expected_counts.*` appear in `configuration.placeholders` and `configuration.undecided`. No field was added, removed or renamed |
 | 3 | 2026-10-17 | `context.header` gains two fields (Increment 10): `visibility` (each placement zone's visible intervals in seconds, `{"region:apical_zone": [[start, end], ...]}`, D-092) and `flags` (a list; `annotation_coverage_assumed` for annotation data). The rule flag `annotation_coverage_assumed` is now built: every result of an annotation timeline carries it, and `development_data` is then true (D-066). `context.zone_visibility` is unchanged (the whole-recording status) |
+| 4 | 2026-10-17 | **Meaning changed:** `no_shock` now means no shock seen on the screen. The shock time is never inferred (D-093), so a paddle removal no longer gives a shock time. `shock_time_from_removal` and `command_before_removal` appear only if `shock_time_fallback` is set to `removal`, which is not the decided setting. **New region:** `screen` (the defibrillator screen, D-094) appears in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R2 is implemented (Increment 11), so `simultaneous` and `taken_before_first_placed` are now built. **New failure code** `first_placement_not_observed` (R2, D-097). It replaces the planned "first missing" code, which is removed, because R2 never produces it. R2 still reports `pending` until it is approved |
 
 ## How to get the report
 
@@ -89,7 +90,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 3,
+  "report_version": 4,
   "kind": "rule_engine_report",
   "development_data": false,
   "overall": {
@@ -183,12 +184,12 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `coverage_policy_undecided` | undecided (OQ-001) | Whether the event could be observed is unknown; interim Unable to Verify |
 | `timing_not_checked` | built | No approved time limit, so only presence and order were checked. The overall result cannot be Pass (D-062) |
 | `limit_not_approved` | built | A time limit exists but is not approved, so it was not used (D-061) |
-| `shock_time_from_removal` | built | No shock on screen; the shock time comes from paddle removal, so delays look shorter than they were (D-023) |
-| `no_shock` | built | No shock or removal was found |
+| `shock_time_from_removal` | built (only with `shock_time_fallback: removal`, not the decided setting) | No shock on screen; the shock time comes from paddle removal, so delays look shorter than they were (D-023) |
+| `no_shock` | built (meaning changed in v4) | No shock was seen on the screen, so there is no shock time; it is never inferred (D-093). Shock-dependent rules are Not evaluable because of R5 |
 | `multiple_shocks` | built | Two or more shocks; no shock time was chosen (also a timeline anomaly) |
 | `multiple_candidates` | built | Several events could give a key time; the earliest was used |
 | `command_near_shock` | built | A "resume compressions" command was too close to the shock to tell continue from restart |
-| `command_before_removal` | built | Under the removal fallback, a command before the removal may have been the restart (D-053, D-059) |
+| `command_before_removal` | built (only with `shock_time_fallback: removal`) | Under the removal fallback, a command before the removal may have been the restart (D-053, D-059) |
 | `no_shock_time` | built | No shock time, so a command or the restart could not be placed |
 | `unresolved_commands` | built | An ambiguous command could not be classified, so the continue or restart time may be incomplete |
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
@@ -227,9 +228,9 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `missing` | planned | R1, R5, R6, A1–A5, R7/A6 | The required step or command was not done |
 | `applied_once` | planned | R1 | Gel applied only once |
 | `outside_time_period` | planned | R1 | The two gel applications were not within the approved period |
-| `simultaneous` | planned | R2, R8 | Two actions happened at the same time where order matters |
-| `taken_before_first_placed` | planned | R2 | The second paddle was taken before the first was placed |
-| `first_missing` | planned | R2 | The first paddle step was not done |
+| `simultaneous` | built (R2; R8 planned) | R2, R8 | Two actions happened at the same time where order matters. For R2, it also covers both paddles placed together (a possible parallel placement, once the gate is approved, D-091) |
+| `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
+| `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
 | `wrong_order` | planned | R5, R8, A4, A7 | Steps or commands in the wrong order |
 | `not_in_zone` | planned | R3 | A paddle was outside its approved zone |
 | `placed_after_shock` | planned | R3 | Paddles placed after the shock |

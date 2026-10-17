@@ -89,6 +89,8 @@ class ExportConfig:
     zone_motion_fraction_of_diagonal: float
     repeated_tag_window_frames: int
     placements: PlacementSettings
+    screen_label: str = "defibrillator_screen"         # CVAT screen track label (D-094)
+    screen_event: str = "shock_delivered_on_screen"    # the canonical event the screen governs
 
     def confirmed_not_visible(self, task_id: str) -> set[str]:
         """Zones an annotator confirmed as genuinely not visible in this video."""
@@ -115,7 +117,7 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
     """Load and validate the export/audit config; every problem is a ValueError naming the entry."""
     data = _read_yaml(path)
     expected = {"schema_version", "zone_labels", "paddle_labels", "usual_zone_pattern",
-                "reviewed_zone_exceptions", "audit", "derived_placements"}
+                "reviewed_zone_exceptions", "audit", "derived_placements", "screen"}
     if not isinstance(data, dict) or data.get("schema_version") != 1 or set(data) != expected:
         raise ValueError(f"{path}: expected schema_version: 1 and exactly the keys {sorted(expected)}")
     zones = _labels(data["zone_labels"], f"{path} zone_labels")
@@ -140,7 +142,12 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
         raise ValueError(f"{path} audit.repeated_tag_window_frames: must be a whole number of frames >= 0")
     placements = load_placement_settings(data["derived_placements"], zones, paddles,
                                          simultaneous_window_seconds(engine_path), f"{path} derived_placements")
-    return ExportConfig(zones, paddles, usual, exceptions, float(motion), window, placements)
+    screen = data["screen"]
+    if not isinstance(screen, dict) or set(screen) != {"label", "event"} or not all(
+            isinstance(screen[k], str) and screen[k] for k in ("label", "event")):
+        raise ValueError(f"{path} screen: expected {{label: <CVAT screen track label>, event: <canonical event>}}")
+    return ExportConfig(zones, paddles, usual, exceptions, float(motion), window, placements,
+                        screen["label"], screen["event"])
 
 
 def _labels(value, where):
@@ -368,6 +375,9 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
         "tags": exported_tags,
         "zone_tracks": {zone: sum(t.label == zone for t in source.tracks) for zone in config.zone_labels},
         "zone_visibility": zone_visibility(source, video, config.zone_labels),
+        # The defibrillator screen, derived exactly like the zones (D-094).
+        "screen_tracks": sum(t.label == config.screen_label for t in source.tracks),
+        "screen_visibility": zone_visibility(source, video, (config.screen_label,)),
         "derived_events": derived,  # Step 9c: per-paddle placements (D-081, D-086 to D-089)
     }
 
@@ -479,6 +489,7 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
         "config": {"path": _display(config_path), "sha256": sha256_file(config_path)},
         "counts": {"tasks": len(sources), "records": len(records), "tags": sum(len(r["tags"]) for r in records),
                    "zone_intervals": sum(len(r["zone_visibility"]) for r in records),
+                   "screen_intervals": sum(len(r["screen_visibility"]) for r in records),
                    "derived_events": sum(len(r["derived_events"]) for r in records)},
         "issues": dict(sorted(severities.items())),
     }

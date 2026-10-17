@@ -15,6 +15,10 @@ gel_minimum_gap_seconds:        {value: 1.0, placeholder: true}  # R1: two gel e
 placement_match_window_seconds: {value: 0.5, placeholder: true}  # R8: visible-zone placement "same time" as first_paddle_placed
 assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
 duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
+# Where the shock time comes from when no shock is seen on the screen (D-093): none (decided
+# 2026-10-17: never inferred, so shock-dependent rules are Not evaluable) | removal (the first
+# paddle removal, flagged shock_time_from_removal; D-023, D-024, D-053, D-054, D-059 then apply).
+shock_time_fallback:            {value: none, note: decided 2026-10-17 (D-093); removal kept available}
 
 # What a missing required event means, by coverage status (rules/coverage.py).
 # Coverage status of an event comes from the timeline header (explicit coverage, analyses_run);
@@ -34,6 +38,7 @@ coverage_policy:
   regions:           # camera regions and the canonical events whose visibility they govern
     apical_zone:  [apical_paddle_placed]
     sternal_zone: [sternal_paddle_placed]
+    screen:       [shock_delivered_on_screen]   # the defibrillator screen (R5; D-094)
 
 inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagged inferred_fail_policy_undecided}
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}

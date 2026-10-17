@@ -3254,3 +3254,162 @@ OQ-055 (camera view from the file name).
 
 ### Next
 Increment 11 (R2). Nothing is committed; commit only when Arnikan says so.
+
+**Committed 2026-10-17** as `946ebf7` and pushed (on Arnikan's instruction).
+
+---
+
+## Increment 11 (R2), with the shock-time, screen and camera-angle changes (2026-10-17)
+
+### Decisions recorded (Arnikan)
+- **D-093, shock time only from the screen:**
+  - the shock time comes only from `shock_delivered_on_screen`, and is never inferred;
+  - `engine.yaml` `shock_time_fallback: none`; the removal fallback is kept behind `removal`;
+  - D-023 is replaced as the default; D-024, D-053, D-054 and D-059 apply only with `removal`;
+  - this supersedes the proposal's A6 clause, to be mentioned to the supervisor (**OQ-057**,
+    new).
+- **D-094, screen coverage for R5:** the screen's visibility is derived exactly like the zones'.
+  A missing shock on screen while the screen is out of view is Unable to Verify, never Fail.
+- **D-095, R2:** when the first placement is missing, R2 asks coverage of both placement zones
+  over the window from first paddle taken to second paddle taken. Visible throughout →
+  `first_missing`; otherwise Unable to Verify. A possible parallel placement past the gate →
+  `simultaneous` (D-091).
+- **OQ-058 (new, Arnikan):** in a parallel placement before the gate is approved, R2 names the
+  wrong mistake (`first_missing`).
+
+### What was done
+- **Shock time** (`rules/context.py`, `rules/config.py`, `engine.yaml`): the new setting
+  `shock_time_fallback` (`none` | `removal`, validated). With `none`, no shock on screen → no
+  shock time (`no_shock`, "never inferred"), resume commands unresolved, and shock-dependent
+  rules Not evaluable because of R5. R3/R4's removal inference is untouched.
+- **Screen** (exporter, adapter, `engine.yaml`):
+  - the exporter writes `screen_tracks` and `screen_visibility` (the training box rule, as for
+    the zones);
+  - `engine.yaml` has a region `screen` governing `shock_delivered_on_screen`;
+  - the adapter applies the P-030 rules to the screen; an export without screen fields →
+    unknown.
+- **R2** (`rules/video_rules.py`, P-032): the first registered rule. It runs only when approved
+  in `rules.yaml`, so the catalogue still reports it as pending.
+- **Camera-angle evidence** (`docs/rule_engine/camera_angle_evidence.md`, interim, 37 of 38
+  videos): zone and screen visibility and tag frequencies per view, and which rules each view
+  can check. It is linked from OQ-038.
+- **Output contract version 4:**
+  - `no_shock` changed meaning;
+  - the `screen` region was added;
+  - R2's failure codes are now built.
+- **How-to for Ananth:** records now include the screen. Item 4 is new: P05_LL has the object
+  label `apical_placement_zone` as a tag at frame 287.
+
+### Tests (486 → 511)
+- **Shock time (6, context):**
+  - the decided setting is `none`;
+  - no shock on screen → no shock time, even with a removal;
+  - the screen shock is still used;
+  - resume commands unresolved and start commands ambiguous, with no removal flags;
+  - a low-confidence screen shock doesn't become the removal;
+  - an invalid setting is rejected.
+
+  The existing removal-fallback tests in `test_rule_engine_context.py` and
+  `test_rule_engine_checks.py` now run with `shock_time_fallback: removal`, as each module's
+  docstring says.
+- **Screen (6):**
+  - the exporter writes screen intervals like the zones;
+  - an LL video with no screen visible → unknown → Unable to Verify;
+  - a never-visible screen → not covered;
+  - a screen visible throughout → a missing shock is a Fail;
+  - a shock expected while the screen was out of view → Unable to Verify;
+  - an export without screen fields → unknown.
+- **R2 (13):**
+  - pass, `taken_before_first_placed`, `simultaneous`;
+  - no second paddle taken;
+  - pending in the catalogue;
+  - first placement missing with the zones visible throughout (`first_missing`), out of view,
+    partly visible, with no header, with a low-confidence placement, and with no first paddle
+    taken;
+  - a parallel placement with an approved gate (`simultaneous`) and without one (placements
+    withheld → `first_missing`, OQ-058).
+- **Updated:** five assertions now include the `screen` region; the docs test also reads the
+  failure codes raised by rule modules.
+
+Full suite: **511 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0, and its output matches the reference.
+
+### Interim data
+- **Adapter and engine on 4 records** (`data/rule_engine/reports/interim-2026-10-17b/`, not
+  committed):
+  - P01_LL and P06_T now have **no shock time** (`no_shock`); before D-093 it came from removal;
+  - P01_LS still uses the screen shock (16.8 s);
+  - the screen is unknown everywhere, because this export predates the screen fields;
+  - P05_LL raises `unknown_labels_present` (the mislabelled tag);
+  - all are Incomplete; R2 is pending.
+- **R2 dry run** (R2 approved in a scratch config, not committed; 37 videos):
+
+  | View | Pass | `simultaneous` | `taken_before_first_placed` | `first_missing` | Unable to Verify |
+  |---|---|---|---|---|---|
+  | LL (12) | 2 | 3 | 2 | 0 | 5 (no second paddle taken) |
+  | LS (12) | 9 | 1 | 1 | 1 | 0 |
+  | T (13) | 10 | 1 | 2 | 0 | 0 |
+
+  - **The views of one learner often disagree.** P04: LL and T `simultaneous`, LS pass. P13: LL
+    `simultaneous`, LS `first_missing`, T pass. P31: LS `simultaneous`, T pass. Only P33 agrees
+    in all three views (`taken_before_first_placed`).
+  - **The `simultaneous` Fails** come from gaps of 0.04 to 0.37 s, all inside the placeholder
+    0.5 s window (OQ-018). The window may be too wide for the "taken" and "placed" tags, which
+    are annotated per view.
+  - **P13_LS** is the OQ-058 case on real data.
+  - R2 should not be approved until these are reviewed.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-009, P-011, P-012 (the fallback is removal-only), P-030 (screen),
+  P-032 (R2, new).
+- **`pathways.md`:** the P-009, P-011, P-030 and P-032 tables. W-5, W-6, W-14 to W-16, W-19 and
+  W-24 are marked removal-only. W-53 is updated; W-54 (LL, no screen), W-55 (R2, first
+  placement missing) and W-56 (R2, parallel) are new.
+- **`diagrams.md`:** (e), (e2), (i).
+- **Registers:** `decisions.md` (D-093 to D-095, and a D-023 note); `open_questions.md`
+  (OQ-057 and OQ-058 new; OQ-038 evidence link).
+- **Other docs:**
+  - `anomalies.md`, `output_contract.md` (v4), `rules_status.md`, `methods.md`;
+  - `implementation_plan.md` (rows 11, 13, 14), `upstream_requirements.md`;
+  - `docs/annotation/rule_engine_export_howto.md`, `camera_angle_evidence.md` (new);
+  - `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **New:** OQ-057 (supervisor: no shock time without the screen); OQ-058 (Arnikan: R2 in a
+  parallel placement before the gate).
+- **Worth revisiting with the R2 dry run:** OQ-018 (the simultaneous window).
+
+### Next
+Increment 12 (R8). Nothing is committed; commit only when Arnikan says so.
+
+### Review changes (Arnikan, 2026-10-17)
+- **R2 stays pending** until the supervisor confirms its definition.
+- **D-096, angles are separate videos:** each camera angle is a separate video. Results are
+  never compared or cross-checked across angles, and no cross-view comparison is built. The
+  per-participant comparison in the R2 dry run above is **not used** for anything.
+- **D-097, closes OQ-058:** a missing first placement while both zones were visible throughout
+  the window → **Fail `first_placement_not_observed`**: "either the paddles were placed in
+  parallel, or the second paddle was taken before the first was placed" (A-019).
+  - The old "first missing" code is not used for this case. R2 no longer produces it, so it is
+    removed from the output contract (still v4, which wasn't pushed yet).
+  - Past the gate, derived parallel placements refine the result to `simultaneous` (D-091).
+  - Tests: 2 updated, and they assert the old code is never used.
+- **OQ-001 note:** if unknown coverage were set to Fail, a missing screen track would fail R5, and
+  any rule leaving a missing placement to the coverage policy (R3 and R8 as planned) would fail
+  where a zone has no track. **Correction to the request:** R2 as built would not be affected.
+  D-095 fails only when both zones are actually visible throughout the window, never on unknown.
+
+### Items to share with the team
+- **For the team and the supervisor (camera angle, OQ-038):** **LS is the strongest view for the
+  rule engine.** In the interim evidence ([camera_angle_evidence.md](camera_angle_evidence.md)),
+  LS shows both placement zones throughout in every video and the shock on screen in 10 of 12.
+  Every rule can then be checked directly. Without a shock-time fallback (D-093), LL leaves every
+  shock-dependent rule unverifiable (shock seen in 0 of 12). T is partly usable (shock seen in 9
+  of 13; apical zone often only partly in view).
+- **For Ananth (backups):** **P05_LL uses the track label `apical_placement_zone` as a tag**
+  (frame 287). It should be removed or replaced by the intended event tag. Listed in the how-to,
+  item 4, with the other items to fix.
+- **For the supervisor:** OQ-057 (no shock time without the screen, superseding the proposal's
+  A6 clause); and confirming R2's definition, including `first_placement_not_observed` (D-097).
+
+**Tests:** 511 run, all pass, 1 skipped (charging sound).

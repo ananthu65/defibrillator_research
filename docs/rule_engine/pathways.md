@@ -80,6 +80,7 @@ timeline file per video for `rules.run`.
 | Zone track visible on only part of the recording | **unknown** | its intervals; a time window gets its own status (P-007) | D-092 |
 | Zone track present but outside on every frame | **not covered** | empty | D-080 |
 | No zone track | **unknown** | none | D-074 |
+| The defibrillator screen (region `screen`, R5) | the same rules (no reviewed exceptions); an export without screen fields → **unknown** | as above | D-094 |
 
 The view's usual zone pattern plays no part here (D-082).
 
@@ -161,12 +162,16 @@ low-confidence rule.
 ### Stage: context
 
 #### P-009 Shock time (built)
+The shock time comes only from the screen (D-093). `engine.yaml` `shock_time_fallback` is `none`;
+the removal rows apply only when it is set to `removal`.
+
 | Condition | Outcome | Flags |
 |---|---|---|
 | Two or more shocks | No shock time (not guessed) | `multiple_shocks` |
 | One shock on screen | Shock time = the shock | — |
-| No shock on screen, but a paddle removal | Shock time = first removal; every timing result using it is flagged | `shock_time_from_removal` (+ `multiple_candidates` if several removals) |
-| Neither | No shock time | `no_shock` |
+| No shock on screen (fallback `none`, the decided setting) | **No shock time; never inferred**, even if the paddles were removed. Shock-dependent rules are Not evaluable because of R5; resume commands stay unresolved | `no_shock` |
+| No shock on screen, but a paddle removal (fallback `removal` only) | Shock time = first removal; every timing result using it is flagged | `shock_time_from_removal` (+ `multiple_candidates` if several removals) |
+| No shock on screen and no removal (fallback `removal`) | No shock time | `no_shock` |
 
 #### P-010 Phase of a time (built)
 | Condition | Phase |
@@ -180,7 +185,7 @@ low-confidence rule.
 | Condition | Outcome | Flags |
 |---|---|---|
 | No shock time | Unresolved | `no_shock_time` |
-| Shock time from removal, command before the removal | Unresolved (D-024) | `command_before_removal`, `shock_time_from_removal` |
+| Shock time from removal (fallback `removal` only), command before the removal | Unresolved (D-024) | `command_before_removal`, `shock_time_from_removal` |
 | Within 0.5 s of the shock | Unresolved | `command_near_shock` |
 | Before the shock | "Continue compressions" | — |
 | After the shock | "Start compressions" | `shock_time_from_removal` under the fallback |
@@ -313,6 +318,18 @@ elapsed times and checks it used.
 | The visible paddle placed clearly before the first placement | Unable to Verify | `contradictory` |
 | Not determinable (no zone visible, or no first placement) | Unable to Verify; if the fallback is on: **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-060) | — |
 
+#### P-032 R2: second paddle taken after the first is placed (built, Increment 11; pending until approved)
+| Condition | Outcome | Code |
+|---|---|---|
+| Derived placements flagged `possible_parallel_placement` (only once the gate is approved) | Fail (D-091) | `simultaneous` |
+| No confident second paddle taken | Unable to Verify | — |
+| First placement before the second paddle is taken | Pass – Direct | — |
+| Within `simultaneous_window_seconds` | Fail | `simultaneous` |
+| Second paddle taken before the first placement | Fail | `taken_before_first_placed` |
+| First placement not seen, a low-confidence one exists | Unable to Verify (D-010) | — |
+| First placement not seen, both zones visible throughout the window from first paddle taken to second paddle taken | Fail: either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097) | `first_placement_not_observed` |
+| First placement not seen, a zone not visible throughout that window | Unable to Verify | — |
+
 #### P-016 R3/R4 inferred pass (planned, Increments 15–16)
 | Condition | Outcome | Codes |
 |---|---|---|
@@ -388,7 +405,11 @@ today.
 2. P-007: coverage **not covered**. P-008 → **Unable to Verify**. The learner is not blamed
    for missing data (D-004).
 
-### W-5 No shock on screen, paddles removed at 52 s → timing flagged
+> **W-5, W-6, W-14, W-15, W-16, W-19 and W-24 apply only with `shock_time_fallback: removal`.**
+> With the decided setting `none` (D-093), a recording with no shock on screen has no shock time
+> at all: see W-54.
+
+### W-5 No shock on screen, paddles removed at 52 s → timing flagged (fallback `removal` only)
 1. P-009: no shock indication; first removal at 52 s → shock time **52 s**, flagged
    `shock_time_from_removal`.
 2. "Start compressions" at 55 s, and none before the removal → P-012: the restart is
@@ -761,6 +782,42 @@ illustration only.)*
 2. P-030: the sternal zone is visible throughout → covered. The apical zone is visible only from
    10.1 s → **unknown** for the recording. The first placement (14.03 s) lies inside its visible
    interval, so a rule asking about that time would get **covered** (D-092).
-3. No shock on screen is tagged → shock time from the removal at 21.57 s
-   (`shock_time_from_removal`).
+3. No shock on screen is tagged. When this ran, the removal fallback still gave a shock time of
+   21.57 s; under D-093 (2026-10-17) there is **no shock time** (see W-54).
 4. Every rule is pending → **Incomplete**, `development_data`, every result flagged.
+
+### W-54 An LL video: no screen, no shock time, nothing guessed
+*(Built; D-093, D-094.)*
+1. P-001/P-030: LL shows the apical zone throughout. There is no sternal zone track and no
+   `defibrillator_screen` track, so the sternal zone and the screen are **unknown**. The paddles
+   were removed at 15.94 s.
+2. P-009 (fallback `none`): no shock on screen → **no shock time**, `no_shock`. The removal is
+   not used.
+3. R5 (Increment 13): no shock on screen while the screen is unknown → **Unable to Verify**,
+   never Fail. Had the screen been in view throughout and no shock seen, R5 would fail.
+4. Every shock-dependent rule (R6, R7/A6, A1–A4, A7, A8; R3's direct check) → **Not evaluable
+   because of R5**. Resume commands stay unresolved (`no_shock_time`).
+5. R3/R4 can still pass by inference from the removal (P-016, unchanged).
+
+### W-55 R2: the first placement isn't seen
+*(Built in Increment 11; D-095, D-097.)*
+1. First paddle taken at 5 s, second paddle taken at 9 s, no first-placement tag.
+2. P-032 asks coverage of both placement zones from 5 to 9 s.
+   - **Both zones visible throughout** → **Fail `first_placement_not_observed`**: no first
+     placement was seen although it would have been visible. Following the annotators'
+     convention (A-019), either the paddles were placed in parallel, or the second paddle was
+     taken before the first was placed.
+   - **Zones out of view between 4 and 10 s** → not covered → **Unable to Verify**. The
+     placement may have happened unseen.
+   - **One zone visible until only 7 s** → unknown → **Unable to Verify**.
+
+### W-56 R2: a parallel placement, with and without the gate
+*(Built in Increment 11; D-091, D-088.)*
+1. Both paddles placed together, so the annotators didn't tag the first placement (A-019). The
+   exporter derives both placements 0.08 s apart and flags them `possible_parallel_placement`.
+2. **Gate approved** for this export and its settings → the derived placements reach the engine
+   → R2 **Fail `simultaneous`** (D-091).
+3. **Gate not approved** → the placements are withheld. R2 sees "first placement missing", and
+   with the zones visible throughout it gives **Fail `first_placement_not_observed`**: either a
+   parallel placement or the second paddle taken first (D-097). The approved gate refines this
+   to `simultaneous`.

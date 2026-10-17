@@ -155,7 +155,7 @@ class Records(unittest.TestCase):
                                                       "start_seconds": 0.8, "end_seconds": 3.96}])
         self.assertEqual(record["derived_events"], [])
         self.assertEqual(issues, [])
-        self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1,
+        self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1, "screen_intervals": 0,
                                               "derived_events": 0})
         self.assertEqual(manifest["backups"][0]["archive"], "kartheepan/P01_LL.zip")
 
@@ -173,6 +173,17 @@ class Records(unittest.TestCase):
             track(STERNAL, rect(0, outside=True), rect(50, outside=True))])).export()
         self.assertEqual(records["P03_T"]["zone_tracks"], {APICAL: 0, STERNAL: 1})
         self.assertEqual(records["P03_T"]["zone_visibility"], [])  # coverage is decided by the adapter (P-030)
+
+    def test_screen_visibility_is_exported_like_the_zones(self):
+        backups = (Backups(self)
+                   .add("P23_LS.zip", task("P23_LS", tracks=[track("defibrillator_screen", rect(10), rect(40, outside=True))]))
+                   .add("P23_LL.zip", task("P23_LL", tracks=[track(APICAL, rect(0))])))
+        _, records, _ = backups.export()
+        self.assertEqual(records["P23_LS"]["screen_tracks"], 1)
+        self.assertEqual(records["P23_LS"]["screen_visibility"], [{"label": "defibrillator_screen", "start_frame": 10,
+                                                                  "end_frame": 39, "start_seconds": 0.4,
+                                                                  "end_seconds": 1.56}])
+        self.assertEqual((records["P23_LL"]["screen_tracks"], records["P23_LL"]["screen_visibility"]), (0, []))
 
     def test_a_single_frame_zone_shape_is_reported_not_converted(self):
         _, records, issues = Backups(self).add("P04_T.zip", task("P04_T", shapes=[

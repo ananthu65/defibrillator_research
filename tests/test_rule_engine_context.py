@@ -1,12 +1,22 @@
+"""Procedure context tests.
+
+Most of these were written for the paddle-removal fallback (D-023, D-024, D-053, D-054, D-059), which
+applies only with engine.yaml shock_time_fallback: removal (D-093). They therefore run with that
+setting; the decided setting (none: the shock time only from the screen) is tested in
+ShockTimeOnlyFromTheScreen.
+"""
+from dataclasses import replace
 import unittest
 
-from rules.config import load_rules_config
+from rules.config import Setting, load_rules_config
 from rules.context import build_context
 from rules.coverage import TimelineHeader
 from rules.prepare import prepare_timeline
 from schemas.event import Event
 
-CONFIG = load_rules_config()  # simultaneous_window_seconds = 0.5 (placeholder)
+DEFAULT = load_rules_config()  # simultaneous_window_seconds = 0.5 (placeholder); shock_time_fallback none
+CONFIG = replace(DEFAULT, engine=replace(DEFAULT.engine, settings={
+    **DEFAULT.engine.settings, "shock_time_fallback": Setting("shock_time_fallback", "removal")}))
 
 
 def ev(name, t, source="annotation", confidence=1.0, event_id=None, end=None):
@@ -17,9 +27,9 @@ def cmd(name, t, event_id=None, confidence=0.9):
     return ev(name, t, "audio", confidence, event_id, end=t + 1)
 
 
-def context(events, header=None):
-    head = None if header is None else TimelineHeader.from_dict(header, regions=tuple(CONFIG.engine.regions))
-    return build_context(prepare_timeline(events, CONFIG), CONFIG, head)
+def context(events, header=None, config=CONFIG):
+    head = None if header is None else TimelineHeader.from_dict(header, regions=tuple(config.engine.regions))
+    return build_context(prepare_timeline(events, config), config, head)
 
 
 SHOCK = ev("shock_delivered_on_screen", 30, event_id="shock")
@@ -77,6 +87,50 @@ class ShockTime(unittest.TestCase):
     def test_phases(self):
         ctx = context([SHOCK])
         self.assertEqual([ctx.phase_of(t) for t in (10, 30, 50)], ["before_shock", "at_shock", "after_shock"])
+
+
+class ShockTimeOnlyFromTheScreen(unittest.TestCase):
+    """D-093: with shock_time_fallback none (the decided setting) the shock time is never inferred."""
+
+    def test_the_decided_setting_is_none(self):
+        self.assertEqual(DEFAULT.engine.value("shock_time_fallback"), "none")
+
+    def test_no_shock_on_screen_means_no_shock_time_even_with_a_removal(self):
+        ctx = context([REMOVAL, ev("Gel applied", 1)], config=DEFAULT)
+        self.assertFalse(ctx.shock.present)
+        self.assertEqual(ctx.shock.flags, ("no_shock",))
+        self.assertIn("never inferred", ctx.shock.reason)
+        self.assertIsNone(ctx.phase_of(40))
+        self.assertIsNone(ctx.elapsed("shock", "first_placement").seconds)
+
+    def test_the_shock_on_screen_is_still_the_shock_time(self):
+        self.assertEqual(context([SHOCK, REMOVAL], config=DEFAULT).shock.time, 30)
+
+    def test_resume_commands_stay_unresolved_and_start_commands_are_ambiguous(self):
+        ctx = context([REMOVAL, cmd("resume_compressions_command", 20, "r1"),
+                       cmd("start_compressions_command", 40, "s1")], config=DEFAULT)
+        self.assertEqual([(r.event_id, r.resolved_to, r.flags) for r in ctx.resolutions], [("r1", None, ("no_shock_time",))])
+        start = ctx.anchor("start_compressions")
+        self.assertFalse(start.present)
+        self.assertEqual(start.ambiguous, ("s1",))   # not a mistake (D-054)
+        self.assertNotIn("shock_time_from_removal", start.flags)
+        self.assertNotIn("command_before_removal", [f for r in ctx.resolutions for f in r.flags])
+
+    def test_a_low_confidence_shock_on_screen_does_not_become_the_removal(self):
+        ctx = context([ev("shock_delivered_on_screen", 30, "video", 0.1), REMOVAL], config=DEFAULT)
+        self.assertFalse(ctx.shock.present)
+
+    def test_invalid_setting_is_rejected(self):
+        import copy
+        import yaml
+        from pipeline.config import ROOT
+        from rules.config import EngineSettings
+        from rules.errors import ConfigError
+        data = yaml.safe_load((ROOT / "configs/rule_engine/engine.yaml").read_text(encoding="utf-8"))
+        data = copy.deepcopy(data)
+        data["shock_time_fallback"] = {"value": "estimate"}
+        with self.assertRaisesRegex(ConfigError, "must be one of"):
+            EngineSettings.from_dict(data)
 
 
 class CommandResolution(unittest.TestCase):
@@ -291,7 +345,7 @@ class StartAnchor(unittest.TestCase):
 class ZoneVisibility(unittest.TestCase):
     def test_no_header_means_unknown(self):
         self.assertEqual({r: s.status for r, s in context([SHOCK]).zone_visibility.items()},
-                         {"apical_zone": "unknown", "sternal_zone": "unknown"})
+                         {"apical_zone": "unknown", "sternal_zone": "unknown", "screen": "unknown"})
 
     def test_header_region_coverage(self):
         ctx = context([SHOCK], {"analyses_run": {"video": True}, "coverage": {"region:sternal_zone": "not_covered"}})

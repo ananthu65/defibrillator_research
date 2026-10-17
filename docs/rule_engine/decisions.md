@@ -426,16 +426,94 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   placement happened. A missing placement then is Unable to Verify, never a Fail.
 - **Affects:** P-007, P-030; R3, R8.
 
+### D-094 Screen coverage for R5
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:**
+  - **Derived like the zones:** the `defibrillator_screen` track's visibility is derived by the
+    exporter (`screen_tracks`, `screen_visibility`) and the adapter exactly as for the placement
+    zones: intervals in the header; no track → unknown; never visible → not covered.
+  - **Its region:** `engine.yaml` has a region `screen` governing `shock_delivered_on_screen`.
+  - **R5:** a missing shock on screen while the screen is out of view gives **Unable to Verify,
+    never Fail**. Out of view means not covered, so the result is Unable to Verify. A screen
+    with no track is unknown, which is Unable to Verify under the interim policy (OQ-001).
+  - **An older export without the screen fields** gives unknown.
+- **Affects:** P-030, P-007; R5 (Increment 13).
+
+### D-095 R2 when the first placement is missing: zone coverage over the window
+- **Date / by / status:** 2026-10-17 · Arnikan · approved; **its failure code is replaced by
+  D-097** (`first_placement_not_observed`)
+- **Decision:** When the first placement isn't seen, R2 asks coverage for both placement zones
+  over the window from `first_paddle_taken` to `second_paddle_taken` (D-092).
+  - Both zones visible throughout the window → **Fail** (first "first missing", now
+    `first_placement_not_observed`, D-097).
+  - Otherwise → **Unable to Verify**.
+  - Once the gate is approved, derived placements flagged `possible_parallel_placement` give
+    **Fail `simultaneous`** (D-091).
+- **Affects:** R2 (P-032). **Resolved:** OQ-058 (by D-097).
+
+### D-096 Each camera angle is a separate video; results are never compared across angles
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** In this project each camera angle (LL, LS, T) is treated as a separate video,
+  even though the same procedure is recorded from three angles. Results are never compared or
+  cross-checked across angles, and no cross-view comparison is built. Each recording is
+  assessed on its own evidence (D-032: one camera angle per timeline).
+- **Note:** the R2 dry run of 2026-10-17 listed results per participant across views. That
+  listing is not used for anything. The camera-angle evidence report compares what each view
+  **can** show, to choose a camera angle (OQ-038); it doesn't cross-check results.
+- **Affects:** every rule; the engine, the adapter and the exporter work per recording.
+
+### D-097 R2: a first placement not observed is its own failure code
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** When the first placement is missing while both placement zones were visible
+  throughout the window (first paddle taken → second paddle taken), R2 fails with a new code,
+  **`first_placement_not_observed`**. It means **"either the paddles were placed in parallel, or
+  the second paddle was taken before the first was placed"**, following the annotators'
+  convention (A-019).
+  - The code "first missing" is not used for this case. R2 no longer produces it, and it is
+    removed from the output contract.
+  - Once the gate is approved, derived parallel placements refine the result to
+    **`simultaneous`** (D-091).
+- **Reason:** without the first-placement tag, the evidence can't tell a parallel placement from
+  taking the second paddle first. The code names exactly what was observed, not a guess.
+- **Affects:** R2 (P-032); the output contract (v4). **Resolves:** OQ-058.
+
 ---
 
 ## Shock time and command timing
 
 ### D-023 Shock time falls back to paddle removal, flagged
-- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved; **replaced by D-093** (2026-10-17) as
+  the default. It now applies only with `shock_time_fallback: removal`.
 - **Decision:** If no shock is confirmed on screen, the shock time is taken from the first
   paddle removal. Every timing result that uses it is flagged `shock_time_from_removal`.
 - **Reason:** Removal happens after the shock, so delays measured from it look shorter.
 - **Affects:** R6, R7/A6, A1–A5, A8; P-009, P-011, P-012.
+
+### D-093 The shock time comes only from the screen
+- **Date / by / status:** 2026-10-17 · Arnikan · approved. **Replaces D-023** as the default.
+- **Decision:**
+  - **Only from the screen:** the shock time is established only from
+    `shock_delivered_on_screen`, which is visible in LS-angle videos. The interim data shows it
+    in some T videos too (see the camera-angle evidence document).
+  - **Never inferred:** if no shock is seen on the screen, there is no shock time. It is never
+    inferred from paddle removal or anything else.
+  - **The setting:** `engine.yaml` `shock_time_fallback: none`. The removal fallback stays in
+    the code behind `shock_time_fallback: removal`. D-023, D-024, D-053, D-054 and D-059 apply
+    only with that setting.
+  - **Without a shock time:**
+    - every shock-dependent rule (R6, R7/A6, A1–A5, A7, A8, and R3's direct check) is
+      **Not evaluable** because of R5;
+    - "resume compressions" commands stay unresolved (`no_shock_time`).
+
+    The context still lists start commands as ambiguous (no shock time), but under `none` no
+    rule uses that, since every rule needing the restart is already Not evaluable.
+  - **Unchanged:** R3/R4's inference from paddle removal (P-016). Removal still confirms that
+    the paddles were placed; it just doesn't give a time.
+  - **This supersedes the A6 clause of the supervisor's proposal** (Arnikan, 2026-10-17). It is
+    to be mentioned to the supervisor (OQ-057).
+- **Reason:** a time inferred from a later event is not an observed shock time. Rules that need
+  it should not be judged on an estimate.
+- **Affects:** P-009, P-011, P-012; R6, R7/A6, A1–A8. **Open question:** OQ-057.
 
 ### D-039 Multiple shocks: no shock time is chosen
 - **Date / by / status:** 2026-10-13 · Arnikan · approved

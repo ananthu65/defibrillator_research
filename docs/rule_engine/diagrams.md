@@ -95,44 +95,52 @@ flowchart TD
     C -->|unknown, incl. no header| U3["Unable to Verify (interim)<br/>coverage_policy_undecided"]
 ```
 
-## (e) Shock time, phases and command resolution (P-009, P-010, P-011)
+## (e) Shock time, phases and command resolution (P-009, P-010, P-011; D-093)
+
+The shock time comes only from the screen. `shock_time_fallback` is `none` (decided); the dashed
+removal branch runs only when the setting is `removal`.
 
 ```mermaid
 flowchart TD
-    S0{"How many confident<br/>shock indications?"} -->|two or more| N1["No shock time<br/>multiple_shocks<br/>(not guessed)"]
+    S0{"How many confident<br/>shock indications<br/>on the screen?"} -->|two or more| N1["No shock time<br/>multiple_shocks<br/>(not guessed)"]
     S0 -->|one| T1["Shock time = shock on screen"]
-    S0 -->|none| R{"Paddle removal?"}
-    R -->|yes| T2["Shock time = first removal<br/>shock_time_from_removal<br/>(delays look shorter)"]
-    R -->|no| N2["No shock time<br/>no_shock"]
+    S0 -->|none| F{"shock_time_fallback?"}
+    F -->|"none (decided, D-093)"| N0["No shock time, never inferred<br/>no_shock<br/>shock-dependent rules:<br/>Not evaluable because of R5"]
+    F -.->|removal| R{"Paddle removal?"}
+    R -.->|yes| T2["Shock time = first removal<br/>shock_time_from_removal<br/>(delays look shorter)"]
+    R -.->|no| N2["No shock time<br/>no_shock"]
     T1 --> PH["P-010 Phases: before / at / after"]
-    T2 --> PH
+    T2 -.-> PH
     PH --> CR{"P-011 'Resume compressions'<br/>relative to the shock"}
-    CR -->|before removal, fallback only| UR1["Unresolved<br/>command_before_removal"]
+    CR -.->|"before removal<br/>(fallback removal only)"| UR1["Unresolved<br/>command_before_removal"]
     CR -->|"within simultaneous_window_seconds<br/>(configurable, placeholder 0.5 s)"| UR2["Unresolved<br/>command_near_shock"]
     CR -->|before| CO["Continue"]
     CR -->|after| ST["Start"]
     N1 --> UR3["Commands unresolved<br/>no_shock_time"]
-    N2 --> UR3
+    N0 --> UR3
+    N2 -.-> UR3
 ```
 
 ### (e2) Which start command is the restart (P-012)
 
 Every start command goes through these checks **on its own**. Commands that do not count are
 set aside, and the **earliest remaining** one is the restart, so a later start can still be
-the restart.
+the restart. The dashed removal branch (D-024, D-053, D-059) runs only with
+`shock_time_fallback: removal` (D-093). With the decided setting, the shock time is either from
+the screen or absent.
 
 ```mermaid
 flowchart TD
-    K{"For each start command:<br/>how was the shock time<br/>established? P-009"} -->|no shock time| A0["Ambiguous, not a mistake<br/>no_shock_time (D-054)<br/>no restart time"]
+    K{"For each start command:<br/>how was the shock time<br/>established? P-009"} -->|"no shock time<br/>(no shock on screen, D-093;<br/>or two shocks)"| A0["Ambiguous, not a mistake<br/>no_shock_time<br/>no restart time; R7/A6, A8, A7<br/>Not evaluable because of R5"]
     K -->|shock on screen| B{"This command at or<br/>before the shock?"}
     B -->|yes| B1["Does not count: a mistake<br/>start_command_before_shock<br/>(A7 reports it)"]
     B -->|no| RS["Candidate: after the shock"]
-    K -->|from paddle removal| C{"This command at or<br/>before the removal?"}
-    C -->|yes| C1["Ambiguous, not a mistake<br/>command_before_removal (D-053)<br/>R7/A6, A8 → Unable to Verify"]
-    C -->|no| RR["Candidate: after the removal"]
-    RES["Unresolved resume command<br/>before the removal (D-024)"] -->|"also makes the restart ambiguous (D-059)"| C1
+    K -.->|"from paddle removal<br/>(fallback removal only)"| C{"This command at or<br/>before the removal?"}
+    C -.->|yes| C1["Ambiguous, not a mistake<br/>command_before_removal (D-053)<br/>R7/A6, A8 → Unable to Verify"]
+    C -.->|no| RR["Candidate: after the removal"]
+    RES["Unresolved resume command<br/>before the removal (D-024)"] -.->|"also makes the restart ambiguous (D-059)"| C1
     RS --> E["Restart = earliest candidate"]
-    RR --> E
+    RR -.-> E
 ```
 
 ## (f) R8: apical before sternal (P-015, planned)
@@ -226,10 +234,11 @@ flowchart LR
     REP -->|items to fix in the backups| CVAT
 ```
 
-## (i) How a zone's coverage is decided for a recording (P-030, P-007; D-074, D-080, D-082, D-092)
+## (i) How a zone's coverage is decided for a recording (P-030, P-007; D-074, D-080, D-082, D-092, D-094)
 
 Decided per zone (apical, sternal) for one annotated recording by the adapter (built, Increment
-10). When a rule asks about a time window, P-007 uses the zone's visible intervals (D-092). The
+10). The defibrillator screen (region `screen`, R5) goes through the same steps, without reviewed
+exceptions (D-094). When a rule asks about a time window, P-007 uses the zone's visible intervals (D-092). The
 view's usual zone pattern is used only by the audit's review list, never here.
 
 ```mermaid

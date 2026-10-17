@@ -26,7 +26,18 @@ DIGEST = EXPORT.placements.digest()
 EXPORT_ID = "a" * 64
 
 
-def record(task="P01_LS", view="LS", stop=99, tags=(), tracks=None, zones=(), derived=()):
+def record(task="P01_LS", view="LS", stop=99, tags=(), tracks=None, zones=(), derived=(), screen_tracks=0,
+           screen=()):
+    data = _record(task, view, stop, tags, tracks, zones, derived)
+    if screen_tracks is not None:   # None: an export made before the screen was added
+        data["screen_tracks"] = screen_tracks
+        data["screen_visibility"] = [{"label": "defibrillator_screen", "start_frame": a, "end_frame": b,
+                                      "start_seconds": round(a / FPS, 6), "end_seconds": round(b / FPS, 6)}
+                                     for a, b in screen]
+    return data
+
+
+def _record(task, view, stop, tags, tracks, zones, derived):
     return {"schema_version": 1, "kind": RECORD_KIND, "canonical_task_id": task, "participant_id": task[:3],
             "camera_view": view, "annotation_source": "x", "archive": "a.zip", "task_path": ".",
             "media_name": f"{task}.mp4", "fps": FPS, "width": 1920, "height": 1080, "start_frame": 0,
@@ -82,12 +93,12 @@ class ZoneCoverageRules(unittest.TestCase):
 
     def test_each_case(self):
         adapted = adapt_record(record(tracks={APICAL: 1, STERNAL: 0}, zones=[(APICAL, 0, 99)]), RULES, EXPORT)
-        self.assertEqual(zone_status(adapted), {"apical_zone": "covered", "sternal_zone": "unknown"})
+        self.assertEqual(zone_status(adapted), {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown"})
         self.assertEqual(adapted.header.visibility, {"region:apical_zone": ((0.0, 3.96),)})
 
         adapted = adapt_record(record(tracks={APICAL: 1, STERNAL: 2}, zones=[(APICAL, 0, 39), (APICAL, 60, 99)]),
                                RULES, EXPORT)
-        self.assertEqual(zone_status(adapted), {"apical_zone": "unknown", "sternal_zone": "not_covered"})
+        self.assertEqual(zone_status(adapted), {"apical_zone": "unknown", "sternal_zone": "not_covered", "screen": "unknown"})
         self.assertEqual(adapted.header.visibility, {"region:apical_zone": ((0.0, 1.56), (2.4, 3.96)),
                                                      "region:sternal_zone": ()})
         self.assertIn("80 of 100 frames", adapted.zones[0].reason)
@@ -138,6 +149,40 @@ class WindowedCoverage(unittest.TestCase):
         self.assertEqual(self.coverage.status("gel_applied", (1.7, 2.2)).status, "covered")   # analyses_run video
 
 
+class ScreenCoverage(unittest.TestCase):
+    """D-094: the defibrillator screen's coverage, exactly as for the zones; R5's missing shock on screen."""
+
+    def missing_shock(self, data, window=None):
+        adapted = adapt_record(data, RULES, EXPORT)
+        coverage = Coverage(prepare_timeline(adapted.events, RULES), RULES, adapted.header)
+        return zone_status(adapted)["screen"], coverage.missing("shock_delivered_on_screen", window)
+
+    def test_ll_video_with_no_screen_visible_is_never_a_fail(self):
+        status, missing = self.missing_shock(record("P01_LL", "LL", screen_tracks=0))
+        self.assertEqual((status, missing.coverage.status, missing.outcome), ("unknown", "unknown", "unable_to_verify"))
+        self.assertEqual(missing.coverage.scope, "region:screen")
+
+    def test_screen_never_visible_is_not_covered(self):
+        status, missing = self.missing_shock(record(screen_tracks=1, screen=()))
+        self.assertEqual((status, missing.outcome), ("not_covered", "unable_to_verify"))
+
+    def test_screen_visible_throughout_makes_a_missing_shock_a_fail(self):
+        status, missing = self.missing_shock(record(screen_tracks=1, screen=[(0, 99)]))
+        self.assertEqual((status, missing.outcome), ("covered", "fail"))
+
+    def test_shock_expected_while_the_screen_was_out_of_view(self):
+        data = record(screen_tracks=1, screen=[(0, 39), (60, 99)])
+        status, gap = self.missing_shock(data, (1.7, 2.2))
+        self.assertEqual((status, gap.coverage.status, gap.outcome), ("unknown", "not_covered", "unable_to_verify"))
+        _, seen = self.missing_shock(data, (0.2, 1.0))
+        self.assertEqual((seen.coverage.status, seen.outcome), ("covered", "fail"))
+
+    def test_an_export_without_screen_fields_is_unknown(self):
+        adapted = adapt_record(record(screen_tracks=None), RULES, EXPORT)
+        self.assertEqual(zone_status(adapted)["screen"], "unknown")
+        self.assertIn("not in this export", adapted.zones[-1].reason)
+
+
 class Gate(unittest.TestCase):
     """D-088: derived placements reach the engine only for the reviewed export and settings."""
 
@@ -179,7 +224,7 @@ class ThroughTheEngine(unittest.TestCase):
         self.assertTrue(result.overall.development_data)
         self.assertEqual(result.overall.result, "incomplete")
         self.assertEqual({r: s.status for r, s in result.context.zone_visibility.items()},
-                         {"apical_zone": "covered", "sternal_zone": "unknown"})
+                         {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown"})
 
     def test_header_validation(self):
         regions = tuple(RULES.engine.regions)

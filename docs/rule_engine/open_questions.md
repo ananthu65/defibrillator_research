@@ -31,6 +31,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-021 | E-14a | supervisor | Ananth, Arnikan | open | Gel applied more than twice |
 | OQ-022 | E-14b | supervisor | Ananth, Arnikan | open | Paddles lifted and placed again before the shock |
 | OQ-023 | E-14c | supervisor | Ananth, Arnikan | open | Discharge buttons pressed more than once |
+| OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen (supersedes the proposal's A6 clause) |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -58,6 +59,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-051 | new (2026-10-14) | Arnikan | — | answered | A zone track that is never visible |
 | OQ-052 | new (2026-10-14) | Arnikan | — | answered | Derived placements: settings, evidence type, disagreement with tags |
 | OQ-056 | new (2026-10-16) | Arnikan | — | answered | Is possible_parallel_placement alone enough for a Fail? |
+| OQ-058 | new (2026-10-17) | Arnikan | — | answered | R2 in a parallel placement before the gate is approved |
 | OQ-044 | new (2026-10-14) | Arnikan | — | answered | Which timeline anomalies block an overall Pass, and where in the order? |
 | OQ-043 | new (2026-10-14) | Arnikan | Ananth, Sanjeevan | answered | Registry check versus minimal test configs |
 | OQ-042 | new (2026-10-13) | Arnikan | — | answered | Is a provided but unapproved time limit ignored or used? |
@@ -189,6 +191,17 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   `expected_counts.both_paddle_buttons_pressed` is undecided, so repeated presses are not checked
   as a count (D-071).
 
+### OQ-057 No shock time without the screen (supersedes the proposal's A6 clause)
+- **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan (to mention
+  it) · **Raised:** 2026-10-17 · **Status:** open
+- **Question:** The rule engine now takes the shock time only from the shock seen on the
+  defibrillator screen, and never infers it from paddle removal (D-093). This supersedes the A6
+  clause of the proposal. In a view without the screen, every shock-dependent rule is therefore
+  Not evaluable. Is the supervisor content with this?
+- **Affects:** R6, R7/A6, A1–A8; the choice of camera angle (OQ-038).
+- **Interim behaviour:** `shock_time_fallback: none`. The removal fallback is kept behind the
+  setting `removal`.
+
 ### OQ-001 Final policy when coverage is unknown
 - **Old no.:** E-1 · **Owner:** team · **Also involves:** supervisor (whether unverifiable
   evidence may count against a learner is an assessment-policy question) · **Raised:**
@@ -198,6 +211,17 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   to Verify?
 - **Affects:** all rules; P-008.
 - **Interim behaviour:** Unable to Verify, flagged `coverage_policy_undecided` (D-008).
+- **A consequence to weigh when deciding (noted 2026-10-17):** a recording with **no zone track
+  or no screen track** has unknown coverage for that region (D-074, D-094). If unknown were set
+  to Fail:
+  - a missing shock on screen would **fail R5** in a view that never shows the screen (for
+    example LL);
+  - any rule that leaves a missing placement to the coverage policy would **fail** where a zone
+    has no track: R3 and R8 are planned this way.
+
+  The learner would then be failed for what the camera couldn't see. **R2 as built would not be
+  affected:** D-095 fails only when both zones are actually visible throughout the window. It
+  never relies on the unknown setting.
 
 ### OQ-006 R8 placement-match window; is the apical-first fallback clinically acceptable?
 - **Old no.:** E-3b · **Owner:** team (the window value, from pilot validation) · **Also
@@ -358,13 +382,31 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Old no.:** Brief §9 · **Owner:** team · **Also involves:** Ananth (models are trained per
   angle) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** Which camera angle will the final system use?
-- **Affects:** R8 (zone visibility), all video rules.
+- **Affects:** R8 (zone visibility), all video rules; with no shock-time fallback (D-093), every
+  shock-dependent rule.
 - **Interim behaviour:** Any single angle is accepted; mixing angles is rejected (D-032).
+- **Evidence (interim, 38 videos):** [camera_angle_evidence.md](camera_angle_evidence.md). It
+  covers how often each zone and the screen are visible per view, how often each tag appears,
+  and which rules each view can check. It is to be rerun on the final export.
 
 ---
 
 ## For Arnikan (rule engine and annotation)
 
+
+
+### OQ-058 R2 in a parallel placement before the gate is approved — *answered*
+- **Old no.:** new (2026-10-17) · **Owner:** Arnikan · **Raised:** 2026-10-17 · **Status:**
+  answered
+- **Question:** In a parallel placement the annotators don't tag the first placement (A-019).
+  Before the gate is approved, R2 saw "first placement missing" and, with the zones visible
+  throughout, reported the code for "first paddle never placed". That names the wrong mistake.
+  What should R2 report?
+- **Answer:** A new code, `first_placement_not_observed`: "either the paddles were placed in
+  parallel, or the second paddle was taken before the first was placed". The old code is not
+  used for this case. Once the gate is approved, derived parallel placements refine it to
+  `simultaneous`.
+- **Answered:** 2026-10-17 → **D-097**.
 
 ### OQ-056 Is `possible_parallel_placement` alone enough for a Fail? — *answered*
 - **Old no.:** new (2026-10-16) · **Owner:** Arnikan · **Raised:** 2026-10-16 · **Status:**

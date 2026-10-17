@@ -21,7 +21,8 @@ becomes one timeline file in the format ``rules.run`` reads: ``{"header": ..., "
   - visible for part of the recording: unknown.
 
   The visible intervals go into the header, so a rule asking about a time window gets that
-  window's coverage (D-092).
+  window's coverage (D-092). The defibrillator screen is handled in exactly the same way
+  (region `screen`, governing the shock on screen for R5, D-094).
 - **Derived placements (Step 9c)** reach the engine only when ``derived_placements_approved()``
   passes for the export's ID and settings hash, and every event carries that settings hash
   (D-088). Otherwise they are withheld and counted.
@@ -76,25 +77,39 @@ class AdaptedRecord:
         return {"header": header, "events": [e.to_dict() for e in self.events]}
 
 
-def zone_regions(export_config, rules_config) -> dict[str, str]:
-    """CVAT zone label -> engine region, through the placement event each zone governs (no new names, D-073)."""
-    regions = {}
+ZONES = ("zone_tracks", "zone_visibility")       # record keys of the placement zones
+SCREEN = ("screen_tracks", "screen_visibility")  # record keys of the defibrillator screen (D-094)
+
+
+def visibility_regions(export_config, rules_config) -> list[tuple[str, str, tuple[str, str]]]:
+    """(CVAT label, engine region, record keys) for each placement zone and the screen.
+
+    Each label maps to the engine region that governs its event (no new names, D-073).
+    """
+    found = []
     for paddle in export_config.placements.paddles:
         region = rules_config.engine.region_of(paddle.event)
         if region is not None:
-            regions[paddle.zone] = region
-    return regions
+            found.append((paddle.zone, region, ZONES))
+    region = rules_config.engine.region_of(export_config.screen_event)
+    if region is not None:
+        found.append((export_config.screen_label, region, SCREEN))
+    return found
 
 
-def zone_coverage(record: dict[str, Any], zone: str, confirmed: set[str]):
-    """(status, reason, visible intervals or None) for one zone of one recording (P-030)."""
-    if zone in confirmed:
+def zone_coverage(record: dict[str, Any], label: str, confirmed: set[str], keys: tuple[str, str] = ZONES):
+    """(status, reason, visible intervals or None) for one zone or the screen of one recording (P-030)."""
+    tracks_key, visibility_key = keys
+    if label in confirmed:
         return NOT_COVERED, "reviewed exception: an annotator confirmed it was not visible (D-082)", None
-    if not record["zone_tracks"].get(zone):
-        return UNKNOWN, "no zone track (D-074)", None
-    spans = [z for z in record["zone_visibility"] if z["label"] == zone]
+    if tracks_key not in record:
+        return UNKNOWN, f"not in this export ({tracks_key} missing: exported before it was added)", None
+    tracks = record[tracks_key]
+    if not (tracks.get(label) if isinstance(tracks, dict) else tracks):
+        return UNKNOWN, "no track (D-074)", None
+    spans = [z for z in record[visibility_key] if z["label"] == label]
     if not spans:
-        return NOT_COVERED, "zone track never visible (D-080)", ()
+        return NOT_COVERED, "track never visible (D-080)", ()
     intervals = tuple((z["start_seconds"], z["end_seconds"]) for z in spans)
     visible = sum(z["end_frame"] - z["start_frame"] + 1 for z in spans)
     total = record["stop_frame"] - record["start_frame"] + 1
@@ -139,12 +154,12 @@ def adapt_record(record: dict[str, Any], rules_config, export_config, manifest: 
                                 event_id=derived["id"], metadata=metadata))
     confirmed = export_config.confirmed_not_visible(task)
     coverage, visibility, zones = {}, {}, []
-    for zone, region in zone_regions(export_config, rules_config).items():
-        status, reason, intervals = zone_coverage(record, zone, confirmed)
+    for label, region, keys in visibility_regions(export_config, rules_config):
+        status, reason, intervals = zone_coverage(record, label, confirmed, keys)
         coverage[f"region:{region}"] = status
         if intervals is not None:
             visibility[f"region:{region}"] = intervals
-        zones.append(ZoneCoverage(region, zone, status, reason))
+        zones.append(ZoneCoverage(region, label, status, reason))
     header = TimelineHeader(recording_id=task, camera_angle=view, duration_seconds=record["duration_seconds"],
                             analyses_run={"video": True, "audio": False}, coverage=coverage,
                             visibility=visibility, flags=(ANNOTATION_COVERAGE_ASSUMED,))

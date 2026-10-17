@@ -5,6 +5,9 @@ schema_version: 1
 
 zone_labels: [apical_placement_zone, sternal_placement_zone]   # CVAT zone track labels
 paddle_labels: [paddle_apical, paddle_sternal]                 # CVAT paddle track labels
+# The defibrillator screen: its visibility is exported exactly like the zones' (D-094), and the
+# adapter maps it to the engine region that governs `event` (engine.yaml regions: screen).
+screen: {label: defibrillator_screen, event: shock_delivered_on_screen}
 
 # Zone tracks normally present in each camera view (D-077). Used ONLY by the audit's review list:
 # the rule engine never uses it, and it never affects a result (D-082). The audit report prints

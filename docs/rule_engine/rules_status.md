@@ -11,7 +11,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
 |---|---|---|---|---|---|---|---|
 | **R1** Gel applied twice | Gel is applied twice, as two separate applications at least a minimum gap apart, within the approved period. Order versus paddle placement is not checked (D-018) | gel applied (every occurrence) | P-014, P-008 | `missing`, `applied_once`, `outside_time_period` | 17 | pending | OQ-016 (period), OQ-021 (more than twice), OQ-018 (gap) |
-| **R2** Second paddle taken after the first is placed | First paddle taken → first paddle placed firmly → second paddle taken (D-051) | first paddle taken, first placement, second paddle taken | P-014, P-012, P-008 | `simultaneous`, `taken_before_first_placed`, `first_missing` | 11 | pending | OQ-008 (tag dropped from timelines), OQ-022 |
+| **R2** Second paddle taken after the first is placed | First paddle taken → first paddle placed firmly → second paddle taken (D-051) | first paddle taken, first placement, second paddle taken; zone coverage over that window; derived placements past the gate | P-032, P-012, P-007 | `simultaneous`, `taken_before_first_placed`, `first_placement_not_observed` (D-097) | 11 | **implemented** (Increment 11); pending until the supervisor confirms its definition | OQ-022 |
 | **R8** Apical before sternal | Apical placed before sternal. With one zone visible, inferred from the first placement (D-013); inferred mistakes undecided (D-015); a missing placement gives Unable to Verify, `placement_missing` (D-058); the apical-first fallback gives an assumed result that blocks an overall Pass (D-060) | apical and sternal placements, first placement, zone visibility | P-015, P-012, P-007 | `wrong_order`, `simultaneous` | 12 | pending | OQ-004, OQ-005, OQ-006, OQ-007, OQ-015 |
 | **R3** Paddles firmly on chest | Both paddles stable in their zones before the shock; otherwise (direct evidence weak or missing, D-057) Pass – Inferred if the shock on screen or the paddle removal is confirmed | paddles firmly on chest, shock time | P-016, P-009, P-008 | `not_in_zone`, `placed_after_shock` | 15 | pending | OQ-012, OQ-022 |
 | **R4** Both discharge buttons pressed | Both buttons pressed after placement and before the shock; otherwise (weak or missing, D-057) inferred as for R3 | buttons pressed, placement, shock time | P-016, P-009, P-008 | `before_placement`, `not_pressed` | 16 | pending | OQ-023 |
@@ -27,7 +27,7 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 | **A7** Command sequence | Order: oxygen away → continue → stand clear → stop → shock → start. A missing command is "not evaluable because of Ax" (D-027); a start before a confirmed on-screen shock is a sequence problem (D-025), but a timing-ambiguous one is not (D-053, D-054) | all commands; results of A1–A5 | P-014, P-011, P-012 | `wrong_order` | 22 | pending | OQ-010 |
 | **A8** Pre-shock pause | "Stop CPR" to the restart within **5 s** (approved, D-016). If the restart is timing-ambiguous, Unable to Verify (D-053, D-059). Under the removal fallback with an unambiguous restart, measured normally (D-059) | stop time, restart time | P-012, P-008 | `pre_shock_pause` | 23 | pending | OQ-009, OQ-015 |
 
-## What is built so far (Increments 0–10, with 9a, 9b and 9c)
+## What is built so far (Increments 0–11, with 9a, 9b and 9c)
 
 Everything every rule will rely on is built and tested:
 - **Preparation:** P-002 to P-005.
@@ -69,5 +69,14 @@ approved (D-091).
   (D-092). For example, a placement expected while the zone was out of view gives Unable to
   Verify, never a Fail. Derived placements reach the engine only past the gate (D-088).
 
-No individual rule is built yet, so all 16 still report "pending". On the interim annotation data
-the engine gives Incomplete, marked as development data. Next: R2 (Increment 11).
+- **Shock time only from the screen (D-093):** without a shock seen on the screen there is no
+  shock time, and shock-dependent rules are Not evaluable. The removal fallback is kept behind
+  `shock_time_fallback: removal`. Which rules each camera view can check:
+  [camera_angle_evidence.md](camera_angle_evidence.md) (interim).
+- **Screen coverage for R5 (D-094):** a missing shock on screen while the screen is out of view is
+  Unable to Verify, never Fail.
+- **R2 (Increment 11, P-032):** implemented and tested. It reports "pending" until it is approved
+  in `rules.yaml`.
+
+All 16 rules still report "pending" (R2 is implemented but not yet approved). On the interim
+annotation data the engine gives Incomplete, marked as development data. Next: R8 (Increment 12).

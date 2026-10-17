@@ -20,6 +20,7 @@ MODALITIES = ("video", "audio")
 COVERAGE_STATUSES = ("covered", "not_covered", "unknown")
 MISSING_OUTCOMES = ("fail", "unable_to_verify")
 OVERALL_UNABLE_OUTCOMES = ("fail", "faculty_review")
+SHOCK_TIME_FALLBACKS = ("none", "removal")
 COUNT_BOUNDS = ("exactly", "at_least", "at_most")
 UNLIMITED = "unlimited"
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -86,7 +87,7 @@ class EngineSettings:
         expected = {"schema_version", "confidence_thresholds", "simultaneous_window_seconds",
                     "gel_minimum_gap_seconds", "placement_match_window_seconds", "assume_first_taken_is_apical",
                     "duration_tolerance_seconds", "coverage_policy", "inferred_fail_outcome",
-                    "unable_to_verify_outcome", "review_anomalies", "expected_counts"}
+                    "unable_to_verify_outcome", "review_anomalies", "expected_counts", "shock_time_fallback"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
@@ -100,6 +101,8 @@ class EngineSettings:
         settings["unable_to_verify_outcome"] = _setting(
             "unable_to_verify_outcome", data["unable_to_verify_outcome"], where, _choice(OVERALL_UNABLE_OUTCOMES))
         settings["review_anomalies"] = _setting("review_anomalies", data["review_anomalies"], where, _anomaly_list)
+        settings["shock_time_fallback"] = _setting("shock_time_fallback", data["shock_time_fallback"], where,
+                                                   _choice(SHOCK_TIME_FALLBACKS))
         policy = _exact_keys(data["coverage_policy"], {"outcomes", "by_modality", "by_source", "by_region", "regions"},
                              f"{where} coverage_policy")
         outcomes = _exact_keys(policy["outcomes"], set(COVERAGE_STATUSES), f"{where} coverage_policy.outcomes")
