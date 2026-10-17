@@ -283,7 +283,8 @@ class RepositoryPolicy(unittest.TestCase):
         self.assertEqual(engine.coverage_overrides, {})
         self.assertEqual(engine.regions, {"apical_zone": ("apical_paddle_placed",),
                                           "sternal_zone": ("sternal_paddle_placed",),
-                                          "screen": ("shock_delivered_on_screen",)})   # D-094
+                                          "screen": ("shock_delivered_on_screen",),   # D-094
+                                          "apical_paddle": (), "sternal_paddle": ()})   # visibility only (D-108)
 
 
 class InvalidCoverageConfig(unittest.TestCase):
@@ -318,8 +319,16 @@ class InvalidCoverageConfig(unittest.TestCase):
         self.assertRejected("already in region", regions={"a": ["apical_paddle_placed"],
                                                           "b": ["apical_paddle_placed"]})
 
-    def test_empty_region(self):
-        self.assertRejected("nonempty list", regions={"apical_zone": []})
+    def test_region_events_must_be_a_list(self):
+        self.assertRejected("expected a list of canonical event names", regions={"apical_zone": "apical_paddle_placed"})
+
+    def test_empty_region_is_visibility_only(self):
+        """D-108: a region with no event (a paddle) is asked by name; it governs no event."""
+        data = copy.deepcopy(ENGINE)
+        data["coverage_policy"]["regions"] = {"apical_zone": ["apical_paddle_placed"], "apical_paddle": []}
+        engine = EngineSettings.from_dict(data)
+        self.assertEqual(engine.regions["apical_paddle"], ())
+        self.assertIsNone(engine.region_of("both_paddle_buttons_pressed"))
 
     def test_region_event_must_be_a_video_event_in_the_vocabulary(self):
         for events in (["apical_paddle_placd"], ["stand_clear_command"]):

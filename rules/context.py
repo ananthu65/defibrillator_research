@@ -162,7 +162,7 @@ def build_context(prepared, config, header=None):
     for name in ("continue_compressions", "start_compressions"):
         if unresolved:  # an unresolved command might have been this one: do not pretend the anchor is complete
             anchors[name] = replace(anchors[name], flags=anchors[name].flags + (UNRESOLVED_COMMANDS,))
-    zones = {region: coverage.status(events_in_region[0])
+    zones = {region: coverage.status(events_in_region[0]) if events_in_region else coverage.region_status(region)
              for region, events_in_region in config.engine.regions.items()}
     return ProcedureContext(prepared, coverage, tuple(events), anchors, tuple(resolutions), zones)
 

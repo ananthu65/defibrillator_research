@@ -111,7 +111,23 @@ class Inference(unittest.TestCase):
     def test_inferred_from_the_removal_without_a_shock_on_screen(self):
         """D-093: removal confirms placement, though it gives no shock time (and no successful shock, A-021)."""
         outcome = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")])
-        self.assertEqual((outcome.kind, outcome.evidence), ("pass_inferred", ("removed",)))
+        self.assertEqual((outcome.kind, outcome.evidence, outcome.flags),
+                         ("pass_inferred", ("removed",), ("inferred_from_removal",)))
+        self.assertIn("A-021", outcome.reason)
+
+    def test_each_source_on_its_own(self):
+        """D-107: one confirmed source is enough."""
+        shock_only = r3([TAKEN, SHOCK], cfg=config(["shock_delivered_on_screen"]))
+        self.assertEqual((shock_only.kind, shock_only.evidence, shock_only.flags), ("pass_inferred", ("shock",), ()))
+        removal_only = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")],
+                          cfg=config(["paddles_removed_after_shock"]))
+        self.assertEqual((removal_only.kind, removal_only.evidence), ("pass_inferred", ("removed",)))
+        self.assertIn("inferred_from_removal", removal_only.flags)
+
+    def test_with_both_sources_confirmed_the_first_listed_is_cited(self):
+        """D-107: the shock on screen is listed first, so a removal tagged before it is not cited."""
+        outcome = r3([TAKEN, ev("paddles_removed_after_shock", 14.0, "removed"), SHOCK])
+        self.assertEqual((outcome.evidence, outcome.flags), (("shock",), ()))
 
     def test_a_tag_without_a_shock_time_cannot_be_checked_directly(self):
         """D-093: R3's direct check needs the shock time; the inference may still apply."""

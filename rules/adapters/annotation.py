@@ -22,7 +22,8 @@ becomes one timeline file in the format ``rules.run`` reads: ``{"header": ..., "
 
   The visible intervals go into the header, so a rule asking about a time window gets that
   window's coverage (D-092). The defibrillator screen is handled in exactly the same way
-  (region `screen`, governing the shock on screen for R5, D-094).
+  (region `screen`, governing the shock on screen for R5, D-094), and so are the paddles
+  (regions `apical_paddle` and `sternal_paddle`, R4's coverage of the button press, D-108).
 - **Derived placements (Step 9c)** reach the engine only when ``derived_placements_approved()``
   passes for the export's ID and settings hash, and every event carries that settings hash
   (D-088). Otherwise they are withheld and counted.
@@ -79,12 +80,14 @@ class AdaptedRecord:
 
 ZONES = ("zone_tracks", "zone_visibility")       # record keys of the placement zones
 SCREEN = ("screen_tracks", "screen_visibility")  # record keys of the defibrillator screen (D-094)
+PADDLES = ("paddle_tracks", "paddle_visibility")  # record keys of the paddles (R4, D-108)
 
 
 def visibility_regions(export_config, rules_config) -> list[tuple[str, str, tuple[str, str]]]:
-    """(CVAT label, engine region, record keys) for each placement zone and the screen.
+    """(CVAT label, engine region, record keys) for each placement zone, the screen and each paddle.
 
-    Each label maps to the engine region that governs its event (no new names, D-073).
+    Each zone and the screen map to the engine region that governs their event (no new names,
+    D-073); each paddle maps to its visibility-only region (annotation_export.yaml paddle_regions).
     """
     found = []
     for paddle in export_config.placements.paddles:
@@ -94,6 +97,9 @@ def visibility_regions(export_config, rules_config) -> list[tuple[str, str, tupl
     region = rules_config.engine.region_of(export_config.screen_event)
     if region is not None:
         found.append((export_config.screen_label, region, SCREEN))
+    for label, region in export_config.paddle_regions:
+        if region in rules_config.engine.regions:
+            found.append((label, region, PADDLES))
     return found
 
 

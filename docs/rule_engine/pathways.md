@@ -81,6 +81,7 @@ timeline file per video for `rules.run`.
 | Zone track present but outside on every frame | **not covered** | empty | D-080 |
 | No zone track | **unknown** | none | D-074 |
 | The defibrillator screen (region `screen`, R5) | the same rules (no reviewed exceptions); an export without screen fields → **unknown** | as above | D-094 |
+| Each paddle (regions `apical_paddle`, `sternal_paddle`, R4) | the same rules (no reviewed exceptions); an export without paddle fields (exporter version 1) → **unknown** | as above | D-108 |
 
 The view's usual zone pattern plays no part here (D-082).
 
@@ -147,6 +148,7 @@ The most specific information wins.
 | Header states coverage for the event's source | that status |
 | Header states coverage for the modality, or says whether that analysis ran | covered (ran) / not covered (did not run) / the stated status |
 | Nothing stated | unknown |
+| A visibility-only region asked by name (a paddle, for R4) | only that region's window or whole-recording status; nothing stated → unknown (D-108) |
 
 #### P-008 Missing-event outcome (built)
 | Condition | Outcome | Flags |
@@ -346,14 +348,32 @@ the chest regions (OQ-012, D-106).
 | Shock time; a `paddles_firmly_on_chest` tag at or before the shock (within `simultaneous_window_seconds` after it counts as at it) | Pass – Direct | — |
 | Shock time; past the gate, both derived placements at or before the shock | Pass – Direct | `derived_placement` |
 | Shock time; only tags clearly after the shock | Fail; comes before the inference | `placed_after_shock` |
-| No direct evidence (or no shock time to judge it against); an event in `inference_sources` confirmed | Pass – Inferred (D-057, D-102) | — |
+| No direct evidence (or no shock time to judge it against); an event in `inference_sources` confirmed | Pass – Inferred (D-057, D-102, D-107) | `inferred_from_removal` if from the removal |
 | No inference and no shock time | **Not evaluable because of R5** | — |
 | No inference; a low-confidence firm placement | Unable to Verify | `low_confidence_evidence` |
 | No inference; both placement zones visible throughout first paddle taken → shock | Fail | `missing` |
 | No inference; a zone not visible throughout that window (for example one paddle visible: the tag is not made then, A-019) | Unable to Verify, never Fail | — |
 
-With the proposal's sources, a shock time always means a shock on the screen, which is itself
-an inference source, so the coverage rows are reached only if `inference_sources` drops it.
+With the proposal's sources the coverage rows are unreachable: a shock time always means a shock
+on the screen, which is itself an inference source, and without one a removal infers or the rule
+is Not evaluable (D-107, OQ-061).
+
+#### P-036 R4: both discharge buttons pressed (built, Increment 16; pending until approved)
+The placement is `paddles_firmly_on_chest`, or past the gate the later derived placement. The
+window `w` is `simultaneous_window_seconds` (annotation lag, as R3). Repeated presses: any valid
+one counts; the count stays undecided (OQ-023).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Shock time; a press after the placement (within `w` before it counts) and at or before the shock (within `w` after it counts) | Pass – Direct | `derived_placement` if the placement is derived |
+| Shock time; a valid press, no placement observed | Pass – Direct, order not checked; the overall result can't be Pass | `order_not_checked` |
+| A press clearly before the placement, none valid (without a shock time: only if no press came after the placement) | Fail; comes before the inference | `before_placement` |
+| Shock time; presses only clearly after the shock | Unable to Verify | `contradictory` |
+| No direct evidence (or no shock time to judge it against); a source in `inference_sources` confirmed | Pass – Inferred (P-016) | `inferred_from_removal` if from the removal |
+| No inference and no shock time | **Not evaluable because of R5** | — |
+| No inference; a low-confidence press | Unable to Verify | `low_confidence_evidence` |
+| No inference; both paddles visible throughout the placement → the shock (the recording's start when no placement is known) | Fail (unreachable while either source is listed) | `not_pressed` |
+| No inference; a paddle not visible throughout that window | Unable to Verify, never Fail | — |
 
 #### P-034 R6: paddles removed after the shock (built, Increment 14; pending until approved)
 `paddles_removed_after_shock` means the paddles were removed; it doesn't prove a shock (D-104).
@@ -382,13 +402,20 @@ an inference source, so the coverage rows are reached only if `inference_sources
 | First placement not seen, both zones visible throughout the window from first paddle taken to second paddle taken | Fail: either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097) | `first_placement_not_observed` |
 | First placement not seen, a zone not visible throughout that window | Unable to Verify | — |
 
-#### P-016 R3/R4 inferred pass (built for R3 in Increment 15, see P-035; R4 planned, Increment 16)
-| Condition | Outcome | Codes |
+#### P-016 R3/R4 inferred pass (built, Increments 15–16; direct evidence and coverage in P-035 and P-036)
+Either source is enough (D-107). The first source listed in `inference_sources` that is confirmed
+is cited, so the shock on the screen is cited whenever it is there.
+
+| Condition | Outcome | Flags |
 |---|---|---|
-| Direct evidence in time | Pass – Direct | — |
-| Direct evidence shows the mistake | Fail | R3: see P-035; R4: `before_placement`, `not_pressed` |
-| Direct evidence weak **or missing**; an event in `inference_sources` confirmed (the shock on screen or the removal) | Pass – Inferred (D-057). A removal can happen without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102, OQ-060) | — |
-| Neither | → P-008 | — |
+| Direct evidence weak **or missing**; the shock on screen confirmed | Pass – Inferred, citing the shock (D-057) | — |
+| Direct evidence weak or missing; the removal confirmed (no shock listed or seen), **with or without a shock time** | Pass – Inferred, citing the removal. Paddles are sometimes removed without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102, OQ-060) | `inferred_from_removal` |
+| No listed source confirmed | Back to the rule: no shock time → Not evaluable because of R5; otherwise its coverage step | — |
+
+**With both sources listed (the proposal), R3's `missing` and R4's `not_pressed` are
+unreachable:** with a shock time there is a shock on the screen, which infers; without one, a
+removal infers, and otherwise the rule is Not evaluable because of R5 (D-107; OQ-061 asks the
+supervisor).
 
 ### Stage: overall policy
 
@@ -1008,3 +1035,34 @@ illustration only.)*
 3. Gate not approved → the placements never reach R3 → **Pass – Inferred** from the shock.
 4. Only one derived placement, or one after the shock → not direct evidence; the inference or
    coverage decides.
+
+### W-71 R3 and R4 from the removal alone, in a view without the screen
+*(Built in Increment 16; D-107, A-021.)*
+1. An LL view: no screen, so no shock time. Paddles removed at 20 s; no firm placement and no press
+   tagged.
+2. P-016: the removal is confirmed → R3 and R4 are each **Pass – Inferred**, citing the removal and
+   flagged `inferred_from_removal` (the reason names A-021).
+3. R5 is Unable to Verify (no screen), so the overall result is not Pass.
+
+### W-72 R4 with a press and a placement
+*(Built in Increment 16; D-108.)*
+1. Paddles firmly on chest at 10 s, shock on the screen at 15 s.
+2. Press at 13 s → **Pass – Direct**. Press at 8 s → **Fail `before_placement`**, even though the
+   shock would support an inference. Press at 9.5 s (within 0.5 s of the placement) → Pass.
+3. Press only at 17 s → **Unable to Verify**, `contradictory`: the screen showed the shock first.
+4. No placement tag, gate not approved, press at 13 s → **Pass – Direct**, `order_not_checked`; the
+   overall result is Incomplete.
+
+### W-73 R4 from derived placements
+*(Built in Increment 16; D-088, D-108.)*
+1. Gate approved; no firm placement tag. Derived placements: apical at 7 s, sternal at 12 s, so the
+   placement is 12 s. Shock on the screen at 15 s.
+2. Press at 13 s → **Pass – Direct**, `derived_placement`. Press at 10 s, between the two placements
+   → **Fail `before_placement`**.
+
+### W-74 R4's coverage: the paddles in view
+*(Built in Increment 16; D-108. Reached only if the shock on screen isn't an inference source.)*
+1. Placement at 10 s, shock at 15 s, no press, no inference.
+2. Both paddles visible from 10 s to 15 s → **Fail `not_pressed`**.
+3. The sternal paddle visible only until 12 s, out of view, or no paddle tracks → **Unable to
+   Verify**.

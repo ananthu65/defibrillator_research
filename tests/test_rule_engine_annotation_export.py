@@ -156,7 +156,7 @@ class Records(unittest.TestCase):
         self.assertEqual(record["derived_events"], [])
         self.assertEqual(issues, [])
         self.assertEqual(manifest["counts"], {"tasks": 1, "records": 1, "tags": 4, "zone_intervals": 1, "screen_intervals": 0,
-                                              "derived_events": 0})
+                                              "paddle_intervals": 0, "derived_events": 0})
         self.assertEqual(manifest["backups"][0]["archive"], "kartheepan/P01_LL.zip")
 
     def test_zone_intervals_close_at_outside_keyframes_and_merge_across_tracks_and_jobs(self):
@@ -184,6 +184,16 @@ class Records(unittest.TestCase):
                                                                   "end_frame": 39, "start_seconds": 0.4,
                                                                   "end_seconds": 1.56}])
         self.assertEqual((records["P23_LL"]["screen_tracks"], records["P23_LL"]["screen_visibility"]), (0, []))
+
+    def test_paddle_visibility_is_exported_like_the_zones(self):
+        """D-108: R4's coverage of the button press."""
+        backups = Backups(self).add("P24_LS.zip", task("P24_LS", tracks=[
+            track("paddle_apical", rect(5), rect(30, outside=True)), track("paddle_sternal", rect(0))]))
+        _, records, _ = backups.export()
+        record = records["P24_LS"]
+        self.assertEqual(record["paddle_tracks"], {"paddle_apical": 1, "paddle_sternal": 1})
+        self.assertEqual([(p["label"], p["start_frame"], p["end_frame"]) for p in record["paddle_visibility"]],
+                         [("paddle_apical", 5, 29), ("paddle_sternal", 0, 99)])
 
     def test_a_single_frame_zone_shape_is_reported_not_converted(self):
         _, records, issues = Backups(self).add("P04_T.zip", task("P04_T", shapes=[

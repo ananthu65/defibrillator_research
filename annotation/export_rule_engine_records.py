@@ -59,7 +59,7 @@ DEFAULT_CONFIG = ROOT / "configs/rule_engine/annotation_export.yaml"
 DEFAULT_ENGINE_CONFIG = ROOT / "configs/rule_engine/engine.yaml"   # simultaneous_window_seconds (9c)
 DEFAULT_CONVERSION_REPORT = ROOT / "annotation/reports/phase4/video_conversion.csv"
 TRAINING_DATA = ROOT / "data/video"
-EXPORTER_VERSION = 1
+EXPORTER_VERSION = 2   # 2: paddle_tracks and paddle_visibility (R4, D-108)
 RECORD_KIND = "rule_engine_annotation_record"
 TASK_ID = re.compile(r"^P\d{2}_(LL|LS|T)$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -91,6 +91,7 @@ class ExportConfig:
     placements: PlacementSettings
     screen_label: str = "defibrillator_screen"         # CVAT screen track label (D-094)
     screen_event: str = "shock_delivered_on_screen"    # the canonical event the screen governs
+    paddle_regions: tuple[tuple[str, str], ...] = ()   # (CVAT paddle label, engine region) for paddle visibility
 
     def confirmed_not_visible(self, task_id: str) -> set[str]:
         """Zones an annotator confirmed as genuinely not visible in this video."""
@@ -117,7 +118,7 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
     """Load and validate the export/audit config; every problem is a ValueError naming the entry."""
     data = _read_yaml(path)
     expected = {"schema_version", "zone_labels", "paddle_labels", "usual_zone_pattern",
-                "reviewed_zone_exceptions", "audit", "derived_placements", "screen"}
+                "reviewed_zone_exceptions", "audit", "derived_placements", "screen", "paddle_regions"}
     if not isinstance(data, dict) or data.get("schema_version") != 1 or set(data) != expected:
         raise ValueError(f"{path}: expected schema_version: 1 and exactly the keys {sorted(expected)}")
     zones = _labels(data["zone_labels"], f"{path} zone_labels")
@@ -146,8 +147,12 @@ def load_config(path: Path = DEFAULT_CONFIG, engine_path: Path = DEFAULT_ENGINE_
     if not isinstance(screen, dict) or set(screen) != {"label", "event"} or not all(
             isinstance(screen[k], str) and screen[k] for k in ("label", "event")):
         raise ValueError(f"{path} screen: expected {{label: <CVAT screen track label>, event: <canonical event>}}")
+    regions = data["paddle_regions"]
+    if not isinstance(regions, dict) or set(regions) != set(paddles) or not all(
+            isinstance(r, str) and r for r in regions.values()) or len(set(regions.values())) != len(regions):
+        raise ValueError(f"{path} paddle_regions: expected each of {list(paddles)} -> a distinct engine region")
     return ExportConfig(zones, paddles, usual, exceptions, float(motion), window, placements,
-                        screen["label"], screen["event"])
+                        screen["label"], screen["event"], tuple((p, regions[p]) for p in paddles))
 
 
 def _labels(value, where):
@@ -378,6 +383,9 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
         # The defibrillator screen, derived exactly like the zones (D-094).
         "screen_tracks": sum(t.label == config.screen_label for t in source.tracks),
         "screen_visibility": zone_visibility(source, video, (config.screen_label,)),
+        # The paddles, derived exactly like the zones: R4's coverage of the button press (D-108).
+        "paddle_tracks": {paddle: sum(t.label == paddle for t in source.tracks) for paddle in config.paddle_labels},
+        "paddle_visibility": zone_visibility(source, video, config.paddle_labels),
         "derived_events": derived,  # Step 9c: per-paddle placements (D-081, D-086 to D-089)
     }
 
@@ -490,6 +498,7 @@ def export(backup_root: Path, output: Path, conversion_report: Path = DEFAULT_CO
         "counts": {"tasks": len(sources), "records": len(records), "tags": sum(len(r["tags"]) for r in records),
                    "zone_intervals": sum(len(r["zone_visibility"]) for r in records),
                    "screen_intervals": sum(len(r["screen_visibility"]) for r in records),
+                   "paddle_intervals": sum(len(r["paddle_visibility"]) for r in records),
                    "derived_events": sum(len(r["derived_events"]) for r in records)},
         "issues": dict(sorted(severities.items())),
     }

@@ -44,7 +44,9 @@ rules:
   # R3/R4 inference_sources: confirmed events that support Pass - Inferred (the proposal: the shock on
   # screen or the paddle removal). Removal is kept although paddles are sometimes removed without a
   # successful shock (D-102, A-021, OQ-060); the overall result then can't be Pass, because R5 fails or
-  # is Unable to Verify. Read by R3 (Increment 15) and R4 (Increment 16).
+  # is Unable to Verify. Read by R3 (Increment 15) and R4 (Increment 16). One source is enough; the first
+  # listed that is confirmed is cited; an inference from the removal is flagged inferred_from_removal (D-107).
+  # While either is listed, R3 missing and R4 not_pressed are unreachable (OQ-061).
   - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
   - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
   # R5 preceding_steps: canonical events that must come before the shock on screen (D-100). Unset

@@ -8,6 +8,9 @@ paddle_labels: [paddle_apical, paddle_sternal]                 # CVAT paddle tra
 # The defibrillator screen: its visibility is exported exactly like the zones' (D-094), and the
 # adapter maps it to the engine region that governs `event` (engine.yaml regions: screen).
 screen: {label: defibrillator_screen, event: shock_delivered_on_screen}
+# The paddles: their visibility is exported exactly like the zones (D-108). The adapter maps each
+# paddle label to a visibility-only engine region (engine.yaml regions), used by R4's coverage.
+paddle_regions: {paddle_apical: apical_paddle, paddle_sternal: sternal_paddle}
 
 # Zone tracks normally present in each camera view (D-077). Used ONLY by the audit's review list:
 # the rule engine never uses it, and it never affects a result (D-082). The audit report prints

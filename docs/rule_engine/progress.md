@@ -3768,3 +3768,123 @@ None new. The tolerance value is part of OQ-018; R3's zone check waits on OQ-012
 ### Next
 Increment 16 (R4). Nothing is committed; commit only when Arnikan says so.
 
+## Increment 16: R4, both buttons pressed; R3/R4 inference; paddle visibility (2026-10-17)
+
+Increment 15 was committed and pushed on instruction (bb34dfb) before this work.
+
+### Decisions recorded (Arnikan)
+- **D-107, R3/R4 inference, following the proposal:**
+  - each rule is Pass – Inferred when either `shock_delivered_on_screen` or
+    `paddles_removed_after_shock` is confidently confirmed; one is enough;
+  - `inference_sources` lists both for R3 and R4 (confirmed by a config test). The first listed
+    source that is confirmed is cited, so the shock is cited whenever it is there;
+  - a removal alone gives Pass – Inferred even without a shock time (views without the screen);
+  - the contradiction is linked on those results: the flag `inferred_from_removal`, and a reason
+    naming A-021 and D-102.
+- **OQ-061 (supervisor, new; linked to D-102, D-106, OQ-060):** with both sources, R3 and R4 pass
+  whenever the shock is on the screen or the paddles are removed, even when the zones or paddles
+  were visible and the firm placement or press wasn't tagged. Can the training defibrillator
+  deliver a shock without firm contact? Since removal happens without a successful shock, should
+  either source still apply when the direct evidence was visible but absent?
+- **D-108, R4:**
+  - **direct evidence:** a press after the placement and at or before the shock, with the same
+    annotation-lag tolerance as R3. A press clearly before the placement → `before_placement`;
+  - **missing evidence:** first the inference from either source, then without a shock time Not
+    evaluable because of R5, then coverage;
+  - **paddle visibility:** exported and adapted like the zones and the screen. `not_pressed`
+    fails only if both paddles were visible throughout from the placement to the shock;
+    otherwise Unable to Verify;
+  - **repeated presses:** stay the supervisor's question (OQ-023); the count stays undecided.
+- **Unreachable for now (D-107):** R3's `missing` and R4's `not_pressed` can't be produced while
+  either source is in `inference_sources`. With a shock time there is a shock on the screen; without
+  one a removal infers, and otherwise the rule is Not evaluable.
+
+### What was done
+- **Shared inference (`_inferred` in `rules/video_rules.py`)**, used by R3 and R4. R3 now uses it, so
+  its inferences from the removal carry the new flag.
+- **R4 (`both_buttons_pressed`, P-036):**
+  - **The placement:** the firm-placement tag, or, past the gate, the later of the two derived
+    placements.
+  - **Choices of mine, recorded in D-108:**
+    - no placement observed → Pass – Direct, `order_not_checked` (blocks an overall Pass);
+    - presses only clearly after the shock → Unable to Verify, `contradictory`;
+    - without a shock time, `before_placement` only if no press came after the placement;
+    - no placement known → the coverage window starts at the recording's start.
+- **Paddle visibility:**
+  - **Exporter (version 2):** `paddle_tracks` and `paddle_visibility`, derived like the zones; the
+    manifest counts `paddle_intervals`.
+  - **Export config:** `paddle_regions` maps `paddle_apical` → `apical_paddle` and
+    `paddle_sternal` → `sternal_paddle`.
+  - **Engine config:** these are visibility-only regions in `engine.yaml` (an empty event list, now
+    allowed).
+  - **Coverage:** `region_status` and `region_missing` ask a region by name.
+  - **Context and adapter:** the context reports the new regions, and the adapter turns the paddle
+    fields into header coverage and intervals. An older export gives unknown.
+  - Ananth's files and `events.jsonl` are untouched.
+- **Output contract version 8:**
+  - new flag `inferred_from_removal`;
+  - new regions `apical_paddle` and `sternal_paddle`;
+  - `before_placement` and `not_pressed` built;
+  - `contradictory` and `order_not_checked` can also come from R4.
+- **R4 stays pending** in `rules.yaml`.
+
+### Tests (594 → 628)
+- **`tests/test_rule_engine_r4.py` (28):**
+  - **direct evidence:**
+    - a valid press → Pass, overall Pass;
+    - within the window after the shock, or before the placement → Pass;
+    - before the placement → `before_placement`, which beats the inference;
+    - an early press followed by a valid one → Pass;
+    - only after the shock → `contradictory`;
+    - no placement → `order_not_checked`, overall Incomplete;
+    - the count stays undecided;
+    - pending in the catalogue;
+    - invalid sources → `engine_error`;
+  - **inference:**
+    - the shock on its own;
+    - the removal on its own and with both listed, without a shock time, flagged and naming A-021;
+    - a press without a shock time;
+    - an early press without a shock time (fails only with no later press);
+    - the shock not listed → coverage;
+    - nothing → Not evaluable (R5);
+    - `not_pressed` unreachable with the proposal's sources;
+  - **coverage (no inference):**
+    - both paddles visible → `not_pressed`;
+    - a paddle partly visible, out of view, or no tracks → Unable to Verify;
+    - no placement → from the recording's start;
+    - low confidence → Unable to Verify;
+  - **derived placements and exported paddle visibility:**
+    - gate approved: a press after the later placement → Pass, `derived_placement`; a press between
+      the placements → `before_placement`;
+    - gate not approved → `order_not_checked`;
+    - exported paddle visibility through the adapter: throughout → `not_pressed`; partly → Unable to
+      Verify; an older export → Unable to Verify.
+- **R3 (2):** each source on its own; with both confirmed the shock is cited. The removal test
+  checks the flag and A-021.
+- **Exporter (1):** paddle visibility exported like the zones.
+- **Adapter (2):** paddle regions with windowed status; an older export → unknown.
+- **Coverage (net 1):** region events must be a list; an empty region is visibility-only.
+- **Updated for the new regions:** the region list, the zone-visibility maps and the manifest
+  counts.
+
+Full suite: **628 tests run, all pass, 1 skipped** (charging sound). The pipeline command exits
+with 0.
+
+### Documents updated
+- **`decision_flow.yaml`:** P-036 (new); P-016 (built, both sources, the flag, unreachability);
+  P-035 (the flag); P-030 and P-007 (paddle regions).
+- **`pathways.md`:** the P-036 and P-016 tables; P-030 and P-007 rows; W-71 to W-74.
+- **`diagrams.md`:** (m) R4 (new); (l) the flag; (i) the paddles.
+- **Registers:** `decisions.md` (D-107, D-108); `open_questions.md` (OQ-061 new; OQ-060 and OQ-023
+  notes); `assumptions.md` (A-021 linked on results).
+- **Other docs:** `anomalies.md`, `output_contract.md` (v8), `rules_status.md`, `methods.md`,
+  `implementation_plan.md` (row 16), `upstream_requirements.md` (paddle visibility),
+  `configs/rules.yaml`, `configs/rule_engine/engine.yaml`, `configs/rule_engine/annotation_export.yaml`,
+  `progress.md`, `ai_usage_log.md`.
+
+### Open questions
+- **OQ-061 (supervisor, new):** should either inference source apply when the direct evidence was
+  visible but absent? Can the training defibrillator shock without firm contact?
+
+### Next
+Increment 17 (R1). Nothing is committed; commit only when Arnikan says so.

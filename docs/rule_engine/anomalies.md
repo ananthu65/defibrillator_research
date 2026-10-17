@@ -109,7 +109,7 @@ flags of each anchor, elapsed time and missing-event outcome it used (`flags_of`
 |---|---|---|---|
 | `timing_not_checked` | Rule result (P-024) | The rule's time limit is null, not approved, or the interval cannot be measured | The rule judged presence and order only; its reason says "timing not checked" (D-005). It stays a Pass at rule level, but the overall result cannot be Pass (D-062). **Not raised** for an approved "no limit" (`no_limit: true`), which is a decision that timing doesn't matter (D-103) |
 | `limit_not_approved` | Rule result (P-024) | A time limit has a value, or `no_limit: true`, but no approver | The value is not used (D-061). Timing is not checked, and the overall result cannot be Pass (D-062) |
-| `order_not_checked` | Rule result (R5, P-033) | An order requirement is not set (R5's `preceding_steps`, OQ-013), or one of the steps it needs was not observed | The rule checked presence only, or the order against the observed steps only. Like `timing_not_checked`, the overall result cannot be Pass (D-100) |
+| `order_not_checked` | Rule result (R5, P-033; R4, P-036) | An order requirement is not set (R5's `preceding_steps`, OQ-013), or one of the steps it needs was not observed (R4: no placement observed, so the press can't be checked against it) | The rule checked presence only, or the order against the observed steps only. Like `timing_not_checked`, the overall result cannot be Pass (D-100) |
 
 Rule outcome kinds (`rules/outcome.py`) are not codes, but for reference: `pass_direct`,
 `pass_inferred`, `fail`, `unable_to_verify`, `not_evaluable`, `pending`, `assumed`,
@@ -137,16 +137,17 @@ that timeline (`rules/engine.py`).
 |---|---|---|
 | `annotation_coverage_assumed` | Annotation adapter (P-001, Increment 10) | The timeline comes from CVAT annotation, and its `analyses_run: {video: true}` is a development assumption: annotators tag only what is visible from that angle, so a missing tag may mean "not visible". Every result carries this flag, and the overall result is marked `development_data` (D-066), so it is never mistaken for a real assessment |
 
-## Rule-result flags (`rules/video_rules.py` `FLAGS`, Increments 11 and 12)
+## Rule-result flags (`rules/video_rules.py` `FLAGS`, Increments 11 to 16)
 
-Raised by R2 and R8 (P-032, P-015). R2 and R8 report pending until they are approved.
+Raised by R2, R8, R3 and R4 (P-032, P-015, P-035, P-036). They report pending until they are approved.
 
 | Code | Raised by | Meaning |
 |---|---|---|
 | `possible_parallel_placement` | R2 and R8 | **Shared cause flag** (D-098). Derived placements, past the gate, show both paddles placed at the same time. R2 and R8 are separate checklist criteria, so **both fail with `simultaneous`**, and both carry this flag so the feedback can explain that one action caused both failures. Not a dependency cascade: R8 is evaluated on its own (the apical paddle was not placed first). One mistake or two: OQ-059 |
 | `derived_placement` | R2 and R8 | The result rests on a placement derived from the annotated boxes (D-081), used only past the gate (D-088) |
 | `placement_missing` | R8 (D-058) | A paddle's zone was in view during the placement phase (D-099), but its placement event is missing: either the one visible zone's paddle, or one of two visible placements. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
-| `contradictory` | R8 | The only visible paddle was placed clearly before the first placement; Unable to Verify |
+| `contradictory` | R8, R4 | R8: the only visible paddle was placed clearly before the first placement. R4: the buttons were pressed only after the shock on the screen (D-108). Unable to Verify |
+| `inferred_from_removal` | R3, R4 (D-107) | Pass – Inferred from the paddle removal. Paddles are sometimes removed without a successful shock (A-021, D-102), so the inference may be wrong; the overall result then can't be Pass, because R5 fails or is Unable to Verify |
 | `inferred_fail_policy_undecided` | R8 (D-015) | The one-zone inference shows the sternal paddle first (an inferred mistake). It is Unable to Verify until `inferred_fail_outcome` is decided (OQ-005) |
 
 ## Annotation export and audit codes (Step 9b; not rule-engine codes)
@@ -202,7 +203,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | R2 Second paddle after first placed (**built**, Increment 11, P-032; reported pending until approved) | `simultaneous` (also a possible parallel placement once the gate is approved, D-091), `taken_before_first_placed`, `first_placement_not_observed` (no first placement seen while both zones were visible throughout the window: either a parallel placement or the second paddle taken first, A-019, D-097; it replaces the brief's original "first missing" code) |
 | R8 Apical before sternal (**built**, Increment 12, P-015; reported pending until approved) | `wrong_order` (direct, or inferred once the inferred-fail setting is decided as fail, D-015), `simultaneous` (also a parallel placement past the gate, with the cause flag, D-098) |
 | R3 Paddles firmly on chest (**built**, Increment 15, P-035; reported pending until approved) | `placed_after_shock` (a firm placement tagged only after the shock), `missing` (no firm placement and no inference, while both placement zones were visible from first paddle taken to the shock, D-106); `not_in_zone` is not produced until the chest regions are approved (OQ-012) |
-| R4 Both discharge buttons pressed (P-016) | `before_placement`, `not_pressed` |
+| R4 Both discharge buttons pressed (**built**, Increment 16, P-036; reported pending until approved) | `before_placement` (a press clearly before the placement, none valid), `not_pressed` (no press and no inference, while both paddles were visible from the placement to the shock, D-108; unreachable while either inference source is listed, D-107) |
 | R5 Shock confirmed on screen (**built**, Increment 13, P-033; reported pending until approved) | `missing` (no shock while the screen was visible throughout paddles firmly on chest → paddles removed, D-101), `wrong_order` (shock before a preceding step, once those are set, D-100) |
 | R6 Paddles removed after shock (**built**, Increment 14, P-034; reported pending until approved) | `removed_before_shock` (a removal more than the removal-before-screen tolerance before the shock, D-105, or, past the gate, a derived placement ended by a real exit before it, D-104), `missing` (no removal while both placement zones were visible from the shock to the end of the recording, A-022), `too_late` (only once an approved removal time limit is exceeded; the limit is unset now) |
 | A1 Oxygen away | `missing`, `after_shock` |

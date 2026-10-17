@@ -212,7 +212,9 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   `configs/rules.yaml` (R3, R4). No code changes.
 - **Detected by:** the supervisor's answer to OQ-060; comparing R3/R4 inferred passes with R5
   results in the interim runs.
-- **Related:** D-102, D-057, P-016, OQ-060.
+- **Linked on results:** an inference from the removal is flagged `inferred_from_removal`, and its
+  reason names A-021 (D-107).
+- **Related:** D-102, D-107, D-057, P-016, OQ-060, OQ-061.
 
 ### A-022 A removal would have been seen if both placement zones were in view
 - **Assumption:** when both placement zones are visible from the shock to the end of the

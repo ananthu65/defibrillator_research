@@ -93,12 +93,13 @@ class ZoneCoverageRules(unittest.TestCase):
 
     def test_each_case(self):
         adapted = adapt_record(record(tracks={APICAL: 1, STERNAL: 0}, zones=[(APICAL, 0, 99)]), RULES, EXPORT)
-        self.assertEqual(zone_status(adapted), {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown"})
+        self.assertEqual(zone_status(adapted), {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown"})
         self.assertEqual(adapted.header.visibility, {"region:apical_zone": ((0.0, 3.96),)})
 
         adapted = adapt_record(record(tracks={APICAL: 1, STERNAL: 2}, zones=[(APICAL, 0, 39), (APICAL, 60, 99)]),
                                RULES, EXPORT)
-        self.assertEqual(zone_status(adapted), {"apical_zone": "unknown", "sternal_zone": "not_covered", "screen": "unknown"})
+        self.assertEqual(zone_status(adapted), {"apical_zone": "unknown", "sternal_zone": "not_covered", "screen": "unknown",
+                                                "apical_paddle": "unknown", "sternal_paddle": "unknown"})
         self.assertEqual(adapted.header.visibility, {"region:apical_zone": ((0.0, 1.56), (2.4, 3.96)),
                                                      "region:sternal_zone": ()})
         self.assertIn("80 of 100 frames", adapted.zones[0].reason)
@@ -110,6 +111,30 @@ class ZoneCoverageRules(unittest.TestCase):
         self.assertEqual(zone_status(adapted)["apical_zone"], "not_covered")
         self.assertNotIn("region:apical_zone", adapted.header.visibility)
         self.assertIn("reviewed exception", adapted.zones[0].reason)
+
+
+class PaddleVisibility(unittest.TestCase):
+    """D-108: the paddles' visibility becomes the visibility-only regions apical_paddle and sternal_paddle."""
+
+    def test_paddle_tracks_become_paddle_regions(self):
+        data = record(tracks={APICAL: 1, STERNAL: 1}, zones=[(APICAL, 0, 99), (STERNAL, 0, 99)])
+        data["paddle_tracks"] = {"paddle_apical": 1, "paddle_sternal": 0}
+        data["paddle_visibility"] = [{"label": "paddle_apical", "start_frame": 10, "end_frame": 99,
+                                      "start_seconds": 0.4, "end_seconds": 3.96}]
+        adapted = adapt_record(data, RULES, EXPORT)
+        self.assertEqual({k: v for k, v in zone_status(adapted).items() if "paddle" in k},
+                         {"apical_paddle": "unknown", "sternal_paddle": "unknown"})
+        self.assertEqual(adapted.header.visibility["region:apical_paddle"], ((0.4, 3.96),))
+        self.assertNotIn("region:sternal_paddle", adapted.header.visibility)        # no track (D-074)
+        coverage = Coverage(prepare_timeline(adapted.events, RULES), RULES, adapted.header)
+        self.assertEqual(coverage.region_status("apical_paddle", (1.0, 3.0)).status, "covered")
+        self.assertEqual(coverage.region_status("apical_paddle", (0.0, 3.0)).status, "unknown")
+        self.assertEqual(coverage.region_status("sternal_paddle", (1.0, 3.0)).status, "unknown")
+
+    def test_an_export_without_paddle_visibility_is_unknown(self):
+        adapted = adapt_record(record(), RULES, EXPORT)
+        reasons = {z.region: z.reason for z in adapted.zones}
+        self.assertIn("paddle_tracks missing", reasons["apical_paddle"])
 
 
 class WindowedCoverage(unittest.TestCase):
@@ -224,7 +249,7 @@ class ThroughTheEngine(unittest.TestCase):
         self.assertTrue(result.overall.development_data)
         self.assertEqual(result.overall.result, "incomplete")
         self.assertEqual({r: s.status for r, s in result.context.zone_visibility.items()},
-                         {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown"})
+                         {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown"})
 
     def test_header_validation(self):
         regions = tuple(RULES.engine.regions)

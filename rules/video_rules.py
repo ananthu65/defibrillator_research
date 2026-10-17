@@ -11,17 +11,20 @@ from rules.registry import rule
 
 FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN = "first_paddle_taken", "first_paddle_placed", "second_paddle_taken"
 BOTH_PLACED = "paddles_firmly_on_chest"
+BUTTONS = "both_paddle_buttons_pressed"
 SHOCK, REMOVAL = "shock_delivered_on_screen", "paddles_removed_after_shock"
 APICAL, STERNAL = "apical_paddle_placed", "sternal_paddle_placed"
 PLACEMENTS = (APICAL, STERNAL)
+PADDLE_REGIONS = ("apical_paddle", "sternal_paddle")   # visibility-only regions (engine.yaml, D-108)
 
 # Rule-result flags raised here (listed in docs/rule_engine/anomalies.md and output_contract.md)
 DERIVED = "derived_placement"              # the result rests on a placement derived from the boxes (D-081, D-088)
 PARALLEL = "possible_parallel_placement"   # cause flag: one parallel placement fails R2 and R8 (D-091, D-098)
 PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while its zone was in view (D-058)
-CONTRADICTORY = "contradictory"            # R8: the visible paddle placed clearly before the first placement
+CONTRADICTORY = "contradictory"            # R8: the visible paddle placed clearly before the first placement; R4: a press only after the shock
 INFERRED_UNDECIDED = "inferred_fail_policy_undecided"   # R8: an inferred mistake while D-015 is undecided
-FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED)
+INFERRED_FROM_REMOVAL = "inferred_from_removal"   # R3/R4: inferred from a removal, which can happen without a shock (A-021)
+FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, INFERRED_FROM_REMOVAL)
 
 
 def _evidence_flags(events):
@@ -139,8 +142,9 @@ def paddles_firmly_on_chest(ctx, definition, results):
        - past the gate, both derived placements at or before the shock -> Pass - Direct, flagged
          `derived_placement`;
        - only tags clearly after the shock -> Fail `placed_after_shock`.
-    2. Otherwise (no direct evidence, or no shock time to judge it against): the inference first, an
-       event in inference_sources (D-057, D-102) -> Pass - Inferred.
+    2. Otherwise (no direct evidence, or no shock time to judge it against): the inference first, the
+       first confirmed event in inference_sources (D-057, D-102, D-107) -> Pass - Inferred; from a
+       removal it is flagged `inferred_from_removal` (A-021).
     3. No shock time -> Not evaluable because of R5.
     4. Coverage: the tag isn't made when only one paddle is visible (A-019), so a missing tag is
        Fail `missing` only if both placement zones were visible throughout the placement phase,
@@ -168,10 +172,9 @@ def paddles_firmly_on_chest(ctx, definition, results):
             return failed("R3", "placed_after_shock", f"paddles firmly on the chest only at {tags[0].start:g} s, after "
                           f"the shock at {shock.time:g} s", evidence=(tags[0].event_id, shock.event_id), uses=(shock,),
                           timestamps={BOTH_PLACED: tags[0].start, SHOCK: shock.time})
-    support = checks.infer_from(ctx, sources)
+    support = _inferred(ctx, "R3", sources, "paddles firmly on the chest")
     if support is not None:
-        return passed("R3", f"paddles firmly on the chest inferred from {support.event_name} at {support.time:g} s",
-                      (support.event_id,), inferred=True, timestamps={support.event_name: support.time})
+        return support
     blocked = checks.requires("R3", shock, "R5")
     if blocked is not None:
         return blocked
@@ -204,6 +207,113 @@ def _firm_placement_missing(ctx, shock):
     return unable("R3", f"paddles not seen firmly on the chest {where}, but the placement zones were not visible "
                   f"throughout ({statuses}); the tag is not made when only one paddle is visible (A-019)",
                   evidence=(shock.event_id,), uses=(shock, *zones))
+
+
+def _inferred(ctx, rule_id, sources, what):
+    """D-102, D-107: Pass - Inferred from the first source in inference_sources that is confirmed; one is
+    enough. A removal can happen without a successful shock, so an inference from it is flagged (A-021)."""
+    for source in sources:
+        found = ctx.named(source)
+        if found:
+            event = found[0]
+            caveat = ("; paddles are sometimes removed without a successful shock (A-021, D-102)"
+                      if source == REMOVAL else "")
+            return passed(rule_id, f"{what} inferred from {source} at {event.start:g} s{caveat}", (event.event_id,),
+                          inferred=True, flags=(INFERRED_FROM_REMOVAL,) if source == REMOVAL else (),
+                          timestamps={source: event.start})
+    return None
+
+
+# ---- R4 ---------------------------------------------------------------------------------------------
+
+@rule("R4", requires=(BUTTONS, BOTH_PLACED, SHOCK, REMOVAL, *PLACEMENTS),
+      description="Both discharge buttons pressed after placement and before the shock")
+def both_buttons_pressed(ctx, definition, results):
+    """R4 (P-036): both discharge buttons pressed after the paddles are placed, at or before the shock.
+
+    The placement is paddles_firmly_on_chest, or (past the gate) the later of the two derived
+    placements. A press within simultaneous_window_seconds of the placement or after the shock
+    counts as at it (annotation timing, as R3). Repeated presses stay undecided (OQ-023).
+    1. A press clearly before the placement, and none valid -> Fail `before_placement`. Without a
+       shock time, only when no press came after the placement (that one may have been valid).
+    2. With a shock time: a valid press -> Pass - Direct (no placement observed: its order is not
+       checked, `order_not_checked`); only presses clearly after the shock -> Unable to Verify,
+       `contradictory` (the screen showed the shock before the press).
+    3. Otherwise the inference from inference_sources (D-057, D-102, D-107) -> Pass - Inferred.
+    4. No shock time -> Not evaluable because of R5.
+    5. Coverage: Fail `not_pressed` only if both paddles were visible throughout from the placement
+       to the shock (D-108); otherwise Unable to Verify. Low confidence is never a Fail (D-010).
+    """
+    sources = _inference_sources(ctx, definition, "R4")
+    shock = ctx.shock
+    window = checks.simultaneous_window(ctx)
+    placement = _placement(ctx)
+    presses = ctx.named(BUTTONS)
+    early = [p for p in presses if placement is not None and p.start < placement.start - window]
+    later = [p for p in presses if p not in early]
+    if shock.present:
+        valid = checks.first_valid(later, lambda p: p.start <= shock.time + window)
+        if valid is not None:
+            return _pressed(valid, placement, shock)
+    if early and (shock.present or not later):   # without a shock time a later press may be the valid one
+        press = early[0]
+        return failed("R4", "before_placement", f"buttons pressed at {press.start:g} s, before the paddles were placed "
+                      f"({placement.start:g} s)", evidence=(press.event_id, placement.event_id),
+                      flags=_evidence_flags([placement]), timestamps={BUTTONS: press.start, "placement": placement.start})
+    if shock.present and later:
+        press = later[0]
+        return unable("R4", f"buttons pressed only at {press.start:g} s, after the shock on the screen at "
+                      f"{shock.time:g} s: the evidence contradicts itself", evidence=(press.event_id, shock.event_id),
+                      flags=(CONTRADICTORY,), uses=(shock,), timestamps={BUTTONS: press.start, SHOCK: shock.time})
+    support = _inferred(ctx, "R4", sources, "both buttons pressed")
+    if support is not None:
+        return support
+    blocked = checks.requires("R4", shock, "R5")
+    if blocked is not None:
+        return blocked
+    return _press_missing(ctx, placement, shock)
+
+
+def _placement(ctx):
+    """The event that marks both paddles placed: paddles_firmly_on_chest, else (past the gate) the
+    later of the first derived placement of each paddle; None if neither."""
+    tags = ctx.named(BOTH_PLACED)
+    if tags:
+        return tags[0]
+    first = [next((e for e in ctx.named(name) if e.metadata.get("derived_placement")), None) for name in PLACEMENTS]
+    if all(e is not None for e in first):
+        return max(first, key=lambda e: (e.start, e.event_id))
+    return None
+
+
+def _pressed(press, placement, shock):
+    evidence = (press.event_id, *((placement.event_id,) if placement else ()), shock.event_id)
+    timestamps = {BUTTONS: press.start, SHOCK: shock.time, **({"placement": placement.start} if placement else {})}
+    if placement is None:
+        return passed("R4", f"both buttons pressed at {press.start:g} s, before the shock at {shock.time:g} s; order "
+                      "against the placement not checked: no placement observed (R3 reports it)", evidence, uses=(shock,),
+                      flags=(checks.ORDER_NOT_CHECKED,), timestamps=timestamps)
+    return passed("R4", f"both buttons pressed at {press.start:g} s, after the placement ({placement.start:g} s) and "
+                  f"before the shock ({shock.time:g} s)", evidence, uses=(shock,), flags=_evidence_flags([placement]),
+                  timestamps=timestamps)
+
+
+def _press_missing(ctx, placement, shock):
+    start = placement.start if placement is not None and placement.start <= shock.time else 0.0
+    window = (start, shock.time)
+    where = (f"between the placement ({start:g} s) and the shock ({shock.time:g} s)" if placement is not None
+             and placement.start <= shock.time else f"before the shock ({shock.time:g} s)")
+    paddles = [ctx.coverage.region_missing(region, BUTTONS, window) for region in PADDLE_REGIONS]
+    weak = ctx.missing(BUTTONS, window)
+    if LOW_CONFIDENCE_FLAG in weak.flags:
+        return unable("R4", "both buttons may have been pressed: seen with low confidence",
+                      evidence=weak.low_confidence_event_ids, uses=(shock, weak))
+    if all(p.coverage.status == COVERED and p.outcome == "fail" for p in paddles):
+        return failed("R4", "not_pressed", f"buttons not seen pressed {where}, although both paddles were visible "
+                      "throughout (D-108)", evidence=(shock.event_id,), uses=(shock, *paddles))
+    statuses = ", ".join(f"{region.split('_')[0]} paddle {p.coverage.status}" for region, p in zip(PADDLE_REGIONS, paddles))
+    return unable("R4", f"buttons not seen pressed {where}, but the paddles were not visible throughout ({statuses})",
+                  evidence=(shock.event_id,), uses=(shock, *paddles))
 
 
 # ---- R5 ---------------------------------------------------------------------------------------------

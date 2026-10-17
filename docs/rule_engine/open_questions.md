@@ -34,6 +34,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen (supersedes the proposal's A6 clause) |
 | OQ-059 | new (2026-10-17) | supervisor | Arnikan, Sanjeevan | open | Does a parallel placement count as one mistake or two? |
 | OQ-060 | new (2026-10-17) | supervisor | Arnikan | open | Should paddle removal still support an inferred Pass for R3 and R4? |
+| OQ-061 | new (2026-10-17) | supervisor | Arnikan | open | Should either inference source apply when the direct evidence was visible but absent? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -196,7 +197,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Question:** If both buttons are pressed more than once, is that acceptable or a mistake?
   Which press counts for R4?
 - **Affects:** R4.
-- **Interim behaviour:** R4 is not built yet (Increment 16). Every press is kept (D-012).
+- **Interim behaviour:** R4 (built in Increment 16) accepts any valid press (D-012, D-108). Every press is kept.
   `expected_counts.both_paddle_buttons_pressed` is undecided, so repeated presses are not checked
   as a count (D-071).
 
@@ -228,7 +229,26 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   visible) or Unable to Verify (screen not visible).
 - **Interim behaviour:** the proposal is followed (D-102). The list is the setting
   `configs/rules.yaml` R3/R4 `parameters.inference_sources`; removing
-  `paddles_removed_after_shock` from it is the only change needed.
+  `paddles_removed_after_shock` from it is the only change needed. Inferences from the removal
+  are flagged `inferred_from_removal` (D-107). See also OQ-061.
+
+### OQ-061 Should either inference source apply when the direct evidence was visible but absent?
+- **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-17 · **Status:** open
+- **Question:** With both inference sources (D-102, D-107), R3 and R4 pass (Pass – Inferred)
+  whenever the shock is on the screen or the paddles are removed. That holds even when the zones
+  (R3) or the paddles (R4) were visible throughout and the firm placement or the button press
+  wasn't tagged, which may mean it didn't happen properly.
+  1. Can the training defibrillator deliver a shock **without firm contact** with the chest?
+  2. Since paddles are removed even without a successful shock (A-021), should **either** source
+     still apply when the direct evidence was **visible but absent**?
+- **Affects:** R3 (P-035), R4 (P-036); P-016.
+- **Why it matters:** while either source is listed, R3's `missing` and R4's `not_pressed` can
+  never be produced (D-106, D-107, D-108). If the answer is "no inference when the evidence was
+  visible", the rules would check coverage before the inference.
+- **Interim behaviour:** the proposal is followed. Inference comes first, from either source;
+  inferences from the removal are flagged `inferred_from_removal`.
+- **Related:** D-102, D-106, D-107, D-108, OQ-060.
 
 ### OQ-059 Does a parallel placement count as one mistake or two?
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan, Sanjeevan

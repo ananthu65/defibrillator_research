@@ -649,7 +649,55 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Consequence:** with the proposal's sources, a shock time always means a shock on the screen,
   which is itself an inference source. The coverage step (and so `missing`) is therefore reached
   only if `inference_sources` drops the shock on screen.
-- **Affects:** R3 (P-035, P-016). **Open questions:** OQ-012, OQ-060.
+- **Affects:** R3 (P-035, P-016). **Open questions:** OQ-012, OQ-060, OQ-061.
+
+### D-107 R3/R4 inference: either source is enough, removal even without a shock time
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (follows the proposal; the supervisor is
+  asked in OQ-060 and OQ-061)
+- **Decision:** R3 and R4 can each be **Pass – Inferred** when either `shock_delivered_on_screen`
+  or `paddles_removed_after_shock` is confidently confirmed. **One is enough.**
+  - `inference_sources` lists both for R3 and R4, in that order. The first listed source that is
+    confirmed is cited, so the shock on the screen is cited whenever it is there.
+  - **A removal alone gives Pass – Inferred even without a shock time** (views without the screen),
+    because the inference doesn't need a time.
+  - **The contradiction is linked on those results:** an inference from the removal is flagged
+    **`inferred_from_removal`**, and its reason names A-021 and D-102 (paddles are sometimes
+    removed without a successful shock).
+- **Consequence (as D-106 for R3):** with both sources listed, R3's `missing` and R4's
+  `not_pressed` can't be reached. With a shock time there is a shock on the screen, which infers.
+  Without one, a removal infers, and otherwise the rule is Not evaluable because of R5.
+- **Affects:** R3 (P-035), R4 (P-036); P-016. **Assumption:** A-021. **Open questions:** OQ-060,
+  OQ-061.
+
+### D-108 R4: both buttons pressed after the placement, at or before the shock
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (R4 itself stays pending until the
+  supervisor confirms its definition)
+- **Decision:**
+  - **The placement** is `paddles_firmly_on_chest`, or, past the gate, the later of the two
+    derived placements (both paddles on).
+  - **Direct evidence:** `both_paddle_buttons_pressed` after the placement and at or before the
+    shock → Pass – Direct. The same annotation-lag tolerance as R3 applies
+    (`simultaneous_window_seconds`, around the placement and after the shock).
+    - A press clearly before the placement, and none valid → **Fail `before_placement`**. Without
+      a shock time, only when no press came after the placement, since that one may have been
+      valid.
+    - No placement observed → Pass – Direct, flagged `order_not_checked` (R3 reports the missing
+      placement). The overall result can't be Pass then (D-100).
+    - Presses only clearly after the shock → Unable to Verify, `contradictory`: the screen showed
+      the shock before any press (an agent proposal, approved with this increment).
+  - **Missing direct evidence:** first the inference from either source in `inference_sources`
+    (D-107). Then, without a shock time, Not evaluable because of R5. Then coverage.
+  - **Paddle visibility:** the exporter derives `paddle_apical` and `paddle_sternal` visibility
+    intervals exactly as for the zones and the screen (`paddle_tracks`, `paddle_visibility`;
+    exporter version 2). The adapter maps them to the visibility-only regions `apical_paddle` and
+    `sternal_paddle` (a region with no event, asked by name). **`not_pressed`** is a Fail only if
+    both paddles were visible throughout from the placement to the shock (from the recording's
+    start when no placement is known). Otherwise Unable to Verify. Low confidence is never a Fail.
+  - **Repeated presses** stay the supervisor's question (OQ-023). The count stays undecided, and
+    any valid press satisfies the rule (D-012).
+- **Unreachable for now:** like R3's `missing`, `not_pressed` can't be reached while either
+  source is in `inference_sources` (D-107).
+- **Affects:** R4 (P-036); P-030, P-007 (paddle regions). **Open questions:** OQ-023, OQ-061.
 
 ---
 

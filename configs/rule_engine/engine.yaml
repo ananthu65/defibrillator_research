@@ -43,6 +43,10 @@ coverage_policy:
     apical_zone:  [apical_paddle_placed]
     sternal_zone: [sternal_paddle_placed]
     screen:       [shock_delivered_on_screen]   # the defibrillator screen (R5; D-094)
+    # Visibility-only regions (no single event): both paddles govern the button press, so R4 asks
+    # each paddle region by name (D-108).
+    apical_paddle:  []
+    sternal_paddle: []
 
 inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagged inferred_fail_policy_undecided}
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}

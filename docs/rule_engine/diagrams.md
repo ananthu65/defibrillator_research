@@ -240,8 +240,8 @@ flowchart LR
 ## (i) How a zone's coverage is decided for a recording (P-030, P-007; D-074, D-080, D-082, D-092, D-094)
 
 Decided per zone (apical, sternal) for one annotated recording by the adapter (built, Increment
-10). The defibrillator screen (region `screen`, R5) goes through the same steps, without reviewed
-exceptions (D-094). When a rule asks about a time window, P-007 uses the zone's visible intervals (D-092). The
+10). The defibrillator screen (region `screen`, R5) and each paddle (regions `apical_paddle`,
+`sternal_paddle`, R4, D-108) go through the same steps, without reviewed exceptions (D-094). When a rule asks about a time window, P-007 uses the zone's visible intervals (D-092). The
 view's usual zone pattern is used only by the audit's review list, never here.
 
 ```mermaid
@@ -351,7 +351,7 @@ flowchart TD
     L -->|yes| F1["Fail placed_after_shock"]
     L -->|no| I
     S -->|no| I{"An event in inference_sources?<br/>(shock on screen, removal; D-102)"}
-    I -->|yes| P3["Pass – Inferred"]
+    I -->|yes| P3["Pass – Inferred<br/>(from the removal:<br/>inferred_from_removal)"]
     I -->|no| N{"Shock time?"}
     N -->|no| NE["Not evaluable<br/>because of R5"]
     N -->|yes| W{"Low-confidence<br/>firm placement?"}
@@ -359,4 +359,31 @@ flowchart TD
     W -->|no| Z{"Both placement zones visible<br/>first paddle taken → shock?"}
     Z -->|yes| F2["Fail missing"]
     Z -->|"no (e.g. one paddle visible,<br/>no tag then, A-019)"| U2["Unable to Verify"]
+```
+
+## (m) R4: both discharge buttons pressed (P-036, built in Increment 16; pending until approved)
+
+The placement is the firm-placement tag, or past the gate the later derived placement. `w` is
+`simultaneous_window_seconds`. With both inference sources listed, the coverage branch is
+unreachable (D-107, OQ-061).
+
+```mermaid
+flowchart TD
+    S{"Shock time?<br/>(screen only)"} -->|yes| V{"A press after placement − w<br/>and at or before shock + w?"}
+    V -->|"yes, placement known"| P1["Pass – Direct"]
+    V -->|"yes, no placement"| P2["Pass – Direct<br/>order_not_checked"]
+    V -->|no| E
+    S -->|no| E{"A press clearly before<br/>the placement? (without a shock<br/>time: and no later press)"}
+    E -->|yes| F1["Fail before_placement"]
+    E -->|no| L{"Shock time and presses<br/>only after the shock?"}
+    L -->|yes| U0["Unable to Verify<br/>contradictory"]
+    L -->|no| I{"A source in inference_sources?<br/>(shock on screen, removal)"}
+    I -->|yes| P3["Pass – Inferred<br/>(removal: inferred_from_removal)"]
+    I -->|no| N{"Shock time?"}
+    N -->|no| NE["Not evaluable<br/>because of R5"]
+    N -->|yes| W{"Low-confidence press?"}
+    W -->|yes| U1["Unable to Verify"]
+    W -->|no| Z{"Both paddles visible<br/>placement → shock?"}
+    Z -->|yes| F2["Fail not_pressed"]
+    Z -->|"no: partly, never, no track"| U2["Unable to Verify"]
 ```

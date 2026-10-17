@@ -154,6 +154,33 @@ class Coverage:
                 return CoverageStatus(COVERED if ran else NOT_COVERED, scope, "header.analyses_run")
         return CoverageStatus(UNKNOWN, None, "not stated in timeline header")
 
+    def region_status(self, region, window=None):
+        """Coverage of a region asked by name (a visibility-only region such as a paddle, D-108).
+
+        Only the region's own visibility or coverage counts; nothing stated -> unknown.
+        """
+        _check_window(window)
+        scope = f"region:{region}"
+        if self.header is None:
+            return CoverageStatus(UNKNOWN, None, "no timeline header")
+        if window is not None and scope in self.header.visibility:
+            return _windowed(self.header.visibility[scope], window, scope)
+        if scope in self.header.coverage:
+            return CoverageStatus(self.header.coverage[scope], scope, "header.coverage")
+        return CoverageStatus(UNKNOWN, None, "not stated in timeline header")
+
+    def region_missing(self, region, event_name, window=None):
+        """What a missing event_name means, judged by one region's coverage (low confidence first)."""
+        coverage = self.region_status(region, window)
+        low = tuple(e.event_id for e in self.prepared.excluded_named(event_name))
+        if low:  # low confidence is not absence: never Fail
+            return MissingOutcome(event_name, "unable_to_verify", coverage, "low confidence is not absence",
+                                  (LOW_CONFIDENCE_FLAG,), low)
+        setting = self.config.engine.coverage_overrides.get(f"region:{region}", {}).get(coverage.status) \
+            or self.config.engine.coverage_outcomes[coverage.status]
+        flags = (UNDECIDED_FLAG,) if setting.undecided else ()
+        return MissingOutcome(event_name, setting.value, coverage, setting.name, flags)
+
     def missing(self, event_name, window=None):
         """Outcome for a required event that is absent from the usable evidence."""
         coverage = self.status(event_name, window)

@@ -316,8 +316,9 @@ def _regions(value, where):
     for region, events in value.items():
         if not isinstance(region, str) or not region:
             raise ConfigError(f"{where}: region names must be nonempty strings")
-        if not isinstance(events, list) or not events or not all(isinstance(e, str) and e for e in events):
-            raise ConfigError(f"{where}.{region}: expected a nonempty list of canonical event names")
+        if not isinstance(events, list) or not all(isinstance(e, str) and e for e in events):
+            # an empty list is a visibility-only region, asked by name (e.g. the paddles for R4, D-108)
+            raise ConfigError(f"{where}.{region}: expected a list of canonical event names")
         for name in events:
             if name in owner:
                 raise ConfigError(f"{where}.{region}: {name!r} is already in region {owner[name]!r}")
