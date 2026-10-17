@@ -1,11 +1,12 @@
 import { useState } from "react";
 
+import { ModelSelect } from "./components/ModelSelect";
 import { NavigationRail, type NavDestination } from "./components/NavigationRail";
 import { RubricSection, type RubricItem } from "./components/RubricSection";
 import { SegmentedButton } from "./components/SegmentedButton";
 import { StarIcon } from "./components/icons";
-import { TextField } from "./components/TextField";
 import { VideoDropZone } from "./components/VideoDropZone";
+import { audioModels, videoModels } from "./data/availableModels";
 
 const destinations: NavDestination[] = [
   { id: "review", label: "Review" },
@@ -44,14 +45,29 @@ const toggleItem = (items: RubricItem[], id: string) =>
 
 export default function App() {
   const [activeNav, setActiveNav] = useState("review");
-  const [participant, setParticipant] = useState("P01");
   const [videoModel, setVideoModel] = useState("YOLOv8x");
   const [audioModel, setAudioModel] = useState("Whisper Base");
   const [fileName, setFileName] = useState("P01_cam01.mp4");
   const [mode, setMode] = useState<ReviewMode>("auto");
+  const [reviewStarted, setReviewStarted] = useState(false);
   const [audio, setAudio] = useState(initialAudio);
   const [video, setVideo] = useState(initialVideo);
   const [feedback, setFeedback] = useState("");
+
+  const needsModels = mode === "auto";
+  const canStart = Boolean(
+    fileName && (!needsModels || (videoModel && audioModel)),
+  );
+
+  const changeMode = (nextMode: ReviewMode) => {
+    setMode(nextMode);
+    setReviewStarted(false);
+  };
+
+  const changeFile = (nextFileName: string) => {
+    setFileName(nextFileName);
+    setReviewStarted(false);
+  };
 
   return (
     <div className="app">
@@ -61,20 +77,68 @@ export default function App() {
         onSelect={setActiveNav}
       />
       <main className="content">
-        <div className="selectors">
-          <TextField label="Participant" value={participant} onChange={setParticipant} />
-          <TextField label="Video model" value={videoModel} onChange={setVideoModel} />
-          <TextField label="Audio model" value={audioModel} onChange={setAudioModel} />
-        </div>
-
         <div className="camera-views">
-          <VideoDropZone fileName={fileName} onFileChange={setFileName} />
-          <SegmentedButton
-            label="Review mode"
-            options={reviewModes}
-            value={mode}
-            onChange={setMode}
-          />
+          <VideoDropZone fileName={fileName} onFileChange={changeFile} />
+
+          <section className="review-setup" aria-labelledby="review-setup-title">
+            <div className="review-setup__heading">
+              <div>
+                <h2 id="review-setup-title" className="section-title">
+                  Review setup
+                </h2>
+                <p className="review-setup__description">
+                  Choose a review method, then start the recording analysis.
+                </p>
+              </div>
+              <SegmentedButton
+                label="Review mode"
+                options={reviewModes}
+                value={mode}
+                onChange={changeMode}
+              />
+            </div>
+
+            <div className="model-selectors" aria-disabled={!needsModels}>
+              <ModelSelect
+                label="Video model"
+                value={videoModel}
+                options={videoModels}
+                disabled={!needsModels}
+                onChange={(value) => {
+                  setVideoModel(value);
+                  setReviewStarted(false);
+                }}
+              />
+              <ModelSelect
+                label="Audio model"
+                value={audioModel}
+                options={audioModels}
+                disabled={!needsModels}
+                onChange={(value) => {
+                  setAudioModel(value);
+                  setReviewStarted(false);
+                }}
+              />
+            </div>
+
+            <div className="review-setup__footer">
+              <p className="review-setup__status" aria-live="polite">
+                {reviewStarted
+                  ? `${mode === "auto" ? "Automated" : "Manual"} review started.`
+                  : needsModels
+                    ? "Select one available video and audio model."
+                    : "Model selection is not required for manual review."}
+              </p>
+              <button
+                type="button"
+                className="filled-button start-button"
+                disabled={!canStart || reviewStarted}
+                onClick={() => setReviewStarted(true)}
+              >
+                {reviewStarted ? "Review started" : "Start review"}
+              </button>
+            </div>
+          </section>
         </div>
 
         <div className="rubric-grid">
