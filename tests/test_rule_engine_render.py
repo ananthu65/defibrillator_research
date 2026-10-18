@@ -44,8 +44,9 @@ class ReportShape(unittest.TestCase):
         self.document = report(assess([SHOCK], approved("R1", "R7", "A6"), registry=registry))
 
     def test_top_level_keys_and_version(self):
-        self.assertEqual(list(self.document), ["report_version", "kind", "development_data", "overall", "rules",
-                                               "timeline", "context", "configuration"])
+        self.assertEqual(list(self.document), ["report_version", "kind", "development_data", "demo_notice", "overall",
+                                               "rules", "timeline", "context", "configuration"])
+        self.assertIsNone(self.document["demo_notice"])   # only a demo config sets it (D-114)
         self.assertEqual((self.document["report_version"], self.document["kind"]), (REPORT_VERSION, REPORT_KIND))
 
     def test_report_survives_a_json_round_trip_unchanged(self):

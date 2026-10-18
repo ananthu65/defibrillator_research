@@ -4052,3 +4052,77 @@ OQ-021 (more than two applications) apply.
 
 ### Next
 The audio rules (Increment 18, A1 and A3). Nothing is committed; commit only when Arnikan says so.
+
+## Demo of the rule engine as it stands (2026-10-17)
+
+Step 9d and Increment 17 were committed and pushed on instruction (6f43000), with
+`gel_minimum_gap_seconds` at 0.4 s. The supervisor briefing (`supervisor_briefing.md`) is not
+committed yet.
+
+### Decision recorded (Arnikan)
+- **D-114:** the demo uses its own config, `configs/rule_engine/demo/rules_demo.yaml`. It is a copy
+  of `rules.yaml` with the built rules (R1–R6, R8) approved and the unbuilt ones disabled, and it
+  states `demo: true`. Every report from it carries `demo_notice`, "DEMO ONLY: rules not approved
+  by the supervisor", and the overall flag `demo_only`. The real `rules.yaml` is unchanged.
+
+### What was done
+- **Engine:**
+  - `RuleEngineConfig.demo` (validated true/false);
+  - the overall flag `demo_only` (`rules/policy.py`);
+  - the report field `demo_notice` (`rules/render.py`);
+  - `rules.run` prints the notice.
+  - **Output contract version 10.**
+- **Demo config:** generated from `rules.yaml`. The audio rules are disabled rather than left
+  pending, so a correct procedure shows the built rules alone; it is then Incomplete only because
+  of undecided settings.
+- **Scenarios (synthetic, no participant data):** seven, in `docs/rule_engine/demo/scenarios/`,
+  with expected results in `scenarios.yaml`:
+  - a correct procedure (Incomplete: timing and order not checked);
+  - a parallel placement (R2 and R8 `simultaneous`);
+  - gel after placement (`after_placement`);
+  - the screen not in view (R5 Unable to Verify, R6 Not evaluable because of R5, R3/R4 inferred
+    from the removal);
+  - a low-confidence removal (R6 Unable to Verify);
+  - removed before the shock (`removed_before_shock`);
+  - the correct procedure with the real catalogue (every rule pending → Incomplete).
+- **`python -m rules.demo`:**
+  - **Per scenario:** a table (rule, result, failure code, flags, short reason), the overall result
+    and why, and a check against the expected result.
+  - **Options:** `--scenario`; `--full` for whole reasons; `--records` to run real interim
+    annotation records with the demo config.
+  - **`--records` output:** reports written only under the gitignored `data/rule_engine/`, labelled
+    development data. Any other path is refused.
+- **`docs/rule_engine/demo_walkthrough.md`:** a 15–20 minute presentation guide with two diagrams,
+  linking the detailed documents.
+
+### Interim data through the demo (development data)
+On the interim export of 2026-10-16 (38 videos):
+- **R8** is Unable to Verify everywhere: the derived placements are held back by the 9c gate.
+- **R6** is Not evaluable in the views without the screen.
+- **R1** fails `missing` in four videos (P12_LL, P12_T, P31_LL, P31_T) that have **no `Gel applied`
+  tag at all** while a zone was in view. That is worth checking against the videos: possibly
+  untagged gel rather than a learner mistake (A-026).
+
+### Tests (679 → 690)
+- **`tests/test_rule_engine_demo.py` (11):**
+  - every scenario gives its expected results;
+  - the key pathways are covered;
+  - the scenarios hold no participant data;
+  - the demo config approves the built rules, disables the rest, and is otherwise a copy of
+    `rules.yaml`;
+  - the real catalogue is not a demo;
+  - every demo report says DEMO ONLY (the catalogue's doesn't);
+  - the command prints the tables and returns 0, and refuses an unknown scenario;
+  - interim records are written only under `data/rule_engine/` and marked development data.
+- **Render (updated):** the new `demo_notice` field.
+
+### Documents updated
+- `decisions.md` (D-114);
+- `decision_flow.yaml` (P-017 and P-027);
+- `anomalies.md` (`demo_only`);
+- `output_contract.md` (v10);
+- `demo_walkthrough.md` (new);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Wait for Arnikan before committing and before Increment 18.

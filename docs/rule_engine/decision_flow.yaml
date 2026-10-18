@@ -906,6 +906,9 @@ decision_points:
       - condition: No rule was evaluated (e.g. every rule disabled)
         outcome: Incomplete, never Pass
         flags: [no_rules_evaluated]
+      - condition: The config is a demo (demo true, configs/rule_engine/demo/rules_demo.yaml)
+        outcome: Whatever the result, it is flagged as a demo; its rules are not approved by the supervisor (D-114)
+        flags: [demo_only]
       - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved / order not checked
         outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved; order not checked, D-100); never Pass
         flags: [timing_not_checked, limit_not_approved, order_not_checked]
@@ -1154,6 +1157,8 @@ decision_points:
         outcome: Report with report_version, overall result, every enabled rule in display order, timeline, context and configuration
       - condition: The overall result carries development_data
         outcome: The report's top-level development_data is true (not a real assessment, D-066)
+      - condition: A demo config
+        outcome: The report's demo_notice is "DEMO ONLY - rules not approved by the supervisor"; null otherwise (D-114)
       - condition: No assessment (configuration or timeline rejected, or an unreadable file)
         outcome: No report; rules.run prints the error and exits with code 2
       - condition: A report field or code is added, removed or renamed, or its meaning changes
@@ -1161,7 +1166,7 @@ decision_points:
       - condition: A code listed as planned becomes built
         outcome: Version unchanged; its status in output_contract.md becomes built
     config: []
-    code: rules/render.py (report), rules/run.py (command line)
-    decisions: [D-066, D-070]
+    code: rules/render.py (report), rules/run.py (command line), rules/demo.py (demo tables)
+    decisions: [D-066, D-070, D-114]
     assumptions: []
     open_questions: [OQ-017, OQ-045]

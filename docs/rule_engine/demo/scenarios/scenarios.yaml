@@ -1,0 +1,91 @@
+schema_version: 1
+# Demo scenarios for `python -m rules.demo` (D-114). Synthetic timelines: no participant data.
+# `config: demo` runs configs/rule_engine/demo/rules_demo.yaml (DEMO ONLY: the built rules marked
+# approved); `config: catalogue` runs the real configs/rules.yaml (every rule pending).
+# `expected` is checked by tests/test_rule_engine_demo.py, so the demo can't silently break:
+# rules -> [result kind, failure code or null], overall -> the overall result.
+scenarios:
+  - id: correct_procedure
+    file: 01_correct_procedure.json
+    config: demo
+    title: A correct procedure
+    shows: >-
+      Every built rule passes. The overall result is still Incomplete, only because of undecided
+      settings: no clinical time limit for R1 and R6 yet, and R5's preceding steps not set.
+    expected:
+      overall: incomplete
+      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_direct, null],
+              R4: [pass_direct, null], R5: [pass_direct, null], R6: [pass_direct, null]}
+
+  - id: parallel_placement
+    file: 02_parallel_placement.json
+    config: demo
+    title: Both paddles placed at the same time
+    shows: >-
+      One action, two checklist criteria: R2 and R8 both fail with "simultaneous", and both carry
+      the shared cause flag possible_parallel_placement so the feedback can say one action caused both.
+    expected:
+      overall: fail
+      rules: {R1: [pass_direct, null], R2: [fail, simultaneous], R8: [fail, simultaneous], R3: [pass_direct, null],
+              R4: [pass_direct, null], R5: [pass_direct, null], R6: [pass_direct, null]}
+
+  - id: gel_after_placement
+    file: 03_gel_after_placement.json
+    config: demo
+    title: Gel applied only after the paddles were placed
+    shows: >-
+      Gel must come before the paddles, because a shock without gel harms the patient: R1 fails
+      with "after_placement", and any mistake fails the whole procedure.
+    expected:
+      overall: fail
+      rules: {R1: [fail, after_placement], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_direct, null],
+              R4: [pass_direct, null], R5: [pass_direct, null], R6: [pass_direct, null]}
+
+  - id: screen_not_visible
+    file: 04_screen_not_visible.json
+    config: demo
+    title: The defibrillator screen is not in view
+    shows: >-
+      No shock time without the screen: R5 is Unable to Verify (the screen couldn't be seen, so
+      it is not the learner's fault) and R6 is Not evaluable because of R5. R3 and R4 pass by
+      inference from the paddle removal, flagged inferred_from_removal.
+    expected:
+      overall: incomplete
+      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_inferred, null],
+              R4: [pass_inferred, null], R5: [unable_to_verify, null], R6: [not_evaluable, null]}
+
+  - id: low_confidence_removal
+    file: 05_low_confidence_removal.json
+    config: demo
+    title: The paddle removal is detected with low confidence
+    shows: >-
+      Low confidence is never absence: the removal (confidence 0.3, below the 0.5 threshold) is
+      not used as evidence, but R6 gives Unable to Verify, never "missing".
+    expected:
+      overall: incomplete
+      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_direct, null],
+              R4: [pass_direct, null], R5: [pass_direct, null], R6: [unable_to_verify, null]}
+
+  - id: removed_before_shock
+    file: 06_removed_before_shock.json
+    config: demo
+    title: Paddles removed before the shock
+    shows: >-
+      The removal at 14 s comes clearly before the shock on the screen at 15 s (more than the
+      0.5 s screen-delay tolerance): R6 fails with "removed_before_shock".
+    expected:
+      overall: fail
+      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_direct, null],
+              R4: [pass_direct, null], R5: [pass_direct, null], R6: [fail, removed_before_shock]}
+
+  - id: pending_rules
+    file: 01_correct_procedure.json
+    config: catalogue
+    title: The same correct procedure with the real catalogue
+    shows: >-
+      Today no rule is approved by the supervisor, so the real configuration reports every rule as
+      pending and the overall result is Incomplete ("rules not yet approved"), never Pass.
+    expected:
+      overall: incomplete
+      rules: {R1: [pending, null], R2: [pending, null], R8: [pending, null], R3: [pending, null], R4: [pending, null],
+              R5: [pending, null], R6: [pending, null], A1: [pending, null], A7: [pending, null], A8: [pending, null]}

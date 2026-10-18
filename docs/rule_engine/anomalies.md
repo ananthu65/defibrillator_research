@@ -127,6 +127,7 @@ Flags on the overall result (P-017), not on rule results.
 | `development_data` | Any rule result carries `annotation_coverage_assumed` | The result comes from annotation data and is not a real assessment (D-066) |
 | `overall_policy_undecided` | No Fail and nothing incomplete, but something is unverified, while `unable_to_verify_outcome` is undecided | The result is `unable_to_verify`, naming the undecided setting (OQ-002) |
 | `no_rules_evaluated` | No rule was evaluated (e.g. every rule disabled) | Incomplete, never Pass (D-068) |
+| `demo_only` | The config is a demo (`demo: true`, `configs/rule_engine/demo/rules_demo.yaml`) | DEMO ONLY: the rules are not approved by the supervisor; never a real assessment (D-114) |
 
 ## Header flags (`rules/coverage.py` `HEADER_FLAGS`, Increment 10)
 

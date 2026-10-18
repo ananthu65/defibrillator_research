@@ -6,11 +6,13 @@ docs/rule_engine/output_contract.md. REPORT_VERSION changes whenever that struct
 """
 from dataclasses import asdict
 
-REPORT_VERSION = 9   # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
+from rules.policy import DEMO_NOTICE
+
+REPORT_VERSION = 10  # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
 #                      screen (D-093, D-094); 5: R8 flags possible_parallel_placement, derived_placement (D-098);
 #                      6: order_not_checked (D-100); 7: timing_limits no_limit (D-103); 8: inferred_from_removal,
 #                      paddle regions (D-107, D-108); 9: after_placement, derived_gel_application, gel regions
-#                      (D-109, D-111)
+#                      (D-109, D-111); 10: demo_notice and the demo_only flag (D-114)
 REPORT_KIND = "rule_engine_report"
 
 
@@ -23,6 +25,7 @@ def report(assessment):
         "report_version": REPORT_VERSION,
         "kind": REPORT_KIND,
         "development_data": overall.development_data,
+        "demo_notice": DEMO_NOTICE if config.demo else None,   # D-114: never null for a demo config
         "overall": _overall(overall),
         "rules": [_rule(o, titles.get(o.rule_id, o.rule_id)) for o in assessment.outcomes],
         "timeline": _timeline(assessment.prepared),

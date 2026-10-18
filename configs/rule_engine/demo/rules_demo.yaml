@@ -1,0 +1,79 @@
+# DEMO ONLY: rules not approved by the supervisor (D-114).
+# A copy of configs/rules.yaml for demonstrating the rule engine (python -m rules.demo). Every BUILT
+# rule (R1-R6, R8) is marked approved here so that it is evaluated; the rules not built yet (A1-A8,
+# R7/A6) are disabled, so the demo shows the built rules alone. `demo: true` makes every report
+# produced with this file say "DEMO ONLY: rules not approved by the supervisor" (overall flag
+# demo_only). Never use it for a real assessment, and never copy its statuses into rules.yaml.
+# A test checks that it matches rules.yaml apart from the rule statuses, `enabled` and `demo`.
+demo: true
+schema_version: 1
+status: pending_supervisor_review
+# Rule engine catalogue (owner: Arnikan). Loaded and validated by rules/config.py.
+vocabulary: configs/rule_engine/vocabulary.yaml   # canonical event names
+engine: configs/rule_engine/engine.yaml           # engineering placeholders and policies
+
+# Clinical values. Never invented: anything not provided stays null, and a rule with a null
+# limit checks presence and order only and says that timing was not checked. Unused keys are
+# kept on purpose (decided 2026-10-10): they may be used by future rules.
+# A value is a record: {value, approved_by, approved_on, date_pending, provided_by, provided_on,
+# source, note}. A value counts as approved when it has a value and approved_by is set.
+# approved_on cannot be given without approved_by, and may be null only when date_pending: true
+# is set. note is a human-readable explanation only; the engine never reads it. Quote dates
+# ("YYYY-MM-DD") so the configuration stays JSON-serialisable in pipeline reports.
+# "No limit" is a decision too (D-103): {value: null, no_limit: true, approved_by, approved_on, source}.
+# A rule with an approved no_limit checks presence and order and passes fully (no timing_not_checked);
+# plain null keeps meaning "not decided yet" (D-062).
+timing_limits:
+  charge_to_shock_seconds:          {value: null, note: "pre-existing key; not used by any rule yet"}
+  shock_to_compressions_seconds:    {value: null, note: "shock -> start/resume compressions command (planned for R7/A6); not used by any rule yet"}
+  gel_application_period_seconds:   {value: null, note: "period for the two gel applications, one per zone (R1, Increment 17); unset, so timing not checked; the answer may be no limit (D-103)"}
+  stop_to_shock_seconds:            {value: null, note: "stop-compressions command -> shock (planned for A4); not used by any rule yet"}
+  shock_command_tolerance_seconds:  {value: null, note: "verbal shock command may precede the shock by this (planned for A5); not used by any rule yet"}
+  shock_to_removal_seconds:         {value: null, note: "shock -> paddles removed (R6, Increment 14); unset, so timing not checked; the supervisor's answer may be no limit (no_limit: true, D-103)"}
+  pre_shock_pause_seconds:               # A8: stop CPR -> start CPR
+    value: 5
+    approved_by: Dr. Senani Samarasinghe
+    approved_on: null
+    date_pending: true
+    provided_by: Arnikan
+    provided_on: "2026-10-10"
+    source: team discussion
+    note: approval date to be confirmed
+
+# Rules in DISPLAY order (report and checklist). The engine derives the evaluation order from
+# rule-result dependencies (depends_on, same_as); event dependencies impose no order.
+# status: pending | approved. Only approved rules with an implementation are evaluated and
+# counted; pending rules are reported as pending.
+rules:
+  # R1: gel once on each placement zone, either order, before the paddles are placed (D-109, D-110);
+  # per zone past the 9d gate, the tag-count proxy before it (D-113).
+  - {id: R1, title: Gel applied twice, status: approved, implementation: null, parameters: {}}
+  - {id: R2, title: Second paddle taken after the first is placed, status: approved, implementation: null, parameters: {}}
+  - {id: R8, title: Apical paddle placed before sternal, status: approved, implementation: null, parameters: {}}
+  # R3 checks placement timing and presence only until the chest regions are approved (OQ-012, D-106).
+  # R3/R4 inference_sources: confirmed events that support Pass - Inferred (the proposal: the shock on
+  # screen or the paddle removal). Removal is kept although paddles are sometimes removed without a
+  # successful shock (D-102, A-021, OQ-060); the overall result then can't be Pass, because R5 fails or
+  # is Unable to Verify. Read by R3 (Increment 15) and R4 (Increment 16). One source is enough; the first
+  # listed that is confirmed is cited; an inference from the removal is flagged inferred_from_removal (D-107).
+  # While either is listed, R3 missing and R4 not_pressed are unreachable (OQ-061).
+  - {id: R3, title: Paddles placed firmly on the chest, status: approved, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
+  - {id: R4, title: Both discharge buttons pressed, status: approved, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen, paddles_removed_after_shock]}}
+  # R5 preceding_steps: canonical events that must come before the shock on screen (D-100). Unset
+  # (null) until the supervisor answers OQ-013; while unset R5 checks presence only and flags
+  # order_not_checked, which keeps the overall result from being Pass.
+  - {id: R5, title: Shock confirmed on screen, status: approved, implementation: null, parameters: {preceding_steps: null}}
+  # R6: paddles_removed_after_shock means the paddles were removed; it does not prove a shock (D-104).
+  # Its removal time limit is timing_limits.shock_to_removal_seconds (unset; possibly no limit, D-103).
+  - {id: R6, title: Paddles removed after shock, status: approved, implementation: null, parameters: {}}
+  # A1 and A3: any time limit (for example how long before the shock) is for the supervisor; the answer
+  # may be "no limit" (D-103). No limit record exists for them yet.
+  - {id: A1, title: Oxygen away, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A2, title: Continue compressions, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A3, title: All stand clear, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A4, title: Stop compressions, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A5, title: Shock command, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: R7, title: Compressions restarted promptly after shock, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: pending, enabled: false}
+  - {id: A7, title: Correct sequence of audio commands, status: pending, enabled: false, implementation: null, depends_on: [A1, A2, A3, A4, A5], parameters: {}}
+  - {id: A8, title: Pre-shock pause, status: pending, enabled: false, implementation: null, parameters: {}}

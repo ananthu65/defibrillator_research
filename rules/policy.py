@@ -10,7 +10,8 @@ Applied in this order:
      setting: fail | faculty_review; while undecided, unable_to_verify (OQ-002)
   4. otherwise                                                        -> pass
 A Fail on a timeline with a review anomaly stays Fail, flagged timeline_needs_review. Any result
-built on annotation data (annotation_coverage_assumed) is marked as development data.
+built on annotation data (annotation_coverage_assumed) is marked as development data. A result
+from a demo config (demo: true) is flagged demo_only: its rules are not approved (D-114).
 """
 from dataclasses import dataclass
 from rules.checks import LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, TIMING_NOT_CHECKED
@@ -24,7 +25,9 @@ TIMELINE_NEEDS_REVIEW = "timeline_needs_review"
 DEVELOPMENT_DATA = "development_data"
 OVERALL_POLICY_UNDECIDED = "overall_policy_undecided"
 NO_RULES_EVALUATED = "no_rules_evaluated"
-FLAGS = (TIMELINE_NEEDS_REVIEW, DEVELOPMENT_DATA, OVERALL_POLICY_UNDECIDED, NO_RULES_EVALUATED)
+DEMO_ONLY = "demo_only"   # the config is a demo: its rules are marked approved without the supervisor (D-114)
+FLAGS = (TIMELINE_NEEDS_REVIEW, DEVELOPMENT_DATA, OVERALL_POLICY_UNDECIDED, NO_RULES_EVALUATED, DEMO_ONLY)
+DEMO_NOTICE = "DEMO ONLY: rules not approved by the supervisor"
 
 
 @dataclass(frozen=True)
@@ -58,7 +61,7 @@ def decide(outcomes, config, anomalies=()):
     groups = [group for group, _ in pairs]
     review = tuple(a for a in dict.fromkeys(anomalies) if a in config.engine.value("review_anomalies"))
     development = any(ANNOTATION_COVERAGE_ASSUMED in o.flags for o in outcomes)
-    flags = ((DEVELOPMENT_DATA,) if development else ())
+    flags = ((DEVELOPMENT_DATA,) if development else ()) + ((DEMO_ONLY,) if getattr(config, "demo", False) else ())
     fails = tuple(g for g in groups if g.kind == FAIL)
     incomplete = tuple(_incomplete(pairs))
     unverified = tuple(g for g in groups if g.kind in (UNABLE, NOT_EVALUABLE))

@@ -1282,6 +1282,23 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ---
 
+### D-114 The demo uses its own config, and every demo report says DEMO ONLY
+- **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Decision:** the rule engine is demonstrated with `configs/rule_engine/demo/rules_demo.yaml`.
+  It is a copy of `rules.yaml` in which every built rule (R1–R6, R8) is marked approved and the
+  rules not built yet are disabled. The real `rules.yaml` is never changed for a demo.
+  - **Marked everywhere:** the demo config states `demo: true`. Every report it produces carries
+    `demo_notice`, "DEMO ONLY: rules not approved by the supervisor", and the overall flag
+    `demo_only` (output contract v10). `rules.run` and `rules.demo` print the notice.
+  - **Scenarios:** synthetic timelines with headers in `docs/rule_engine/demo/scenarios/`, with no
+    participant data. Their expected results are in `scenarios.yaml` and checked by a test.
+  - **Real interim data:** `python -m rules.demo --records …` runs the annotation records with the
+    demo config. It writes reports only under the gitignored `data/rule_engine/`; they are
+    development data and never committed (D-084).
+- **Reason:** teammates and the supervisor need to see the built rules work, but a demo result
+  must never be mistaken for an approved assessment.
+- **Affects:** P-017, P-027; [demo_walkthrough.md](demo_walkthrough.md).
+
 ## Working method
 
 ### D-063 A rule that raises an error is recorded, never skipped

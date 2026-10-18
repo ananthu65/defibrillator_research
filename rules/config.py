@@ -158,12 +158,16 @@ class RuleEngineConfig:
     timing_limits: dict[str, ClinicalValue]
     engine: EngineSettings
     vocabulary: Vocabulary
+    demo: bool = False   # a demo config (configs/rule_engine/demo/): every report says "DEMO ONLY" (D-114)
 
     @classmethod
     def from_dict(cls, data, where="rules", root=ROOT):
         if not isinstance(data, dict) or data.get("schema_version") != 1:
             raise ConfigError(f"{where}: expected a mapping with schema_version: 1")
         rules = _rules(data.get("rules"), where)
+        demo = data.get("demo", False)
+        if not isinstance(demo, bool):
+            raise ConfigError(f"{where} demo: expected true or false")
         limits = data.get("timing_limits") or {}
         if not isinstance(limits, dict):
             raise ConfigError(f"{where} timing_limits: expected a mapping")
@@ -182,7 +186,7 @@ class RuleEngineConfig:
         if missing or unknown:
             raise ConfigError(f"{engine_path} expected_counts: every canonical event needs an expected count; "
                               f"missing {missing}, not in the vocabulary {unknown}")
-        return cls(rules, timing, engine, vocabulary)
+        return cls(rules, timing, engine, vocabulary, demo)
 
     def rule(self, rule_id):
         return next(r for r in self.rules if r.id == rule_id)

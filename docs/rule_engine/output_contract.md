@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 9
+**Report version:** 10
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -35,6 +35,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 7 | 2026-10-17 | **Field added:** each entry of `configuration.timing_limits` gains `no_limit` (true or false). `no_limit: true` with an approver is a decision that no time limit applies: the rule passes fully, without `timing_not_checked` (D-103). `value: null` with `no_limit: false` still means "not decided yet" (D-062). R6 is implemented (Increment 14), so `removed_before_shock`, `missing` (R6) and `too_late` (R6, only once an approved limit is exceeded) are now built. `paddles_removed_after_shock` doesn't prove a shock (D-104). R6 still reports `pending` until it is approved |
 | 8 | 2026-10-17 | **Rule flag added** (R3/R4): `inferred_from_removal`. A Pass – Inferred from the paddle removal, which can happen without a successful shock (A-021, D-107). **New regions:** `apical_paddle` and `sternal_paddle` (each paddle's visibility, R4's coverage, D-108) appear in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R3 and R4 are implemented (Increments 15-16), so `placed_after_shock`, `missing` (R3), `before_placement` and `not_pressed` are built. `contradictory` and `order_not_checked` can also come from R4. R3 and R4 still report `pending` until they are approved |
 | 9 | 2026-10-17 | **Failure code added** (R1): `after_placement`, gel applied only after the first paddle placement (D-109). **Rule flag added:** `derived_gel_application`, a result resting on a gel application derived from the boxes (D-111). **New regions:** `apical_gel` and `sternal_gel` (whether gel on that zone could have been seen; set only past the 9d gate, D-112) appear in `context.zone_visibility` and `context.header.coverage`. **Meaning changed:** R1's `applied_once` and `missing` are now per zone (one gel application on each placement zone, D-110). R1 is implemented (Increment 17), so `applied_once`, `outside_time_period` and `missing` (R1) are built. R1 still reports `pending` until it is approved |
+| 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
 
 ## How to get the report
 
@@ -53,6 +54,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | `report_version` | int | The version of this contract (1) |
 | `kind` | string | Always `rule_engine_report` |
 | `development_data` | bool | `true` when the results come from annotation data and are **not a real assessment** (D-066). Feedback must not be shown to a learner as an assessment |
+| `demo_notice` | string or null | "DEMO ONLY: rules not approved by the supervisor" when the report comes from a demo config (v10, D-114); otherwise null. Never show a demo report to a learner as an assessment |
 | `overall` | object | The overall result and its explanation (below) |
 | `rules` | list | One entry per enabled rule, in report (display) order |
 | `timeline` | object | The evidence used: events, excluded low-confidence events, anomalies, unknown/unused/unresolved labels, sources |
@@ -95,9 +97,10 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 9,
+  "report_version": 10,
   "kind": "rule_engine_report",
   "development_data": false,
+  "demo_notice": null,
   "overall": {
     "result": "fail",
     "summary": "Fail: A1 failed",
@@ -216,6 +219,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `development_data` | built | Not a real assessment (D-066) |
 | `overall_policy_undecided` | interim (OQ-002) | `unable_to_verify` because the policy is not decided yet |
 | `no_rules_evaluated` | built | No rule was evaluated; Incomplete (D-068) |
+| `demo_only` | built (v10) | The report comes from a demo config: its rules are not approved by the supervisor. Not an assessment (D-114) |
 
 ### Timeline anomalies (`timeline.anomalies[].code`, `overall.timeline_anomalies`)
 
