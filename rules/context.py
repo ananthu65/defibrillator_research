@@ -80,6 +80,7 @@ class ProcedureContext:
     anchors: dict[str, Anchor]
     resolutions: tuple[CommandResolution, ...]
     zone_visibility: dict[str, object] = field(default_factory=dict)  # region -> CoverageStatus
+    paddle_order: object = None        # PaddleOrder (D-118): which paddle came first, from event times
 
     @property
     def shock(self):
@@ -157,7 +158,85 @@ def build_context(prepared, config, header=None):
             anchors[name] = replace(anchors[name], flags=anchors[name].flags + (UNRESOLVED_COMMANDS,))
     zones = {region: coverage.status(events_in_region[0]) if events_in_region else coverage.region_status(region)
              for region, events_in_region in config.engine.regions.items()}
-    return ProcedureContext(prepared, coverage, tuple(events), anchors, tuple(resolutions), zones)
+    return ProcedureContext(prepared, coverage, tuple(events), anchors, tuple(resolutions), zones,
+                            paddle_order(events, window))
+
+
+# Paddle tags (A-027): the names give identity, never time order (D-118).
+PADDLE_TAKEN = {"apical": "first_paddle_taken", "sternal": "second_paddle_taken"}
+# firm placement: for the apical paddle the annotators' tag (first_paddle_placed) wins, else its per-paddle
+# placement; the sternal paddle has no tag, so only its per-paddle placement
+PADDLE_PLACED = {"apical": ("first_paddle_placed", "apical_paddle_placed"), "sternal": ("sternal_paddle_placed",)}
+
+
+@dataclass(frozen=True)
+class PaddleOrder:
+    """D-118: which paddle came first, computed from event times. Under A-027 `first_paddle_*` means
+    the apical paddle and `second_paddle_*` the sternal one, so no rule reads order from the names.
+
+    taken / placed: paddle ("apical", "sternal") -> its earliest taken / firm-placement event, or None.
+    first_taken: the paddle taken first (an exact tie counts as apical; a paddle placed before the other
+        was taken counts as first even without its take), or None when that can't be established.
+    earliest_placement: the earliest known firm placement of either paddle, or None.
+    earliest_certain: False when the other paddle's placement is unknown and could have been earlier.
+    unknown_from: when not certain, the earliest time that unknown placement could be (its take, else 0).
+    take_deduced: True when first_taken was deduced from a placement (its take isn't tagged).
+    """
+    taken: dict
+    placed: dict
+    first_taken: str | None
+    earliest_placement: object
+    earliest_certain: bool
+    unknown_from: float | None
+    reason: str
+    take_deduced: bool = False
+
+    @property
+    def earliest_taken(self):
+        found = [e for e in self.taken.values() if e is not None]
+        return min(found, key=lambda e: (e.start, e.event_id)) if found else None
+
+    @property
+    def gel_phase_end(self):
+        """The event ending the gel phase (R1; Step 9d computes the same in frames): the earliest firm
+        placement of either paddle, else the earliest paddle taken, else None (the end of the recording)."""
+        return self.earliest_placement if self.earliest_placement is not None else self.earliest_taken
+
+
+def paddle_order(events, window):
+    """The shared paddle-order facts (D-118) from the context's events."""
+    def earliest(names):
+        found = [e for e in events if e.event_name in names]
+        return min(found, key=lambda e: (e.start, e.event_id)) if found else None
+    taken = {p: earliest((name,)) for p, name in PADDLE_TAKEN.items()}
+    placed = {p: next((e for e in (earliest((name,)) for name in names) if e is not None), None)
+              for p, names in PADDLE_PLACED.items()}
+    deduced = False
+    if taken["apical"] is None or taken["sternal"] is None:
+        missing = [p for p in ("apical", "sternal") if taken[p] is None]
+        first, reason = None, f"no confident take of the {' and '.join(missing)} paddle"
+        if len(missing) == 1:   # a paddle placed before the other was taken must have been taken first
+            gap, other = missing[0], ("sternal" if missing[0] == "apical" else "apical")
+            if placed[gap] is not None and placed[gap].start < taken[other].start - window:
+                first, deduced = gap, True
+                reason = (f"the {gap} paddle was taken first: its take isn't tagged, but it was placed before the "
+                          f"{other} paddle was taken")
+    else:   # an exact tie counts as apical first; either way the other was taken before any placement
+        first = "sternal" if taken["sternal"].start < taken["apical"].start else "apical"
+        reason = f"the {first} paddle was taken first"
+    known = [e for e in placed.values() if e is not None]
+    if not known:
+        return PaddleOrder(taken, placed, first, None, True, None, reason, deduced)
+    earliest_placed = min(known, key=lambda e: (e.start, e.event_id))
+    unknown = [p for p in ("apical", "sternal") if placed[p] is None]
+    if not unknown:
+        return PaddleOrder(taken, placed, first, earliest_placed, True, None, reason, deduced)
+    other_taken = taken[unknown[0]]
+    if other_taken is not None and other_taken.start >= earliest_placed.start:
+        # the other paddle was taken after this placement, so it can't have been placed before it
+        return PaddleOrder(taken, placed, first, earliest_placed, True, None, reason, deduced)
+    unknown_from = other_taken.start if other_taken is not None else 0.0
+    return PaddleOrder(taken, placed, first, earliest_placed, False, unknown_from, reason, deduced)
 
 
 def _shock_anchor(prepared):

@@ -288,8 +288,8 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   reversed order can test it. If the assumption is wrong, a reversed order would go unseen.
 - **Consequences for the rules:** R8's one-zone inference compared the visible placement with
   `first_paddle_placed`, which under this assumption is the apical placement, so it was circular;
-  it is removed (D-116). Several other rules and helpers read the four tags as time order
-  ("whichever came first"); they are listed in progress.md (2026-10-19) and not changed yet.
+  it is removed (D-116). The other readers that took the tags as time order (R2, Step 9c, R1 and
+  Step 9d; listed in progress.md, 2026-10-19) now compute the order from event times (D-118).
 - **Status:** active (team decision).
 - **Detected by:** a recording with the sternal paddle first, run through the models.
-- **Related:** D-013, D-014, D-047, D-051, D-086, D-116.
+- **Related:** D-013, D-014, D-047, D-051, D-086, D-116, D-118.

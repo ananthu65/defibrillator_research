@@ -3,6 +3,8 @@
 Registered rules run only when their status in configs/rules.yaml is `approved`; until then they
 are reported as pending (D-043). Definitions and failure codes: docs/rule_engine/rules_status.md.
 """
+from dataclasses import replace
+
 from rules import checks
 from rules.context import MULTIPLE_SHOCKS
 from rules.coverage import COVERED, LOW_CONFIDENCE_FLAG
@@ -28,7 +30,10 @@ PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while it
 CONTRADICTORY = "contradictory"            # R4: a press only after the shock on the screen
 ONE_ZONE = "one_zone_in_view"              # R8: one placement seen, the other paddle's zone not in view (D-116)
 DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
-FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, ONE_ZONE, DERIVED_GEL)
+PLACEMENT_TIME_UNKNOWN = "placement_time_unknown"   # R2, R1: a paddle placement needed to judge the order is unknown (D-118)
+TAKE_DEDUCED = "take_order_from_placement"  # R2: the paddle taken first was deduced from its placement (no take tag, D-118)
+FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, ONE_ZONE, DERIVED_GEL, PLACEMENT_TIME_UNKNOWN,
+         TAKE_DEDUCED)
 
 
 def _evidence_flags(events):
@@ -62,9 +67,11 @@ def _parallel(ctx, rule_id):
 def gel_applied_twice(ctx, definition, results):
     """R1 (P-038): gel applied to each placement zone (either order) before the first placement (D-109, D-110).
 
-    The gel phase ends at the first placement (first_paddle_placed, or the earliest per-paddle
-    placement), else at first_paddle_taken. Annotation lag: an application within
-    simultaneous_window_seconds after the end still counts.
+    The gel phase ends at the earliest firm placement of either paddle (ctx.paddle_order, D-118),
+    else at the earliest paddle taken. Annotation lag: an application within
+    simultaneous_window_seconds after the end still counts. If the other paddle's placement is
+    unknown and could have been earlier, a Pass whose gel may fall after it becomes Unable to Verify,
+    `placement_time_unknown` (D-118).
     1. Gel only after the first placement (no gel before it, a gel tag or per-zone application after)
        -> Fail `after_placement`.
     2. Per zone, when each zone's gel status is known (the gel regions are in the header: past the 9d
@@ -79,9 +86,9 @@ def gel_applied_twice(ctx, definition, results):
        two applications are not checked (OQ-021).
     """
     window = checks.simultaneous_window(ctx)
-    placement = _first_placement(ctx)
-    taken = ctx.named(FIRST_TAKEN)
-    end = placement.start if placement is not None else (taken[0].start if taken else None)
+    order = ctx.paddle_order
+    placement = order.earliest_placement
+    end = order.gel_phase_end.start if order.gel_phase_end is not None else None
 
     def in_phase(event):
         return end is None or event.start <= end + window
@@ -100,15 +107,28 @@ def gel_applied_twice(ctx, definition, results):
     where = (f"before the first placement ({end:g} s)" if placement is not None else
              f"before the first paddle was taken ({end:g} s)" if end is not None else "in the recording")
     if all(ctx.coverage.region_status(region).scope is not None for _, _, region, _ in GEL_ZONES):
-        return _gel_by_zone(ctx, {name: [e for e in events if in_phase(e)] for name, events in zone_events.items()},
-                            where)
-    return _gel_by_tags(ctx, [t for t in tags if in_phase(t)], end, where)
+        result = _gel_by_zone(ctx, {name: [e for e in events if in_phase(e)] for name, events in zone_events.items()},
+                              where)
+    else:
+        result = _gel_by_tags(ctx, [t for t in tags if in_phase(t)], end, where)
+    return _gel_order_check(result, order, early)
 
 
-def _first_placement(ctx):
-    """The earliest first-paddle placement: first_paddle_placed or a per-paddle placement."""
-    found = [e for name in (FIRST_PLACED, *PLACEMENTS) for e in ctx.named(name)]
-    return min(found, key=lambda e: (e.start, e.event_id)) if found else None
+def _gel_order_check(result, order, counted):
+    """D-118: the other paddle's placement is unknown and could have been earlier than the known one;
+    a Pass whose gel may fall after that placement becomes Unable to Verify."""
+    if not result.passed or order.earliest_certain:
+        return result
+    unsure = [e for e in counted if e.start > order.unknown_from]
+    if not unsure:
+        return result
+    unknown = "sternal" if order.placed["sternal"] is None else "apical"
+    gel = min(unsure, key=lambda e: (e.start, e.event_id))
+    return unable("R1", f"gel at {gel.start:g} s may have come after the {unknown} paddle was placed: that placement "
+                  f"is unknown and could be any time after {order.unknown_from:g} s, before the "
+                  f"{order.earliest_placement.event_name} at {order.earliest_placement.start:g} s (D-118)",
+                  evidence=tuple(e.event_id for e in unsure), flags=(PLACEMENT_TIME_UNKNOWN,),
+                  timestamps={"unknown_from": order.unknown_from, gel.event_name: gel.start})
 
 
 def _gel_by_zone(ctx, applied, where):
@@ -192,61 +212,98 @@ def _gel_passed(ctx, applications, reason, flags, uses):
 
 
 @rule("R2", requires=(FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN, *PLACEMENTS),
-      description="Second paddle taken only after the first is placed (D-051)")
+      description="The paddle taken first is placed before the other is taken (D-051, D-118)")
 def second_paddle_after_first_placed(ctx, definition, results):
-    """R2 (P-032): first paddle taken -> first paddle placed firmly -> second paddle taken.
+    """R2 (P-032): the paddle taken first is placed firmly before the other paddle is taken.
 
+    Order-neutral (D-118): which paddle went first comes from event times (ctx.paddle_order), never
+    from the tag names, which give identity only (A-027). A sternal-first learner who handles one
+    paddle at a time passes R2; R8 reports the order.
     1. Derived placements flagged possible_parallel_placement (they reach the engine only past the
        gate, D-088) -> Fail `simultaneous` (D-091).
-    2. No second paddle taken -> Unable to Verify: the order can't be checked.
-    3. First placement seen -> compare it with the second paddle taken: before -> Pass;
-       within simultaneous_window_seconds -> Fail `simultaneous`; after -> Fail
-       `taken_before_first_placed`.
-    4. First placement not seen -> coverage of both placement zones over the window from first
-       paddle taken to second paddle taken (D-092, D-095): both visible throughout -> Fail
-       `first_placement_not_observed` (D-097): either the paddles were placed in parallel, or the
-       second paddle was taken before the first was placed (A-019); otherwise Unable to Verify.
-       Past the gate, derived parallel placements refine this to `simultaneous` (step 1).
+    2. Both paddles taken within simultaneous_window_seconds of each other -> Fail `simultaneous`,
+       whichever is named first: neither was placed before the other was taken.
+    3. A take missing -> Unable to Verify: the order can't be checked, unless the paddle without a take
+       was placed before the other was taken: then it was taken first, flagged
+       `take_order_from_placement`. (Otherwise the earlier take counts as first, an exact tie as apical.)
+    4. Its firm placement seen -> compare it with the other paddle taken: before -> Pass; within
+       simultaneous_window_seconds -> Fail `simultaneous`; after -> Fail `taken_before_first_placed`.
+    5. Its placement not seen:
+       - the sternal paddle taken first -> Unable to Verify, `placement_time_unknown`: no tag marks
+         the sternal placement, so its absence is no evidence (D-118);
+       - the apical paddle taken first -> coverage of both placement zones over the window between
+         the two takes (D-092, D-095): both visible throughout -> Fail `first_placement_not_observed`
+         (D-097, A-019); otherwise Unable to Verify. Past the gate, derived parallel placements
+         refine this to `simultaneous` (step 1).
     """
     parallel = _parallel(ctx, "R2")
     if parallel is not None:
         return parallel
-    seconds = ctx.named(SECOND_TAKEN)
-    if not seconds:
-        found = ctx.missing(SECOND_TAKEN)
-        return unable("R2", f"no confident {SECOND_TAKEN}, so the order cannot be checked (coverage "
-                      f"{found.coverage.status})", evidence=found.low_confidence_event_ids, uses=(found,))
-    second = seconds[0]
-    placed = ctx.anchor("first_placement")
-    if placed.present:
-        return _order(ctx, placed, second)
-    return _first_placement_missing(ctx, second)
+    order = ctx.paddle_order
+    together = _taken_together(ctx, order)
+    if together is not None:
+        return together
+    if order.first_taken is None:
+        missing = [name for paddle, name in (("apical", FIRST_TAKEN), ("sternal", SECOND_TAKEN))
+                   if order.taken[paddle] is None]
+        found = ctx.missing(missing[0])
+        return unable("R2", f"{order.reason}, so the order cannot be checked (coverage {found.coverage.status})",
+                      evidence=found.low_confidence_event_ids, uses=(found,))
+    first = order.first_taken
+    other = "sternal" if first == "apical" else "apical"
+    placed = order.placed[first]
+    if placed is not None:
+        result = _order(ctx, first, placed, order.taken[other])
+    else:
+        result = _first_placement_missing(ctx, first, order.taken[first], order.taken[other])
+    if order.take_deduced:   # the report shows that the paddle taken first was deduced, not tagged
+        result = replace(result, reason=f"{result.reason}; {order.reason}", flags=(*result.flags, TAKE_DEDUCED))
+    return result
 
 
-def _order(ctx, placed, second):
-    relation = checks.relation(placed.time, second.start, checks.simultaneous_window(ctx))
-    evidence = (placed.event_id, second.event_id)
-    timestamps = {FIRST_PLACED: placed.time, SECOND_TAKEN: second.start}
+def _taken_together(ctx, order):
+    """Both paddles taken within the simultaneous window: neither was placed before the other was taken,
+    whichever is named first (the apical tie-break never decides this)."""
+    apical, sternal = order.taken["apical"], order.taken["sternal"]
+    if apical is None or sternal is None:
+        return None
+    if checks.relation(apical.start, sternal.start, checks.simultaneous_window(ctx)) != checks.SIMULTANEOUS:
+        return None
+    return failed("R2", "simultaneous", f"both paddles taken together (apical at {apical.start:g} s, sternal at "
+                  f"{sternal.start:g} s, within simultaneous_window_seconds): neither was placed before the other "
+                  "was taken", evidence=(apical.event_id, sternal.event_id),
+                  timestamps={apical.event_name: apical.start, sternal.event_name: sternal.start})
+
+
+def _order(ctx, first, placed, other_taken):
+    relation = checks.relation(placed.start, other_taken.start, checks.simultaneous_window(ctx))
+    evidence = (placed.event_id, other_taken.event_id)
+    timestamps = {placed.event_name: placed.start, other_taken.event_name: other_taken.start}
+    flags = _evidence_flags([placed])
+    other = "sternal" if first == "apical" else "apical"
     if relation == checks.BEFORE:
-        return passed("R2", f"first paddle placed at {placed.time:g} s, before the second paddle was taken at "
-                      f"{second.start:g} s", evidence, uses=(placed,), timestamps=timestamps)
+        return passed("R2", f"the {first} paddle (taken first) placed at {placed.start:g} s, before the {other} paddle "
+                      f"was taken at {other_taken.start:g} s", evidence, flags=flags, timestamps=timestamps)
     if relation == checks.SIMULTANEOUS:
-        return failed("R2", "simultaneous", f"second paddle taken at {second.start:g} s, at the same time as the "
-                      f"first was placed ({placed.time:g} s)", evidence=evidence, uses=(placed,), timestamps=timestamps)
-    return failed("R2", "taken_before_first_placed", f"second paddle taken at {second.start:g} s, before the first "
-                  f"was placed at {placed.time:g} s", evidence=evidence, uses=(placed,), timestamps=timestamps)
+        return failed("R2", "simultaneous", f"the {other} paddle taken at {other_taken.start:g} s, at the same time as "
+                      f"the {first} paddle (taken first) was placed ({placed.start:g} s)", evidence=evidence,
+                      flags=flags, timestamps=timestamps)
+    return failed("R2", "taken_before_first_placed", f"the {other} paddle taken at {other_taken.start:g} s, before the "
+                  f"{first} paddle (taken first) was placed at {placed.start:g} s", evidence=evidence, flags=flags,
+                  timestamps=timestamps)
 
 
-def _first_placement_missing(ctx, second):
+def _first_placement_missing(ctx, first, first_taken, other_taken):
+    if first == "sternal":   # D-118: no tag marks the sternal placement, so its absence is no evidence
+        return unable("R2", f"the sternal paddle was taken first ({first_taken.start:g} s), but its firm placement time "
+                      "is unknown (no tag marks it, and derived placements reach the engine only past the gate), so "
+                      "R2 cannot be checked (D-118)", evidence=(first_taken.event_id, other_taken.event_id),
+                      flags=(PLACEMENT_TIME_UNKNOWN,))
     weak = ctx.missing(FIRST_PLACED)
     if LOW_CONFIDENCE_FLAG in weak.flags:   # low confidence is not absence (D-010)
         return unable("R2", "the first placement may have been seen with low confidence",
                       evidence=weak.low_confidence_event_ids, uses=(weak,))
-    taken = ctx.named(FIRST_TAKEN)
-    if not taken or taken[0].start > second.start:
-        return unable("R2", f"first placement not seen, and no {FIRST_TAKEN} before the second paddle was taken, "
-                      "so there is no window in which it should have happened", evidence=(second.event_id,))
-    window = (taken[0].start, second.start)
+    window = (first_taken.start, other_taken.start)
     zones = [ctx.missing(name, window) for name in PLACEMENTS]
     statuses = ", ".join(f"{z.event_name.split('_')[0]} zone {z.coverage.status}" for z in zones)
     where = f"between taking the first paddle ({window[0]:g} s) and the second ({window[1]:g} s)"
@@ -254,10 +311,10 @@ def _first_placement_missing(ctx, second):
         return failed("R2", "first_placement_not_observed", f"no first placement observed {where}, although both "
                       "placement zones were visible throughout: either the paddles were placed in parallel, or the "
                       "second paddle was taken before the first was placed (A-019, D-097)",
-                      evidence=(taken[0].event_id, second.event_id), uses=tuple(zones),
+                      evidence=(first_taken.event_id, other_taken.event_id), uses=tuple(zones),
                       timestamps={FIRST_TAKEN: window[0], SECOND_TAKEN: window[1]})
     return unable("R2", f"first placement not seen {where}, but the placement zones were not visible throughout "
-                  f"({statuses})", evidence=(taken[0].event_id, second.event_id), uses=tuple(zones))
+                  f"({statuses})", evidence=(first_taken.event_id, other_taken.event_id), uses=tuple(zones))
 
 
 # ---- R3 ---------------------------------------------------------------------------------------------

@@ -447,6 +447,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   - **Still to review:** P12_LS's pair (exactly 0.5 s apart, on the audit's duplicate list) now
     counts as two; Arnikan reviews it with P03_LS and the four single-tag videos (progress.md,
     Increment 17).
+- **9c `min_overlap_of_paddle` (2026-10-19, D-118):** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). Until it is
+  calibrated, R8 has no direct evidence on the annotations and R2 can't detect a parallel
+  placement. The value is Arnikan's to choose after a calibration against the apical tag.
 - **R6 screen delay (2026-10-17, D-105):** on the interim export, the removal tag came after the
   shock on the screen in all 20 LS/T videos with both tags (0.13 to 1.40 s, median 0.88 s), so the
   data doesn't bound the tolerance. Placeholder 0.5 s for now.

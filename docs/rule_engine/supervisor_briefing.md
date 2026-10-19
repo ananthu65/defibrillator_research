@@ -67,9 +67,14 @@ first paddle went on, R1 fails ("gel after placement"). One zone gelled and the 
   applications.
 
 **R2 Second paddle taken after the first is placed** ([pathway table](pathways.md#p-032-r2-second-paddle-taken-after-the-first-is-placed-built-increment-11-pending-until-approved)).
-The order must be: first paddle taken → first paddle placed firmly → second paddle taken.
+The paddle taken first, whichever it is, must be placed firmly before the other is taken. "First"
+is by time: the team's tag names say which paddle (apical or sternal), not the order (D-118). A
+learner who starts with the sternal paddle but handles one paddle at a time passes R2; R8 reports
+the order.
 - Taking the second paddle at the same moment as placing the first fails ("simultaneous");
   taking it before the first is placed fails.
+- Taking both paddles together (within the simultaneous window) fails as "simultaneous",
+  whichever paddle the tags name first.
 - If the first placement wasn't seen although both zones were in view, it fails as "first
   placement not observed": either the paddles were placed together, or the second was taken
   first.
@@ -83,6 +88,11 @@ The order must be: first paddle taken → first paddle placed firmly → second 
   tag as the apical paddle, so the inference could pass a learner who placed the sternal paddle
   first.)
 - **Both paddles placed together:** both R2 and R8 fail, marked as one cause.
+- **On the annotations so far:** R8 has no direct evidence yet. Its placements come from the
+  paddle and zone boxes (Step 9c), and at the current setting (a paddle counts as placed when half
+  of its box is inside its zone) no placement is found in any of the 38 interim videos. The most
+  any paddle box reaches is 0.29 inside its zone. For the same reason, R2 can't detect a parallel
+  placement yet. The setting is to be calibrated (OQ-018).
 
 **R3 Paddles placed firmly on the chest** ([diagram](diagrams.md#l-r3-paddles-placed-firmly-on-the-chest-p-035-built-in-increment-15-pending-until-approved)).
 - **Pass:** both paddles seen firmly on the chest before the shock shown on the screen.

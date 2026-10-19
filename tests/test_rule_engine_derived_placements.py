@@ -84,7 +84,7 @@ class Placement(unittest.TestCase):
                          [("apical_paddle_placed", 20), ("sternal_paddle_placed", 40)])
         event = events[0]
         self.assertEqual((event["id"], event["evidence_type"], event["flags"], event["method"], event["timestamp_seconds"]),
-                         ("P01_LS_derived_001", "direct", ["derived_placement"], "paddle_in_zone_v1", 0.8))
+                         ("P01_LS_derived_001", "direct", ["derived_placement"], "paddle_in_zone_v2", 0.8))
         self.assertEqual(event["metadata"]["paddle_label"], "paddle_apical")
         self.assertEqual(event["metadata"]["settings_sha256"], SETTINGS.digest())
         self.assertEqual(issues, [])
@@ -212,20 +212,29 @@ class TracksPerLabel(unittest.TestCase):
 
 
 class TagChecks(unittest.TestCase):
-    def test_two_zones_earliest_must_be_within_the_window_of_t1(self):
-        for t1, expected in ((35, [20, 40]), (36, [])):     # 15 frames apart, then 16
+    def test_t1_cross_checks_only_the_apical_placement(self):
+        """D-118: T1 marks the apical placement (A-027); the sternal placement is never checked against it."""
+        for t1, expected in ((35, [20, 40]), (36, [40])):     # the apical 15 frames from T1, then 16
             with self.subTest(t1=t1):
                 events, rows, issues = run(two_zone(20, 40, t1=t1))
                 self.assertEqual(frames(events), expected)
-        self.assertEqual([i.code for i in issues], ["placement_disagrees_with_tag"] * 2)
-        self.assertIn("16 frames from first_paddle_firmly_on_the_chest", rows["paddle_sternal"]["reason"])
+        self.assertEqual([(i.code, i.label) for i in issues], [("placement_disagrees_with_tag", "paddle_apical")])
+        self.assertIn("16 frames from first_paddle_firmly_on_the_chest", rows["paddle_apical"]["reason"])
+        self.assertEqual(rows["paddle_sternal"]["outcome"], "event")
 
-    def test_one_zone_placement_not_before_t1_minus_the_window(self):
+    def test_sternal_first_keeps_both_placements(self):
+        """D-118: a sternal-first video (sternal at frame 30, apical and T1 at 60) used to lose both."""
+        events, rows, issues = run(two_zone(60, 30, t1=60))
+        self.assertEqual([(e["event_name"], e["frame"]) for e in events],
+                         [("sternal_paddle_placed", 30), ("apical_paddle_placed", 60)])
+        self.assertEqual(issues, [])
+
+    def test_one_zone_apical_placement_must_match_t1(self):
         def one_zone(placed, t1):
             return video([zone_track("apical_placement_zone", APICAL_ZONE), paddle("paddle_apical", APICAL_ZONE, placed),
                           paddle("paddle_sternal", STERNAL_ZONE, 30)],
                          [("first_paddle_firmly_on_the_chest", t1)], view="LL")
-        for placed, t1, expected in ((20, 35, [20]), (20, 36, []), (50, 30, [50])):   # the visible paddle may be second
+        for placed, t1, expected in ((20, 35, [20]), (20, 36, []), (50, 30, [])):   # T1 is the apical's own tag (A-027)
             with self.subTest(placed=placed, t1=t1):
                 events, rows, _ = run(one_zone(placed, t1))
                 self.assertEqual(frames(events), expected)
@@ -277,12 +286,12 @@ class ValidationReport(unittest.TestCase):
             source.canonical_task_id = f"P0{len(rows) // 2 + 1}_LS"
             rows += list(run(source)[1].values())
         summary = validation_summary(rows, SETTINGS, {"export_id": "x" * 64})
-        self.assertEqual((summary["videos"], summary["videos_both_paddles"], summary["videos_no_paddle"]), (3, 2, 1))
+        self.assertEqual((summary["videos"], summary["videos_both_paddles"], summary["videos_no_paddle"]), (3, 2, 0))
         self.assertEqual(summary["videos_possible_parallel_placement"], 1)
         self.assertEqual((summary["two_zone_videos_checkable_against_t1"], summary["two_zone_videos_agreeing_with_t1"]), (2, 1))
         self.assertIn("median", summary["highest_overlap"])
         text = validation_markdown(summary, rows, SETTINGS)
-        self.assertIn("## Disagreements with the tags (2)", text)
+        self.assertIn("## Disagreements with the tags (1)", text)   # only the apical placement is checked
         self.assertIn("## Possible parallel placements (1 videos)", text)
         self.assertIn(SETTINGS.digest(), text)
 

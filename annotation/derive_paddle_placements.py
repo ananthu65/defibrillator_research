@@ -17,13 +17,15 @@ frames are skipped, so an occlusion of the zone neither starts nor ends a placem
 exit can a re-placement start.
 A placement touching a blocked frame (from ``exit_frames`` before its start to its end) gives no event.
 
-The first placements are then checked against the tags (A-019, D-086):
-  T1 present, both paddles derived  the earlier must be within the window of T1; otherwise no event for either
-  T1 present, one paddle derived    it must not be earlier than T1 minus the window
-  T1 missing                        both derived and within simultaneous_window_seconds of each other:
-                                    both kept, flagged possible_parallel_placement; otherwise no events
-  T2 present                        each kept paddle's first placement must be at or before T2 plus the window
-                                    (in the parallel case, both are dropped if either fails)
+The first placements are then checked against the tags (A-019, A-027, D-086, D-118). Each paddle is
+derived from its own box in its own zone, whatever the order; T1 is the APICAL paddle's firm placement
+(A-027), so it cross-checks only that paddle and never says which paddle came first:
+  T1 present, the T1 paddle derived  its first placement must be within the window of T1; otherwise no
+                                     event for it (the other paddle is unaffected)
+  T1 missing                         both derived and within simultaneous_window_seconds of each other:
+                                     both kept, flagged possible_parallel_placement; otherwise no events
+  T2 present                         each kept paddle's first placement must be at or before T2 plus the window
+                                     (in the parallel case, both are dropped if either fails)
 Derived events are direct evidence, flagged derived_placement, with the method in metadata (D-081).
 """
 
@@ -39,7 +41,7 @@ from typing import Any
 from annotation.audit_cvat_backups import Issue
 from annotation.build_yolo_video_dataset import clip_box, shape_box, track_box_at
 
-METHOD = "paddle_in_zone_v1"
+METHOD = "paddle_in_zone_v2"   # v2: T1 cross-checks only its own paddle (D-118)
 DERIVED = "derived_placement"
 PARALLEL = "possible_parallel_placement"
 IN, OUT, BLOCKED, UNKNOWN = "in", "out", "blocked", "unknown"
@@ -48,7 +50,8 @@ HEX64 = re.compile(r"^[0-9a-f]{64}$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 REVIEW_KEYS = ("reviewed_by", "reviewed_on", "export_id", "placement_settings_sha256")
 SETTING_KEYS = {"paddles", "min_overlap_of_paddle", "steady_frames", "max_centre_motion_of_diagonal", "exit_frames",
-                "tag_agreement_window_frames", "first_placement_tag", "both_placed_tag", "reviewed_for_r8"}
+                "tag_agreement_window_frames", "first_placement_tag", "first_placement_tag_paddle", "both_placed_tag",
+                "reviewed_for_r8"}
 VALIDATION_COLUMNS = ["canonical_task_id", "camera_view", "paddle", "zone", "zone_visible", "t1_frame", "t2_frame",
                       "first_placement_frame", "placements", "gap_to_t1_frames", "highest_overlap",
                       "steady_frames_achieved", "centre_motion_of_diagonal", "frames_zone_not_visible",
@@ -84,6 +87,7 @@ class PlacementSettings:
     first_placement_tag: str
     both_placed_tag: str
     simultaneous_window_seconds: float
+    first_placement_tag_paddle: str = "paddle_apical"   # the paddle T1 marks (A-027); a cross-check only (D-118)
     review: PlacementReview = PlacementReview()
 
     def digest(self) -> str:
@@ -93,6 +97,7 @@ class PlacementSettings:
                    "max_centre_motion_of_diagonal": self.max_centre_motion_of_diagonal,
                    "exit_frames": self.exit_frames, "tag_agreement_window_frames": self.tag_agreement_window_frames,
                    "first_placement_tag": self.first_placement_tag, "both_placed_tag": self.both_placed_tag,
+                   "first_placement_tag_paddle": self.first_placement_tag_paddle,
                    "simultaneous_window_seconds": self.simultaneous_window_seconds}
         return hashlib.sha256(json.dumps(content, sort_keys=True).encode("utf-8")).hexdigest()
 
@@ -119,9 +124,11 @@ def load_placement_settings(data: Any, zone_labels, paddle_labels, simultaneous_
     for key in ("first_placement_tag", "both_placed_tag"):
         if not isinstance(data[key], str) or not data[key]:
             raise ValueError(f"{where}.{key}: expected a CVAT tag label")
+    if data["first_placement_tag_paddle"] not in {r.paddle for r in rules}:
+        raise ValueError(f"{where}.first_placement_tag_paddle: expected one of {[r.paddle for r in rules]}")
     return PlacementSettings(tuple(rules), overlap, steady, motion, exit_frames, window, data["first_placement_tag"],
                              data["both_placed_tag"], float(simultaneous_window),
-                             _review(data["reviewed_for_r8"], f"{where}.reviewed_for_r8"))
+                             data["first_placement_tag_paddle"], _review(data["reviewed_for_r8"], f"{where}.reviewed_for_r8"))
 
 
 def _value(raw):
@@ -351,6 +358,7 @@ def derive_placements(source, video, settings: PlacementSettings, issues: list[I
                                                      if paddle["episodes"] else None),
                      "placements": sum(not e["blocked"] for e in paddle["episodes"]) if kept else 0,
                      "gap_to_t1_frames": _blank(None if t1 is None or not paddle["episodes"]
+                                                or rule.paddle != settings.first_placement_tag_paddle
                                                 else states[paddle["episodes"][0]["start"]].frame - t1),
                      **{k: _blank(v) for k, v in paddle["stats"].items()},
                      "outcome": "event" if kept else "no_event", "reason": paddle["reason"],
@@ -362,7 +370,11 @@ def derive_placements(source, video, settings: PlacementSettings, issues: list[I
 
 
 def _check_tags(derived, t1, t2, window, settings, video, issues, where):
-    """Apply the tag rules (A-019, D-086) to the paddles with a derived first placement."""
+    """Apply the tag rules (A-019, A-027, D-086, D-118) to the paddles with a derived first placement.
+
+    T1 is the firm placement of one paddle (settings.first_placement_tag_paddle, the apical one under
+    A-027), so it cross-checks that paddle only. Which paddle came first is never read from it.
+    """
     def reject(paddle, reason, review=True):
         paddle["reason"] = reason
         if review:
@@ -379,17 +391,12 @@ def _check_tags(derived, t1, t2, window, settings, video, issues, where):
                 reject(paddle, f"{settings.first_placement_tag} is not tagged, and the placements are not "
                        "within simultaneous_window_seconds of each other", review=False)
             return
-    elif len(derived) == 2:
-        earliest = min(p["first"] for p in derived)
-        if abs(earliest - t1) > window:
-            for paddle in derived:
-                reject(paddle, f"the earlier placement (frame {earliest}) is {abs(earliest - t1)} frames from "
-                       f"{settings.first_placement_tag} (frame {t1}); more than {window}")
-            return
-    elif len(derived) == 1 and derived[0]["first"] < t1 - window:
-        reject(derived[0], f"placed at frame {derived[0]['first']}, before {settings.first_placement_tag} "
-               f"(frame {t1}) minus {window} frames")
-        return
+    else:
+        for paddle in derived:
+            if paddle["rule"].paddle == settings.first_placement_tag_paddle and abs(paddle["first"] - t1) > window:
+                reject(paddle, f"the {paddle['rule'].paddle} placement (frame {paddle['first']}) is "
+                       f"{abs(paddle['first'] - t1)} frames from {settings.first_placement_tag} (frame {t1}), which "
+                       f"marks that paddle (A-027); more than {window}")
     if t2 is not None:
         late = [p for p in derived if not p["reason"] and p["first"] > t2 + window]
         parallel = any(PARALLEL in p["flags"] for p in derived)
@@ -427,7 +434,7 @@ def validation_summary(rows: list[dict[str, Any]], settings: PlacementSettings, 
     two_zone = [rs for rs in videos.values() if all(r["zone_visible"] for r in rs) and rs[0]["t1_frame"] != ""
                 and all(r["first_placement_frame"] != "" for r in rs)]
     agree = sum(all(r["outcome"] == "event" for r in rs) for rs in two_zone)
-    gaps = [min(abs(r["gap_to_t1_frames"]) for r in rs) for rs in two_zone]
+    gaps = [abs(r["gap_to_t1_frames"]) for rs in two_zone for r in rs if r["gap_to_t1_frames"] != ""]
     reasons: dict[str, int] = {}
     for row in rows:
         if row["reason"]:

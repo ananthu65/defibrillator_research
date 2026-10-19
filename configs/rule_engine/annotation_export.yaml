@@ -43,6 +43,7 @@ derived_placements:
   exit_frames:                   {value: 5,    placeholder: true}   # frames out of the zone before a re-placement counts
   tag_agreement_window_frames:   {value: 15,   placeholder: true}
   first_placement_tag: first_paddle_firmly_on_the_chest   # T1 (CVAT tag)
+  first_placement_tag_paddle: paddle_apical               # the paddle T1 marks (A-027); a cross-check only (D-118)
   both_placed_tag: paddles_firmly_on_chest                # T2 (CVAT tag), used only when present
   # The gate (D-088): R8 may use derived placements only for the export and settings reviewed here.
   # Fill all four after reviewing placement_validation.md of that export: export_id and
@@ -61,6 +62,7 @@ derived_gel:
     sternal_placement_zone: {event: sternal_gel_applied, region: sternal_gel}
   gel_tag: Gel applied                     # CVAT tag, used to cross-check (gel_validation.csv)
   first_paddle_taken_tag: first_paddle_taken
+  second_paddle_taken_tag: second_paddle_taken   # the gel phase ends at the earliest take of either paddle (D-118)
   gel_hand_zone_max_gap:    {value: 0.05, placeholder: true}   # gap between hand and zone boxes / frame diagonal
   gel_dwell_frames:         {value: 10,   placeholder: true}   # frames near the zone for one application
   gel_zone_nearer_ratio:    {value: 2.0,  placeholder: true}   # the other zone must be this many times further

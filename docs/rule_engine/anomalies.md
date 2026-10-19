@@ -147,6 +147,8 @@ Raised by R2, R8, R3, R4 and R1 (P-032, P-015, P-035, P-036, P-038). They report
 | `placement_missing` | R8 (D-058) | A paddle's zone was in view during the placement phase (D-099), but its placement event is missing: either the one visible zone's paddle, or one of two visible placements. R8 gives Unable to Verify, not `wrong_order`, and R3 reports the missing placement (one mistake reported once) |
 | `contradictory` | R4 | The buttons were pressed only after the shock on the screen (D-108). Unable to Verify. (R8 raised it for its one-zone inference until 2026-10-19, D-116) |
 | `derived_gel_application` | R1 (D-111, D-112) | The result rests on a per-zone gel application derived from the `learner_hand` and zone boxes, used only past the 9d gate |
+| `placement_time_unknown` | R2, R1 (D-118) | A paddle placement needed to judge the order is unknown. R2: the sternal paddle was taken first but no event gives its placement (no tag marks it). R1: the other paddle's placement is unknown and could have been before the known one, and a gel event may fall after it. Unable to Verify, never Fail or Pass. Order comes from event times, never from the tag names (A-027) |
+| `take_order_from_placement` | R2 (D-118) | The paddle taken first was deduced, not tagged: its take isn't tagged, but it was placed before the other paddle was taken, so it must have been taken first. The result stands and carries this flag so the report shows the deduction |
 | `one_zone_in_view` | R8 (D-116) | One placement was seen, but the other paddle's zone was not in view during the placement phase, so the order can't be established. Unable to Verify. There is no one-zone inference: the first-placement tag is the apical placement under the team's labelling (A-027) |
 
 ## Annotation export and audit codes (Step 9b; not rule-engine codes)
@@ -166,7 +168,7 @@ learner, and never reach a rule result or the report.
 | `duplicate_task` | error | The same task in a second archive; the first copy is kept |
 | `unrecognized_task_name`, `invalid_cvat_json`, `missing_annotations_json`, `no_tasks_in_archive`, `no_zip_archives`, `unreadable_zip` | error | The backup cannot be read as a CVAT task |
 | `placement_duplicate_paddle_box` | review | Step 9c (P-031): two boxes of one paddle label overlap during its placement, so no event for that paddle (D-087). Ananth fixes the tracks, which also affect the training labels |
-| `placement_disagrees_with_tag` | review | Step 9c: a derived placement contradicts T1 or T2 (D-086), so no event (for both paddles when the earlier one disagrees with T1) |
+| `placement_disagrees_with_tag` | review | Step 9c: the apical placement is more than the tag window from T1, which marks that paddle (A-027, D-118), or a placement comes after T2 (D-086); no event for that paddle. T1 never decides the order, so the other paddle is unaffected |
 | `gel_hand_not_tracked` | review | Step 9d (P-037): no `learner_hand` box in the gel phase, so every zone's gel is unknown (D-111) |
 
 **Flags on derived placement events (`derived_events[].flags`, Step 9c):** `derived_placement`

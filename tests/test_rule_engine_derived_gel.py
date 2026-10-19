@@ -180,12 +180,25 @@ class GelPhase(unittest.TestCase):
 
     def test_else_at_the_derived_placement_else_at_first_paddle_taken(self):
         tracks = [*zones(), hand((20, 35, beside_apical(0)))]
-        _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75)]), placements=[{"frame": 60}])
+        _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75)]),
+                                 placements=[{"frame": 60, "event_name": "sternal_paddle_placed"}])
         self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (60, "derived placement"))
         _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75)]))
         self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (75, "first_paddle_taken"))
         _, _, _, _, record = run(video(tracks, tags=[]))
         self.assertEqual(record["phase"]["ended_by"], "end of recording")
+
+    def test_the_earliest_placement_of_either_paddle_ends_it(self):
+        """D-118: a sternal placement before the apical tag ends the phase; the apical tag wins over the
+        derived apical placement; with only takes, the earliest take of either paddle ends it."""
+        tracks = [*zones(), hand((20, 35, beside_apical(0)))]
+        sternal_first = [{"frame": 50, "event_name": "sternal_paddle_placed"}, {"frame": 78, "event_name": "apical_paddle_placed"}]
+        _, _, _, _, record = run(video(tracks), placements=sternal_first)          # T1 at 80
+        self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (50, "derived placement"))
+        _, _, _, _, record = run(video(tracks), placements=[{"frame": 70, "event_name": "apical_paddle_placed"}])
+        self.assertEqual(record["phase"]["end_frame"], 80)                          # the tag, not the derived 70
+        _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75), ("second_paddle_taken", 65)]))
+        self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (65, "second_paddle_taken"))
 
     def test_an_application_after_the_gel_phase_is_not_derived(self):
         events, _, _, _, _ = run(video([*zones(), hand((20, 35, beside_apical(0)), end=90)],

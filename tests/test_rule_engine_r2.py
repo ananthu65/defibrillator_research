@@ -99,10 +99,10 @@ class FirstPlacementMissing(unittest.TestCase):
         weak = ev("first_paddle_placed", 7, "weak", confidence=0.2, source="video")
         self.assertEqual(r2([*self.EVENTS, weak], header()).kind, "unable_to_verify")
 
-    def test_no_first_paddle_taken_gives_no_window(self):
+    def test_no_first_paddle_taken_cannot_be_ordered(self):
         outcome = r2([ev("second_paddle_taken", 9)], header())
         self.assertEqual(outcome.kind, "unable_to_verify")
-        self.assertIn("no window", outcome.reason)
+        self.assertIn("no confident take of the apical paddle", outcome.reason)
 
 
 def parallel_record():
@@ -111,7 +111,8 @@ def parallel_record():
                 "evidence_type": "direct", "flags": ["derived_placement", "possible_parallel_placement"],
                 "method": "paddle_in_zone_v1", "metadata": {"settings_sha256": EXPORT.placements.digest()}}
                for i, (name, frame) in enumerate((("apical_paddle_placed", 20), ("sternal_paddle_placed", 22)), start=1)]
-    tags = [("first_paddle_taken", 5), ("second_paddle_taken", 10), ("paddles_firmly_on_chest", 30)]
+    # the takes 0.64 s apart (outside the simultaneous window), so only the placements are parallel
+    tags = [("first_paddle_taken", 2), ("second_paddle_taken", 18), ("paddles_firmly_on_chest", 30)]
     return {"schema_version": 1, "kind": RECORD_KIND, "canonical_task_id": "P01_LS", "participant_id": "P01",
             "camera_view": "LS", "annotation_source": "x", "archive": "a.zip", "task_path": ".", "media_name": "x.mp4",
             "fps": FPS, "width": 1920, "height": 1080, "start_frame": 0, "stop_frame": 99, "duration_seconds": 4.0,

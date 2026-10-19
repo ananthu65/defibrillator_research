@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 12
+**Report version:** 13
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -38,6 +38,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
 | 11 | 2026-10-19 | **Three flags removed** (D-115): `shock_time_from_removal` and `command_before_removal` (the shock time is never taken from the paddle removal; the `shock_time_fallback` setting is gone) and `inferred_from_removal` (R3 and R4 no longer infer from the removal: it doesn't show that a shock was delivered). R3 and R4 infer only from the shock on the screen; without a shock time they are Not evaluable because of R5 |
 | 12 | 2026-10-19 | **Rule flag removed:** `inferred_fail_policy_undecided`. **Rule flag added:** `one_zone_in_view` (R8). R8 has no one-zone inference any more: with only one zone in view it is Unable to Verify, never Pass – Inferred, because the first-placement tag is the apical placement under the team's labelling (A-027, D-116). **Meaning changed:** `contradictory` now comes from R4 only; R8's `wrong_order` only from two observed placements. The settings `inferred_fail_outcome` and `placement_match_window_seconds` no longer appear in `configuration` |
+| 13 | 2026-10-19 | **Rule flags added:** `placement_time_unknown` (R2, R1) and `take_order_from_placement` (R2). Both paddles taken within `simultaneous_window_seconds` fail R2 `simultaneous`, whichever is named first. Paddle order now comes from event times, never from the tag names (A-027, D-118). **Meaning changed:** R2 judges the paddle taken first, whichever it is (a sternal-first learner handling one paddle at a time passes R2); R1's gel phase ends at the earliest firm placement of either paddle |
 
 ## How to get the report
 
@@ -99,7 +100,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 12,
+  "report_version": 13,
   "kind": "rule_engine_report",
   "development_data": false,
   "demo_notice": null,
@@ -206,6 +207,8 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `contradictory` | built (R4) | The evidence contradicts itself, so Unable to Verify: the buttons were pressed only after the shock on the screen. (R8 no longer raises it, v12) |
 | `derived_gel_application` | built (v9) | R1: the result rests on a per-zone gel application derived from the annotated hand and zone boxes (only past the 9d gate, D-112), not on a tag |
 | `one_zone_in_view` | built (v12) | R8: only one placement zone was in view, so which paddle went first can't be established; Unable to Verify (D-116) |
+| `placement_time_unknown` | built (v13) | R2 or R1 could not be judged because a paddle's placement time is unknown: for R2 the sternal paddle was taken first and nothing shows when it was placed; for R1 the gel may have come after a placement whose time is unknown. Unable to Verify, never a Fail or a Pass (D-118) |
+| `take_order_from_placement` | built (v13) | R2: which paddle was taken first was deduced from its placement, because its take isn't tagged (it was placed before the other paddle was taken). The result stands; the flag shows the deduction (D-118) |
 | `possible_parallel_placement` | built (v5) | **Shared cause flag.** Both paddles were placed at the same time, a learner mistake seen in the derived placements (only once the gate is approved). It appears on **both R2 and R8**, each failed with `simultaneous`. They are separate checklist criteria, but **one action caused both failures**, so the feedback can say so (D-098). Whether this counts as one mistake or two is OQ-059 |
 | `derived_placement` | built (v5) | The result rests on a paddle placement derived from the annotated boxes by the exporter (direct evidence, method recorded), not on a tag (D-081, D-088) |
 | `annotation_coverage_assumed` | built (v3) | The timeline comes from annotation data (its header is flagged so). Every result carries it, and the report is development data, not an assessment (D-066) |

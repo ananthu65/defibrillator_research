@@ -73,8 +73,8 @@ the paddle removal, D-093, D-115), and annotation-like evidence.
 | Rule | Needs | LL | LS | T |
 |---|---|---|---|---|
 | R1 Gel applied twice | gel tags | partly (two applications seen in 1 of 12) | **direct** | partly (3 of 13) |
-| R2 Second paddle after first placed | first taken, first placement, second taken; both zones for `first_placement_not_observed` | partly (second taken in 7 of 12; the sternal zone is never in view, so `first_placement_not_observed` can't be confirmed) | **direct** | direct when the placement is tagged; `first_placement_not_observed` only where both zones are in view throughout the window (apical partly visible in 10 of 13) |
-| R8 Apical before sternal | per-paddle placements (derived, after the gate) and both zones | **unverifiable** (one zone only: no one-zone inference since D-116) | **direct** (both zones throughout) | partly (apical zone partly visible) |
+| R2 Second paddle after first placed | first taken, first placement, second taken; both zones for `first_placement_not_observed` | partly (second taken in 7 of 12; the sternal zone is never in view, so `first_placement_not_observed` can't be confirmed) | **direct** from the tags; a parallel placement can't be detected on the annotations yet (no 9c placements, see below) | direct when the placement is tagged; `first_placement_not_observed` only where both zones are in view throughout the window (apical partly visible in 10 of 13) |
+| R8 Apical before sternal | per-paddle placements (derived, after the gate) and both zones | **unverifiable** (one zone only: no one-zone inference since D-116) | both zones in view throughout, but **no evidence on the annotations yet**: Step 9c derives no placement (see below) | partly (apical zone partly visible); no 9c placements yet either |
 | R3 Paddles firmly on chest before the shock | placement and the shock time; or inference from the shock on screen (never the removal, D-115) | **unverifiable** (no shock time; a removal doesn't infer it) | **direct** | partly (shock seen in 9 of 13) |
 | R4 Both buttons pressed | button press, placement, the shock time; or inference from the shock on screen | **unverifiable** (no shock time; pressed in 2 of 12, but not judged without the shock) | **direct** | **direct** |
 | R5 Shock confirmed on screen | the screen | **unverifiable** | **direct** | partly |
@@ -90,7 +90,11 @@ data in any view. The table describes the final system.
 ## Reading
 
 - **LS** is the only view where every rule can be checked directly in most videos. It shows
-  both placement zones throughout and the screen.
+  both placement zones throughout and the screen. R8 is the exception on the annotations so far
+  (next point).
+- **Step 9c on the annotations (2026-10-19, D-118):** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). So R8 has no direct
+  evidence on the annotations in any view, and R2 can't detect a parallel placement. The camera
+  view isn't the limit here; the overlap setting is, and it is to be calibrated (OQ-018).
 - **T** shows the screen in most interim videos, but not reliably (screen tracked in 19 of 48
   older videos). Its apical zone is often only partly in view.
 - **LL** shows the apical zone throughout but never the sternal zone and almost never the

@@ -4301,6 +4301,7 @@ expected results. The pipeline command exits with 0.
 - The vocabulary, the CVAT mapping and Ananth's files are unchanged.
 
 ### Open items for Arnikan
+*All three resolved on 2026-10-19 by D-118 (see the next entry).*
 - **R2 under A-027:** keep the time-order reading (a sternal-first learner also fails R2), or
   change R2?
 - **Step 9c:** T1 is checked as "the earlier placement". Under A-027 it is the apical placement,
@@ -4309,3 +4310,183 @@ expected results. The pipeline command exits with 0.
 
 ### Next
 Wait for Arnikan. Nothing is committed.
+
+## Paddle time order from event times: R2, Step 9c, R1/9d (2026-10-19)
+
+The R8 and exporter-role changes were committed and pushed on instruction (3329e63). This change is
+not committed.
+
+### Decision recorded (Arnikan)
+- **D-118:** tag names give paddle identity, never time order (A-027). It resolves the three open
+  items of the previous entry.
+
+### What was done
+- **`paddle_order` in the procedure context (`rules/context.py`):** each paddle's take and firm
+  placement, which paddle was taken first, the earliest firm placement, and whether it is certain.
+  - **Apical placement:** the annotators' tag wins over the per-paddle placement. The sternal paddle
+    has no tag.
+  - **First taken:** a paddle placed before the other was taken counts as first even without its own
+    take (as in P05_LL, whose apical take tag is missing). An exact tie counts as apical.
+- **R2:**
+  - the paddle taken first must be placed before the other is taken, whichever it is;
+  - sternal taken first with no placement event → Unable to Verify, new flag
+    **`placement_time_unknown`**;
+  - apical taken first with its placement unseen keeps D-097;
+  - a parallel placement fails R2 and R8 as before.
+- **R1:**
+  - the gel phase ends at the earliest firm placement of either paddle, else the earliest take;
+  - if the other paddle's placement is unknown and could have been earlier, a Pass with gel after
+    the earliest time that placement could be → Unable to Verify, `placement_time_unknown`.
+- **Step 9c (`derive_paddle_placements.py`):**
+  - T1 cross-checks only the apical placement (new setting `first_placement_tag_paddle`), never the
+    order; an apical placement that disagrees with T1 is dropped alone;
+  - method `paddle_in_zone_v2`;
+  - the gate is unchanged, but the settings hash changes, so a review must name the new hash;
+  - the validation report's T1 gap is now the apical paddle's.
+- **Step 9d (`derive_gel_applications.py`):**
+  - the gel phase ends at the earliest firm placement of either paddle (the T1 tag wins over the
+    derived apical placement), else the earliest take of either paddle;
+  - new setting `second_paddle_taken_tag`; the audit uses the same phase.
+- **Output contract version 13:** the flag `placement_time_unknown`; the R2 and R1 meanings are
+  order-neutral.
+
+### Why Step 9c dropped both placements in a sternal-first video
+In `_check_tags` (before), with T1 tagged and both paddles derived:
+`earliest = min(p["first"] for p in derived)`; if `abs(earliest - t1) > window`, both paddles were
+rejected with `placement_disagrees_with_tag`. T1 was taken as "the earlier placement". Under A-027
+it is the apical placement, while the earliest placement of a sternal-first learner is the sternal
+one, so the two always disagreed. The one-paddle branch had the same assumption: a placement
+"earlier than T1 − 15" was rejected.
+
+### Before/after comparison on the interim backups (data only under the gitignored data/rule_engine/d118/)
+- **Source:** the "Complete sets" CVAT backups of the interim export (38 videos). Annotation JSON
+  only; no media opened.
+- **Runs:** the exporter and the audit before the change (HEAD 3329e63) and after it. The built
+  rules were run with the demo config, with the gates closed and with both review gates simulated
+  as approved (in memory only).
+
+| Run | Rule results | Exporter (derived placements, gel phase, issues) | Audit |
+|---|---|---|---|
+| Real settings (`min_overlap_of_paddle` 0.5) | **identical** (0 differences, both gate states) | **identical** (0 derived placements before and after) | **identical** (issues and info) |
+| Experimental `min_overlap_of_paddle` 0.1 (temporary config, not saved) | **identical** (0 differences, both gate states) | 20 → 27 derived placements (see below); 4 gel-phase ends moved | not run |
+
+**What the experimental run shows:**
+- **Placements now kept:** in 7 videos (P04_T, P05_T, P07_T, P14_LS, P14_T, P33_LS, P33_T) the
+  apical placement disagreed with T1 by more than 15 frames. The old check dropped both paddles;
+  now only the apical is dropped, and the sternal placement is kept. That is the intended fix.
+- **Earlier gel-phase ends:** in 4 of them (P14_LS, P14_T, P33_LS, P33_T) the kept sternal placement
+  is earlier than the apical tag, so the 9d gel phase ends earlier (for example P14_LS: frame 432 →
+  367). In apical-first videos this suggests the low threshold picks up a sternal paddle near its
+  zone before it is really placed.
+- **A caught side effect:** an earlier draft let a derived apical placement override the apical
+  tag. That changed R2 in P04_LL and P13_LL in the experimental run. The tag now wins for the
+  apical paddle, and those differences are gone.
+
+**Separate finding:** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives **no
+placement in any of the 38 videos**. The best paddle-zone overlap reached is 0.29 (median 0.11),
+so 9c's evidence for R8 (and R2's parallel placement) can't exist until that setting is tuned
+(OQ-018).
+
+### Tests (676 → 687)
+- **`tests/test_rule_engine_paddle_order.py` (9):** sternal-first timelines:
+  - one paddle at a time with gel before both → R2 Pass, R8 `wrong_order`, R1 Pass;
+  - gel after the sternal placement but before the apical → R1 `after_placement`;
+  - sternal placement unknown → R2 and R1 Unable to Verify, `placement_time_unknown`;
+  - gel before the sternal take → certain;
+  - a parallel placement fails R2 and R8;
+  - the helper: order from times, tie, placed-before-take, certainty.
+- **Step 9c:**
+  - T1 cross-checks only the apical placement;
+  - a sternal-first video keeps both placements;
+  - a one-zone apical placement must match T1;
+  - method v2;
+  - the validation summary.
+- **Step 9d:** the earliest placement of either paddle ends the gel phase; the apical tag wins over
+  the derived apical placement; the earliest take of either paddle ends it otherwise.
+- **R1 fixtures:** an explicit sternal take after the first placement (apical-first, certain).
+- **R2:** the message for a missing take.
+
+Full suite: **687 tests run, all pass, 1 skipped** (charging sound). The demo matches all seven
+expected results. The pipeline command exits with 0.
+
+### Documents updated
+- **Registers:** `decisions.md` (D-118; D-051 and D-086 notes); `assumptions.md` (A-027 linked).
+  The open items in the previous entry are marked resolved.
+- **Logic:**
+  - `decision_flow.yaml` (P-032, P-031, P-037, P-038);
+  - `pathways.md` (the P-032, P-031, P-037 and P-038 tables; W-81 to W-83);
+  - `diagrams.md` ((j) 9c, (n) 9d, (o) R1).
+- **The rest:**
+  - `anomalies.md`, `output_contract.md` (v13), `rules_status.md` (R1, R2);
+  - `supervisor_briefing.md` (R2), `agent_brief.md` (the R2 row);
+  - `configs/rule_engine/annotation_export.yaml` (two settings);
+  - `progress.md`, `ai_usage_log.md`.
+- The vocabulary, the CVAT labels and Ananth's files are unchanged. No exported records are
+  committed.
+
+### Next
+Wait for Arnikan. Nothing is committed.
+
+## D-118 review additions (2026-10-19)
+
+Arnikan approved D-118 with additions. Committed and pushed on instruction (this entry is part of
+the commit).
+
+### Decisions (Arnikan)
+- The apical tie-break stays, but both paddles taken within `simultaneous_window_seconds` fail R2
+  `simultaneous`, whichever is named first.
+- The deduced first take stays, and the result shows it with a flag.
+- D-097 is kept, and the output contract stays at v13 (not released yet).
+
+### What was done
+- **R2:**
+  - Both takes within the window → Fail `simultaneous`, before any order is judged
+    (`_taken_together`).
+  - A first take deduced from a placement → the result carries the new flag
+    **`take_order_from_placement`**, and the reason explains the deduction.
+- **`paddle_order`:**
+  - New field `take_deduced`.
+  - New property `gel_phase_end` (the earliest firm placement, else the earliest take). R1 now
+    uses it.
+- **Step 9d and the helper:** a test checks that both give the same gel-phase end on six synthetic
+  timelines:
+  - apical first;
+  - sternal first;
+  - sternal placement unknown;
+  - the apical tag beats its 9c placement;
+  - takes only;
+  - nothing.
+- **Step 9c finding recorded:** at `min_overlap_of_paddle` 0.5, no placement is derived in any of
+  the 38 interim videos (highest share of a paddle box inside its zone 0.29, median 0.11).
+  - On the annotations, R8 has no direct evidence and R2 can't detect a parallel placement.
+  - The LS "direct" claim for R8 in `camera_angle_evidence.md` is corrected.
+  - Linked to OQ-018.
+
+### Effect on the interim backups (the rules rerun on the same export)
+- **R2 code change:** in P14_LS, P14_T, P33_LS and P33_T, R2's code changes from
+  `taken_before_first_placed` to `simultaneous`. The two takes are 0.06–0.47 s apart, so both
+  paddles were taken together. The result is still a Fail.
+- **New flag:** P05_LL's R2 Pass now carries `take_order_from_placement`.
+- **Unchanged:** no other result changes, and no overall result changes, with the gates closed and
+  simulated as approved.
+- **Test fixture:** the R2 parallel-placement test had its takes 0.2 s apart. They are now
+  0.64 s apart, so that test still checks the gate-closed path (D-097).
+
+### Tests (687 → 692)
+- **Taken together:** apical named first, sternal named first, an exact tie, and no placement seen
+  all give `simultaneous`. Takes just outside the window are ordered.
+- **Deduced take:** R2 carries the flag; there is no flag when both takes are tagged; the helper's
+  `take_deduced`.
+- **Step 9d against the helper:** the six timelines above.
+
+### Documents updated
+- **Decisions and questions:** `decisions.md` (D-118 review additions), `open_questions.md`
+  (OQ-018).
+- **Logic:** `decision_flow.yaml`, `pathways.md` (P-032).
+- **Flags and contract:** `anomalies.md`, `output_contract.md` (v13).
+- **Status and briefing:** `rules_status.md`, `supervisor_briefing.md`,
+  `camera_angle_evidence.md`.
+- **Logs:** `progress.md`, `ai_usage_log.md`.
+
+### Not in this commit
+The investigation of the overlap setting (report only; Arnikan decides the value).

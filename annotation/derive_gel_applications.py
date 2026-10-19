@@ -3,9 +3,10 @@
 Used by ``export_rule_engine_records.py``, like Step 9c. Only the annotation JSON is used (D-085),
 and boxes use the training geometry (``track_box_at`` then ``clip_box``, D-079).
 
-1. **Gel phase:** from the start of the recording to the first paddle placement
-   (``first_paddle_firmly_on_the_chest``, else the earliest placement derived by 9c in the same export),
-   else to ``first_paddle_taken``, else to the end of the recording.
+1. **Gel phase:** from the start of the recording to the earliest firm placement of either paddle
+   (``first_paddle_firmly_on_the_chest``, the apical one under A-027, or any placement derived by 9c in
+   the same export), else to the earliest paddle taken (``first_paddle_taken`` or
+   ``second_paddle_taken``), else to the end of the recording (D-118: tag names give identity, not order).
 2. **Per frame** of the gel phase, the ``learner_hand`` box (it covers only the hand holding the gel
    bottle, A-024) is compared with each visible zone box. The gap is the distance between the two
    boxes (0 when they touch or overlap) relative to the frame diagonal; proximity, not overlap (A-025).
@@ -45,7 +46,8 @@ DERIVED_GEL = "derived_gel_application"
 GELLED, NOT_GELLED, UNKNOWN = "gelled", "not_gelled", "unknown"
 AMBIGUOUS = "ambiguous"
 REVIEW_KEYS = ("reviewed_by", "reviewed_on", "export_id", "gel_settings_sha256")
-SETTING_KEYS = {"hand_label", "zones", "gel_tag", "first_paddle_taken_tag", "gel_hand_zone_max_gap", "gel_dwell_frames",
+SETTING_KEYS = {"hand_label", "zones", "gel_tag", "first_paddle_taken_tag", "second_paddle_taken_tag",
+                "gel_hand_zone_max_gap", "gel_dwell_frames",
                 "gel_zone_nearer_ratio", "gel_exit_frames", "gel_tag_agreement_frames", "reviewed_for_r1"}
 VALIDATION_COLUMNS = ["canonical_task_id", "camera_view", "zone", "gel_phase_end_frame", "gel_phase_ended_by",
                       "bottle_start_frame", "bottle_end_frame", "hidden_frames", "ambiguous_frames",
@@ -77,7 +79,9 @@ class GelSettings:
     zones: tuple[GelZone, ...]
     gel_tag: str
     first_paddle_taken_tag: str
+    second_paddle_taken_tag: str
     first_placement_tag: str
+    first_placement_event: str       # the derived event of the paddle T1 marks (apical, A-027); T1 wins over it
     max_gap: float            # gel_hand_zone_max_gap, fraction of the frame diagonal
     dwell_frames: int
     nearer_ratio: float
@@ -90,6 +94,7 @@ class GelSettings:
         """SHA-256 of every setting that affects a derived gel event (not the review record)."""
         content = {"method": METHOD, "hand_label": self.hand_label, "zones": [vars(z) for z in self.zones],
                    "gel_tag": self.gel_tag, "first_paddle_taken_tag": self.first_paddle_taken_tag,
+                   "second_paddle_taken_tag": self.second_paddle_taken_tag,
                    "first_placement_tag": self.first_placement_tag, "gel_hand_zone_max_gap": self.max_gap,
                    "gel_dwell_frames": self.dwell_frames, "gel_zone_nearer_ratio": self.nearer_ratio,
                    "gel_exit_frames": self.exit_frames, "gel_tag_agreement_frames": self.tag_agreement_frames,
@@ -100,7 +105,7 @@ class GelSettings:
 def load_gel_settings(data: Any, zone_labels, placements, where: str) -> GelSettings:
     if not isinstance(data, dict) or set(data) != SETTING_KEYS:
         raise ValueError(f"{where}: expected exactly the keys {sorted(SETTING_KEYS)}")
-    for key in ("hand_label", "gel_tag", "first_paddle_taken_tag"):
+    for key in ("hand_label", "gel_tag", "first_paddle_taken_tag", "second_paddle_taken_tag"):
         if not isinstance(data[key], str) or not data[key]:
             raise ValueError(f"{where}.{key}: expected a CVAT label")
     zones = data["zones"]
@@ -119,7 +124,8 @@ def load_gel_settings(data: Any, zone_labels, placements, where: str) -> GelSett
         raise ValueError(f"{where}.gel_zone_nearer_ratio: must be a number of at least 1")
     return GelSettings(
         data["hand_label"], tuple(rules), data["gel_tag"], data["first_paddle_taken_tag"],
-        placements.first_placement_tag,
+        data["second_paddle_taken_tag"], placements.first_placement_tag,
+        next(r.event for r in placements.paddles if r.paddle == placements.first_placement_tag_paddle),
         _number(data["gel_hand_zone_max_gap"], f"{where}.gel_hand_zone_max_gap", 0, 1),
         _count(data["gel_dwell_frames"], f"{where}.gel_dwell_frames", minimum=1), float(ratio),
         _count(data["gel_exit_frames"], f"{where}.gel_exit_frames", minimum=0),
@@ -191,16 +197,24 @@ def _first_tag(source, label):
     return min(frames) if frames else None
 
 
-def gel_phase(source, settings: GelSettings, placement_frames=()) -> tuple[int, str]:
-    """(first frame after the gel phase, what ended it). The phase is start_frame .. end - 1."""
+def gel_phase(source, settings: GelSettings, placement_events=()) -> tuple[int, str]:
+    """(first frame after the gel phase, what ended it). The phase is start_frame .. end - 1.
+
+    D-118: it ends at the earliest firm placement of either paddle, else at the earliest paddle taken;
+    tag names never give the order. T1 marks the apical placement (A-027) and wins over its derived
+    placement; the other paddle's placement comes only from 9c.
+    """
     t1 = _first_tag(source, settings.first_placement_tag)
+    placements = [(e["frame"], "derived placement") for e in placement_events
+                  if t1 is None or e["event_name"] != settings.first_placement_event]
     if t1 is not None:
-        return t1, settings.first_placement_tag
-    if placement_frames:
-        return min(placement_frames), "derived placement"
-    taken = _first_tag(source, settings.first_paddle_taken_tag)
-    if taken is not None:
-        return taken, settings.first_paddle_taken_tag
+        placements.append((t1, settings.first_placement_tag))
+    if placements:
+        return min(placements)
+    takes = [(frame, label) for label in (settings.first_paddle_taken_tag, settings.second_paddle_taken_tag)
+             if (frame := _first_tag(source, label)) is not None]
+    if takes:
+        return min(takes)
     return source.stop_frame + 1, "end of recording"
 
 
@@ -265,7 +279,7 @@ def visits(labels, zone: str, settings: GelSettings) -> list[dict[str, Any]]:
 def derive_gel(source, video, settings: GelSettings, placement_events, issues: list[Issue]):
     """(derived events, gel summary for the record, validation rows) for one video."""
     where = dict(archive=source.archive, task_path=source.task_path, canonical_task_id=source.canonical_task_id)
-    end, ended_by = gel_phase(source, settings, [e["frame"] for e in placement_events])
+    end, ended_by = gel_phase(source, settings, placement_events)
     tags = sorted(int(t.get("frame", -1)) for t in source.tags
                   if str(t.get("label", "")) == settings.gel_tag and int(t.get("frame", -1)) < end)
     present = hand_frames(source, video, settings, end)

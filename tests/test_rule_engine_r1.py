@@ -66,12 +66,19 @@ def zone_gel(zone, t):
     return ev(f"{zone}_gel_applied", t, f"{zone}_gel@{t}", derived_gel_application=True)
 
 
-def run(events, head=None, cfg=R1):
+STERNAL_TAKEN = ev("second_paddle_taken", 11, "sternal_taken")   # after the first placement: the order is certain
+
+
+def run(events, head=None, cfg=R1, apical_first=True):
+    """apical_first adds the sternal take at 11 s (after the apical placement at 10 s), so the sternal
+    paddle can't have been placed before it (D-118); tests about that uncertainty pass False."""
+    if apical_first and not any(e.event_name == "second_paddle_taken" for e in events):
+        events = [*events, STERNAL_TAKEN]
     return assess(events, cfg, header=head if head is not None else header(), registry=discover())
 
 
-def r1(events, head=None, cfg=R1):
-    return run(events, head, cfg).outcome("R1")
+def r1(events, head=None, cfg=R1, apical_first=True):
+    return run(events, head, cfg, apical_first).outcome("R1")
 
 
 class TagCountProxy(unittest.TestCase):
@@ -215,7 +222,8 @@ def record(tags, gel_events=(), statuses=("gelled", "not_gelled")):
 
 APPROVED = replace(EXPORT, gel=replace(EXPORT.gel, review=GelReview("Arnikan", "2026-10-17", "a" * 64, EXPORT.gel.digest())))
 MANIFEST = {"export_id": "a" * 64, "gel_settings_sha256": EXPORT.gel.digest()}
-TAGS = [("Gel applied", 75), ("Gel applied", 125), ("first_paddle_firmly_on_the_chest", 250)]   # two tags: the proxy passes
+TAGS = [("Gel applied", 75), ("Gel applied", 125), ("first_paddle_firmly_on_the_chest", 250),
+        ("second_paddle_taken", 275)]   # two tags: the proxy passes; the sternal take after the placement
 
 
 class Gate(unittest.TestCase):

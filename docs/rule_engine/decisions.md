@@ -285,7 +285,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** R1 (P-038). **Replaces:** part of D-018.
 
 ### D-051 R2: second paddle taken only after the first is placed
-- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Date / by / status:** 2026-10-10 · Arnikan · approved; **made order-neutral by D-118**
+  (2026-10-19): "first" and "second" are by time, whichever paddle it is
 - **Decision:** R2 passes when the order is first paddle taken → first paddle placed firmly →
   second paddle taken. "Taken" means the first frame where the paddle is clearly visible.
 - **Affects:** R2; Increment 11.
@@ -1246,7 +1247,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** P-028, P-029; Step 9c.
 
 ### D-086 Derived placements are checked against the tags, including parallel placement
-- **Date / by / status:** 2026-10-16 · Arnikan · approved
+- **Date / by / status:** 2026-10-16 · Arnikan · approved; **the T1 check is changed by D-118**
+  (2026-10-19): T1 cross-checks only the apical placement, never the order
 - **Decision:** The tags are T1 (`first_paddle_firmly_on_the_chest`) and T2
   (`paddles_firmly_on_chest`), following the annotators' convention (A-019). The window is 15
   frames.
@@ -1373,6 +1375,63 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   format and remove the separate annotation adapter, so that annotations and model output share
   one input path ([implementation_plan.md](implementation_plan.md), "Future").
 - **Affects:** P-001, P-028, P-029, P-030, P-031, P-037.
+
+### D-118 Tag names give paddle identity, never time order
+- **Date / by / status:** 2026-10-19 · Arnikan · approved. **Resolves** the three consequences of
+  A-027 listed in progress.md on 2026-10-19 (R2, Step 9c, R1/9d).
+- **Decision:** under A-027, `first_paddle_*` means the apical paddle and `second_paddle_*` the
+  sternal one. Wherever a rule needs "first" or "second" in time, it is computed from event times.
+  - **One shared helper:** `paddle_order` in the procedure context (`rules/context.py`). It gives:
+    - each paddle's take and firm-placement time. For the apical paddle, the annotators' tag
+      (`first_paddle_placed`) wins over its per-paddle placement; the sternal paddle has no tag,
+      so only its per-paddle placement counts;
+    - which paddle was taken first. An exact tie counts as apical. A paddle placed before the other
+      was taken counts as first even when its own take isn't tagged;
+    - the earliest known firm placement, and whether it is certain. It isn't certain when the other
+      paddle's placement is unknown and that paddle could have been placed earlier.
+
+    R1 and R2 use it, and no rule reads order from tag names.
+  - **R2 (order-neutral):** Pass when the paddle taken first is placed firmly before the other
+    paddle is taken, whichever paddle it is; the failure codes are unchanged.
+    - A sternal-first learner handling one paddle at a time passes R2; only R8 reports the order.
+    - The sternal paddle taken first with its placement unknown → Unable to Verify,
+      **`placement_time_unknown`**, never Fail. No tag marks the sternal placement, so its absence
+      is no evidence.
+    - The apical paddle taken first with its placement unseen keeps D-097 (`first_placement_not_observed`
+      when both zones were visible).
+    - A parallel placement still fails both R2 and R8 (D-098; OQ-059 unchanged).
+  - **Step 9c (order-neutral):** each paddle is derived from its own box in its own zone,
+    whatever the order. T1 (`first_paddle_firmly_on_the_chest`) cross-checks only the apical
+    placement (setting `first_placement_tag_paddle`), never the order. An apical placement that
+    disagrees with T1 is dropped alone; the sternal one is unaffected. Method `paddle_in_zone_v2`.
+    The review gate is unchanged; the settings hash changes, so any review must name the new hash.
+  - **R1 and Step 9d:** the gel phase ends at the earliest firm placement of either paddle, else at
+    the earliest take of either paddle (9d: new setting `second_paddle_taken_tag`). If the other
+    paddle's placement is unknown and could have been earlier, a Pass whose gel may fall after it
+    becomes Unable to Verify, `placement_time_unknown`.
+- **Why the old 9c dropped both placements in a sternal-first video:** `_check_tags` took T1 as
+  "the earlier placement". It compared `min(first placements)` with T1 and dropped both paddles
+  when they were more than 15 frames apart. With the sternal paddle first, the earliest placement
+  is the sternal one and T1 is the apical one, so they always disagreed.
+- **Checked on the interim backups (2026-10-19):** the rule results are identical before and
+  after, with the gates closed and simulated as approved. The exporter output and the audit are
+  identical too. At the placeholder overlap of 0.5 no placement is derived in any video either
+  way (progress.md).
+- **Review additions (Arnikan, 2026-10-19):**
+  - **Both paddles taken together:** both takes within `simultaneous_window_seconds` of each other
+    → R2 Fail `simultaneous`, whichever is named first; the apical tie-break never decides it. On
+    the interim backups this changes R2's code from `taken_before_first_placed` to `simultaneous`
+    in P14_LS, P14_T, P33_LS and P33_T (takes 0.06–0.47 s apart). They still fail, and no overall
+    result changes.
+  - **A take deduced from a placement:** when the paddle taken first is deduced from its placement
+    (its take isn't tagged), R2 carries the flag **`take_order_from_placement`** (P05_LL).
+  - **Step 9d and the helper agree:** a test checks that they give the same gel-phase end on the
+    same timelines. In the pipeline their inputs can differ: 9d uses the 9c placements of its export
+    even while the 9c gate is closed, while the engine sees them only past the gate (D-088).
+  - **Step 9c finding:** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). So on the annotations R8 has no direct evidence
+    and R2 can't detect a parallel placement until that setting is calibrated (OQ-018).
+- **Affects:** R2 (P-032), R1 (P-038), Step 9c (P-031), Step 9d (P-037); the output contract
+  (v13). **Assumption:** A-027.
 
 ## Working method
 

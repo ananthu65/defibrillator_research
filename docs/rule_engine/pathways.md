@@ -51,9 +51,9 @@ and T2 is `paddles_firmly_on_chest`, following the annotators' convention (A-019
 | Zone not visible on a frame (occlusion) | **Unknown**: doesn't start or end a placement; in on both sides of the gap is the same placement (A-020, D-090) | counted in `frames_zone_not_visible` |
 | Two boxes of one paddle on a frame during a placement | No event for that paddle | `placement_duplicate_paddle_box` (review) |
 | Zone has no visible track, or the paddle never settles | No event (reason in the validation report) | — |
-| T1 present, both derived, the earlier within 15 frames of T1 | Both events: direct evidence, flagged `derived_placement` | — |
-| T1 present, both derived, the earlier more than 15 frames from T1 | No event for either paddle | `placement_disagrees_with_tag` |
-| T1 present, one derived (one-zone view) | Event if not earlier than T1 − 15; otherwise none | `placement_disagrees_with_tag` |
+| Each paddle | Derived from its own box in its own zone, whatever the order (D-118); events are direct evidence, flagged `derived_placement`, method `paddle_in_zone_v2` | — |
+| T1 present, the apical placement within 15 frames of T1 (T1 marks the apical paddle, A-027) | Kept | — |
+| T1 present, the apical placement more than 15 frames from T1 | No event for the apical paddle; the sternal one is unaffected (T1 never decides the order) | `placement_disagrees_with_tag` |
 | T1 missing, both within `simultaneous_window_seconds` | Both kept, flagged `possible_parallel_placement`; enough for R2/R8 to Fail `simultaneous` once the gate is approved (D-091) | — |
 | T1 missing otherwise | No events | — |
 | T2 present, a first placement after T2 + 15 | No event for that paddle (both if parallel) | `placement_disagrees_with_tag` |
@@ -65,7 +65,7 @@ bottle, A-024) and the zone boxes. Settings are placeholders.
 
 | Condition | Outcome |
 |---|---|
-| Gel phase | From the start to `first_paddle_firmly_on_the_chest`, else the earliest 9c placement, else `first_paddle_taken`, else the end of the recording |
+| Gel phase | From the start to the earliest firm placement of either paddle (the apical tag, winning over its 9c placement; the 9c sternal placement), else the earliest take of either paddle, else the end of the recording (D-118) |
 | A frame: hand box within `gel_hand_zone_max_gap` (5% of the diagonal) of a zone box, the other visible zone at least 2× further | The frame belongs to the nearer zone (proximity, not overlap, A-025) |
 | A frame: about as near to both zones | Ambiguous: belongs to neither |
 | A visit to a zone (dips up to `gel_exit_frames` = 5 allowed) with at least `gel_dwell_frames` = 10 frames | An application, event `apical_gel_applied` / `sternal_gel_applied`, flagged `derived_gel_application`; separate visits count separately |
@@ -367,12 +367,14 @@ always means a shock on the screen, which infers, and without one the rule is No
 because of R5 (OQ-061). A paddle removal never infers (D-115).
 
 #### P-038 R1: gel applied twice, once to each zone, before placement (built, Increment 17; pending until approved)
-The gel phase ends at the first placement (else `first_paddle_taken`). The order between the
-zones and more than two applications are not checked (D-110, OQ-021).
+The gel phase ends at the earliest firm placement of either paddle, else the earliest take of
+either paddle (`paddle_order`, D-118). The order between the zones and more than two applications
+are not checked (D-110, OQ-021).
 
 | Condition | Outcome | Code and flags |
 |---|---|---|
 | Gel only after the first placement | Fail (D-109) | `after_placement` |
+| A pass, but the other paddle's placement is unknown and could have been earlier, and gel may fall after it | Unable to Verify, never Pass (D-118) | `placement_time_unknown` |
 | Past the 9d gate: both zones gelled | Pass – Direct, then the period check (P-024) | `derived_gel_application`; `timing_not_checked` while the period is unset |
 | Past the gate: one gelled, the other not gelled | Fail | `applied_once` |
 | Past the gate: neither gelled | Fail | `missing` |
@@ -415,16 +417,22 @@ one counts; the count stays undecided (OQ-023).
 | No removal, both placement zones visible throughout from the shock to the end of the recording (A-022) | Fail | `missing` |
 | No removal, a placement zone not visible throughout that window | Unable to Verify, never Fail | — |
 
-#### P-032 R2: second paddle taken after the first is placed (built, Increment 11; pending until approved)
+#### P-032 R2: the paddle taken first is placed before the other is taken (built, Increment 11; order-neutral since D-118; pending until approved)
+"First" and "second" are by time (`paddle_order`), never by tag name: under A-027 the tag names
+give identity only.
+
 | Condition | Outcome | Code |
 |---|---|---|
 | Derived placements flagged `possible_parallel_placement` (only once the gate is approved) | Fail (D-091) | `simultaneous` |
-| No confident second paddle taken | Unable to Verify | — |
-| First placement before the second paddle is taken | Pass – Direct | — |
+| Both paddles taken within `simultaneous_window_seconds` of each other, whichever is named first | Fail (D-118) | `simultaneous` |
+| Which paddle was taken first can't be established (a take missing, and that paddle not placed before the other was taken) | Unable to Verify | — |
+| A take missing, but that paddle was placed before the other was taken | It was taken first; judged as below, with the flag | `take_order_from_placement` |
+| The paddle taken first is placed before the other is taken | Pass – Direct, whichever paddle it is | — |
 | Within `simultaneous_window_seconds` | Fail | `simultaneous` |
-| Second paddle taken before the first placement | Fail | `taken_before_first_placed` |
-| First placement not seen, a low-confidence one exists | Unable to Verify (D-010) | — |
-| First placement not seen, both zones visible throughout the window from first paddle taken to second paddle taken | Fail: either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097) | `first_placement_not_observed` |
+| The other paddle taken before the first-taken one was placed | Fail | `taken_before_first_placed` |
+| The sternal paddle taken first, its placement unknown (no tag marks it) | Unable to Verify, never Fail (D-118) | `placement_time_unknown` |
+| The apical paddle taken first, its placement not seen, a low-confidence one exists | Unable to Verify (D-010) | — |
+| The apical paddle taken first, its placement not seen, both zones visible throughout the window between the two takes | Fail: either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097) | `first_placement_not_observed` |
 | First placement not seen, a zone not visible throughout that window | Unable to Verify | — |
 
 #### P-016 R3/R4 inferred pass (built, Increments 15–16; direct evidence and coverage in P-035 and P-036)
@@ -1080,3 +1088,32 @@ today.
 1. Applications at 3 s and 6 s.
 2. Period unset → Pass with `timing_not_checked`. An approved 2 s → **Fail
    `outside_time_period`**. An approved "no limit" → Pass, fully checked.
+
+### W-81 A sternal-first learner, one paddle at a time
+*(Built; D-118, A-027.)*
+1. Gel at 1 s and 2 s. Sternal paddle taken at 3 s (`second_paddle_taken`, the sternal paddle under
+   A-027) and placed at 5 s (a per-paddle placement). Apical paddle taken at 6 s
+   (`first_paddle_taken`) and placed firmly at 9 s (`first_paddle_firmly_on_the_chest`).
+2. `paddle_order`: the sternal paddle was taken first; the earliest firm placement is 5 s, certain.
+3. **R2 Pass – Direct:** the paddle taken first (sternal) was placed before the other was taken.
+4. **R8 Fail `wrong_order`:** the sternal paddle was placed first. Only R8 reports the order.
+5. **R1 Pass:** the gel came before the first placement, at 5 s (not the apical one at 9 s). Gel at
+   6.5 s and 7.5 s instead → **Fail `after_placement`**.
+
+### W-82 A sternal-first learner whose sternal placement isn't seen
+*(Built; D-118.)*
+1. As W-81, but no event marks the sternal placement: no tag exists for it, and derived placements
+   reach the engine only past the gate.
+2. **R2 → Unable to Verify**, `placement_time_unknown`: the sternal paddle was taken first, but when it
+   was placed is unknown. Never a Fail.
+3. **R1:** the sternal placement could be any time after its take at 3 s. Gel at 1 s and 2 s is
+   certainly before it → Pass. Gel at 4 s may be after it → **Unable to Verify**,
+   `placement_time_unknown`, never Pass.
+
+### W-83 Step 9c on a sternal-first video
+*(Built; D-118.)*
+1. Sternal placement derived at frame 30, apical at frame 60; T1 tagged at frame 60.
+2. Before D-118, T1 was taken as "the earlier placement": the earliest (sternal, frame 30) was 30
+   frames from T1, so both placements were dropped (`placement_disagrees_with_tag`).
+3. Now T1 cross-checks only the apical placement (frame 60, in agreement). Both events are kept,
+   and R8 can report `wrong_order`.

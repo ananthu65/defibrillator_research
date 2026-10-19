@@ -272,12 +272,10 @@ flowchart TD
     UK -.->|"in on both sides of the gap:<br/>same placement"| P
     BL -.->|"touches a placement"| NB["No event for this paddle<br/>placement_duplicate_paddle_box<br/>(Ananth fixes the tracks)"]
     P --> T{"T1 tagged?"}
-    T -->|yes, both paddles derived| T1{"Earlier placement within<br/>15 frames of T1?"}
-    T1 -->|yes| K["Keep both"]
-    T1 -->|no| N1["No event for either<br/>placement_disagrees_with_tag"]
-    T -->|yes, one paddle derived| T1b{"Not earlier than<br/>T1 − 15 frames?"}
-    T1b -->|yes| K
-    T1b -->|no| N1
+    T -->|yes| T1{"Apical placement within<br/>15 frames of T1?<br/>(T1 marks the apical paddle, A-027;<br/>it never decides the order, D-118)"}
+    T1 -->|yes| K["Keep each derived paddle"]
+    T1 -->|no| N1["No event for the apical paddle<br/>placement_disagrees_with_tag<br/>(the sternal one is kept)"]
+    N1 --> K
     T -->|no| PP{"Both derived, within<br/>simultaneous_window_seconds?"}
     PP -->|yes| KP["Keep both, flagged<br/>possible_parallel_placement<br/>(R2/R8 Fail simultaneous once<br/>the gate is approved, D-091)"]
     PP -->|no| N2["No events"]
@@ -375,7 +373,7 @@ the zone boxes. Settings are placeholders.
 
 ```mermaid
 flowchart TD
-    PH["Gel phase: start → first placement tag<br/>(else 9c placement, else first_paddle_taken)"] --> H{"learner_hand box<br/>in the gel phase?"}
+    PH["Gel phase: start → earliest firm placement<br/>of either paddle (apical tag, 9c sternal placement),<br/>else the earliest take of either paddle (D-118)"] --> H{"learner_hand box<br/>in the gel phase?"}
     H -->|no| NH["Every zone unknown<br/>gel_hand_not_tracked"]
     H -->|yes| B["Bottle period: the hand box's<br/>first to last frame"]
     B --> F["Each frame: gap from the hand box to<br/>each visible zone box (over the diagonal)"]
@@ -402,6 +400,9 @@ flowchart TD
 
 ## (o) R1: gel twice, once to each zone, before placement (P-038, built in Increment 17; pending until approved)
 
+The first placement is the earliest firm placement of either paddle, by time (`paddle_order`,
+D-118); the tag names give identity only (A-027).
+
 ```mermaid
 flowchart TD
     A{"Gel only after the<br/>first placement?"} -->|yes| F0["Fail after_placement"]
@@ -424,4 +425,7 @@ flowchart TD
     P2 --> T
     T -->|"unset (now)"| TN["timing_not_checked"]
     T -->|"approved, exceeded"| F5["Fail outside_time_period"]
+    P1 -.-> UO{"Other paddle's placement unknown<br/>and possibly earlier, gel after<br/>the earliest time it could be?"}
+    P2 -.-> UO
+    UO -->|yes| U3["Unable to Verify<br/>placement_time_unknown (D-118)"]
 ```

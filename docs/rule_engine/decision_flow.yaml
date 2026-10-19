@@ -119,12 +119,10 @@ decision_points:
         outcome: No event for that paddle; review issue placement_duplicate_paddle_box (Ananth fixes the tracks)
       - condition: Zone of the paddle has no visible track, or the paddle never settles in its zone
         outcome: No event (reason in placement_validation.csv)
-      - condition: T1 present, both paddles derived, the earlier within 15 frames of T1
-        outcome: Events for both, direct evidence flagged derived_placement, method in metadata
-      - condition: T1 present, both paddles derived, the earlier more than 15 frames from T1
-        outcome: No event for either paddle; review issue placement_disagrees_with_tag
-      - condition: T1 present, one paddle derived (e.g. a one-zone view)
-        outcome: Event if not earlier than T1 minus 15 frames; otherwise no event, placement_disagrees_with_tag
+      - condition: T1 present; T1 marks the apical paddle (A-027), so it cross-checks only the apical placement and never the order (D-118)
+        outcome: Each paddle derived from its own box in its own zone, whatever the order; events direct, flagged derived_placement, method paddle_in_zone_v2 in metadata
+      - condition: T1 present, the apical placement more than 15 frames from T1
+        outcome: No event for the apical paddle; the sternal paddle is unaffected; review issue placement_disagrees_with_tag
       - condition: T1 missing, both placements within simultaneous_window_seconds of each other
         outcome: Both events kept, flagged possible_parallel_placement (A-019); enough for R2 and R8 to fail with simultaneous once the gate is approved (D-091)
       - condition: T1 missing otherwise
@@ -133,10 +131,10 @@ decision_points:
         outcome: No event for that paddle (both, for a parallel placement); placement_disagrees_with_tag
       - condition: Gate review record missing, or for another export_id or other placement settings
         outcome: The Increment 10 adapter does not pass derived placements to the engine; R8 cannot use them (D-088)
-    config: [annotation_export.yaml derived_placements (min_overlap_of_paddle, steady_frames, max_centre_motion_of_diagonal, exit_frames, tag_agreement_window_frames, reviewed_for_r8), engine.yaml simultaneous_window_seconds]
+    config: [annotation_export.yaml derived_placements (min_overlap_of_paddle, steady_frames, max_centre_motion_of_diagonal, exit_frames, tag_agreement_window_frames, first_placement_tag_paddle, reviewed_for_r8), engine.yaml simultaneous_window_seconds]
     code: annotation/derive_paddle_placements.py (derive_placements, derived_placements_approved), called by annotation/export_rule_engine_records.py
-    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091, D-104]
-    assumptions: [A-019, A-020]
+    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091, D-104, D-118]
+    assumptions: [A-019, A-020, A-027]
     open_questions: [OQ-004]
 
   - id: P-037
@@ -147,7 +145,7 @@ decision_points:
     inputs: [learner_hand boxes, zone boxes, tags first_paddle_firmly_on_the_chest, first_paddle_taken and Gel applied, the 9c placements of the same export]
     branches:
       - condition: Gel phase
-        outcome: From the start of the recording to first_paddle_firmly_on_the_chest, else the earliest 9c placement, else first_paddle_taken, else the end of the recording; 9d's settings hash includes 9c's
+        outcome: From the start of the recording to the earliest firm placement of either paddle (T1 for the apical paddle, winning over its 9c placement; the 9c sternal placement), else the earliest take of either paddle, else the end of the recording (D-118); 9d's settings hash includes 9c's
       - condition: A frame where the hand box is within gel_hand_zone_max_gap of a zone box (gap between the boxes over the frame diagonal; proximity, not overlap) and the other visible zone is at least gel_zone_nearer_ratio times further
         outcome: The frame belongs to the nearer zone; about as near to both -> ambiguous, belongs to neither
       - condition: A visit (that zone's frames, dips of up to gel_exit_frames allowed) with at least gel_dwell_frames frames
@@ -166,7 +164,7 @@ decision_points:
         outcome: The Increment 10 adapter passes on neither the events nor the zone statuses; R1 uses the tag-count proxy (D-112)
     config: [annotation_export.yaml derived_gel (hand_label, zones, gel_tag, gel_hand_zone_max_gap, gel_dwell_frames, gel_zone_nearer_ratio, gel_exit_frames, gel_tag_agreement_frames, reviewed_for_r1)]
     code: annotation/derive_gel_applications.py (derive_gel, derived_gel_approved), called by annotation/export_rule_engine_records.py; annotation/audit_rule_engine_checks.py (gel_hand_not_tracked)
-    decisions: [D-073, D-085, D-111, D-112]
+    decisions: [D-073, D-085, D-111, D-112, D-118]
     assumptions: [A-023, A-024, A-025]
     open_questions: [OQ-018, OQ-021]
 
@@ -246,40 +244,47 @@ decision_points:
     open_questions: [OQ-016, OQ-057]
 
   - id: P-032
-    name: R2 second paddle taken after the first is placed
+    name: R2 the paddle taken first is placed before the other is taken (order-neutral, D-118)
     stage: rule
     status: built
-    decides: R2's result (Increment 11; D-051, D-091, D-095); it runs only when R2 is approved in rules.yaml, pending until then
-    inputs: [first_paddle_taken, first_paddle_placed anchor, second_paddle_taken, derived placements (only past the gate), placement-zone coverage over a window]
+    decides: R2's result (Increment 11; D-051, D-091, D-095, D-118); it runs only when R2 is approved in rules.yaml, pending until then. Which paddle went first comes from event times (ctx.paddle_order), never from the tag names (A-027)
+    inputs: [paddle_order (each paddle's take and firm placement; the apical tag first_paddle_placed wins over its per-paddle placement), derived placements (only past the gate), placement-zone coverage over a window]
     branches:
       - condition: Derived placements flagged possible_parallel_placement (present only once the gate is approved, D-088)
         outcome: Fail simultaneous (D-091), with the shared cause flag; R8 fails too, separately (D-098)
         failure_codes: [simultaneous]
         flags: [possible_parallel_placement, derived_placement]
-      - condition: No confident second paddle taken
+      - condition: Both paddles taken within simultaneous_window_seconds of each other, whichever is named first (the apical tie-break never decides this)
+        outcome: Fail simultaneous; neither was placed before the other was taken
+        failure_codes: [simultaneous]
+      - condition: Which paddle was taken first can't be established (a take missing, and that paddle not placed before the other was taken)
         outcome: Unable to Verify; the order cannot be checked
-      - condition: First placement before the second paddle is taken (outside the simultaneous window)
-        outcome: Pass – Direct
-      - condition: First placement and second paddle taken within simultaneous_window_seconds
+      - condition: A take missing, but that paddle was placed before the other was taken
+        outcome: It was taken first; R2 is judged as below, and the result carries the flag (D-118)
+        flags: [take_order_from_placement]
+      - condition: The paddle taken first (by time; an exact tie counts as apical) placed before the other paddle is taken (outside the simultaneous window)
+        outcome: Pass – Direct, whichever paddle it is; a sternal-first learner handling one paddle at a time passes, and R8 reports the order
+      - condition: Its placement and the other paddle taken within simultaneous_window_seconds
         outcome: Fail simultaneous
         failure_codes: [simultaneous]
-      - condition: Second paddle taken before the first placement
+      - condition: The other paddle taken before the first-taken paddle was placed
         outcome: Fail taken_before_first_placed
         failure_codes: [taken_before_first_placed]
-      - condition: First placement not seen, a low-confidence one exists
+      - condition: The sternal paddle taken first and its placement unknown (no tag marks the sternal placement; derived ones only past the gate)
+        outcome: Unable to Verify, never Fail (D-118)
+        flags: [placement_time_unknown]
+      - condition: The apical paddle taken first, its placement not seen, a low-confidence one exists
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
-      - condition: First placement not seen, no first paddle taken before the second
-        outcome: Unable to Verify; there is no window
-      - condition: First placement not seen; both placement zones visible throughout the window from first paddle taken to second paddle taken
+      - condition: The apical paddle taken first, its placement not seen; both placement zones visible throughout the window between the two takes
         outcome: Fail first_placement_not_observed - either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097); past the gate, derived parallel placements refine it to simultaneous (D-091)
         failure_codes: [first_placement_not_observed]
       - condition: First placement not seen; a zone not visible throughout that window (partly, never, or unknown)
         outcome: Unable to Verify
     config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
-    code: rules/video_rules.py (second_paddle_after_first_placed)
-    decisions: [D-051, D-091, D-092, D-095, D-097, D-098]
-    assumptions: [A-019]
+    code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order)
+    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118]
+    assumptions: [A-019, A-027]
     open_questions: [OQ-059]
 
   - id: P-001
@@ -805,10 +810,13 @@ decision_points:
     stage: rule
     status: built
     decides: R1's result (Increment 17); runs only when R1 is approved in rules.yaml, pending until the supervisor confirms its definition
-    inputs: [gel_applied tags, apical_gel_applied / sternal_gel_applied (past the 9d gate), regions apical_gel and sternal_gel (their gel status), the first placement (first_paddle_placed or a per-paddle placement), first_paddle_taken, placement zone visibility in the gel phase, rules.yaml gel_application_period_seconds]
+    inputs: [gel_applied tags, apical_gel_applied / sternal_gel_applied (past the 9d gate), regions apical_gel and sternal_gel (their gel status), paddle_order (the earliest firm placement of either paddle and whether it is certain; else the earliest take, D-118), placement zone visibility in the gel phase, rules.yaml gel_application_period_seconds]
     branches:
       - condition: Gel only after the first placement (no gel before it, a gel tag or per-zone application after it beyond simultaneous_window_seconds)
         outcome: Fail after_placement (D-109)
+      - condition: A pass, but the other paddle's placement is unknown and could have been earlier than the known one, and a counted gel event falls after the earliest time that placement could be
+        outcome: Unable to Verify, never Pass (D-118)
+        flags: [placement_time_unknown]
         failure_codes: [after_placement]
       - condition: Past the 9d gate; both zones gelled before the placement
         outcome: Pass – Direct, then the period check
@@ -846,7 +854,7 @@ decision_points:
         outcome: Not checked (D-110, OQ-021)
     config: [configs/rules.yaml timing_limits.gel_application_period_seconds, engine.yaml gel_minimum_gap_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_gel, sternal_gel, apical_zone, sternal_zone)]
     code: rules/video_rules.py (gel_applied_twice)
-    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113]
+    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118]
     assumptions: [A-023, A-026]
     open_questions: [OQ-016, OQ-021]
 
