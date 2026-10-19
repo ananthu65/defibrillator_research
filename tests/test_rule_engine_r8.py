@@ -1,4 +1,4 @@
-"""Increment 12: R8, apical paddle placed before sternal (P-015; D-013, D-014, D-015, D-058, D-060, D-091, D-098, D-099)."""
+"""Increment 12: R8, apical paddle placed before sternal (P-015; D-013, D-014, D-058, D-060, D-091, D-098, D-099, D-116)."""
 import copy
 from dataclasses import replace
 import unittest
@@ -88,7 +88,7 @@ class BothZonesVisible(unittest.TestCase):
 
 
 class OneZoneVisible(unittest.TestCase):
-    """D-013: only the apical zone in view; its placement against the first placement (window 0.5 s)."""
+    """D-116: only one zone in view gives Unable to Verify, `one_zone_in_view`; no inference either way."""
 
     def outcome(self, apical_at, first_at=7, cfg=R8, head=None):
         events = [*TAGS, ev("first_paddle_firmly_on_the_chest", first_at, "first")]
@@ -96,39 +96,41 @@ class OneZoneVisible(unittest.TestCase):
             events.append(ev("apical_paddle_placed", apical_at, "a"))
         return r8(events, head or header(**ONE_ZONE), cfg)
 
-    def test_visible_paddle_at_the_first_placement_time_was_first(self):
-        outcome = self.outcome(7.2)
-        self.assertEqual((outcome.kind, outcome.evidence), ("pass_inferred", ("a", "first")))
+    def test_apical_zone_only_is_unable_to_verify_whatever_the_timing(self):
+        for apical_at in (4, 7.2, 11):   # before, at and after the first-placement tag
+            with self.subTest(apical_at=apical_at):
+                outcome = self.outcome(apical_at)
+                self.assertEqual((outcome.kind, outcome.evidence, outcome.flags),
+                                 ("unable_to_verify", ("a",), ("one_zone_in_view",)))
+                self.assertIn("only the apical zone was in view", outcome.reason)
 
-    def test_visible_paddle_clearly_later_means_the_other_was_first(self):
-        outcome = self.outcome(11)   # the apical paddle was second, so the sternal was first: an inferred mistake
-        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("inferred_fail_policy_undecided",)))
-        self.assertIn("so the sternal paddle was first", outcome.reason)
+    def test_the_circular_case_no_longer_passes(self):
+        """A-027: first_paddle_firmly_on_the_chest is the apical placement. A sternal-first learner (second
+        paddle taken first) in an apical-zone-only view used to "match" and get a false Pass - Inferred."""
+        events = [ev("second_paddle_taken", 3, "sternal_taken"), ev("first_paddle_taken", 6, "apical_taken"),
+                  ev("first_paddle_firmly_on_the_chest", 9, "apical_firm"), ev("apical_paddle_placed", 9, "a")]
+        outcome = r8(events, header(**ONE_ZONE))
+        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("one_zone_in_view",)))
+        self.assertNotEqual(outcome.kind, "pass_inferred")
 
-    def test_inferred_mistake_follows_the_setting_once_decided(self):
-        failing = self.outcome(11, cfg=config("R8", inferred_fail_outcome="fail"))
-        self.assertEqual((failing.kind, failing.failure_code), ("fail", "wrong_order"))
-        lenient = self.outcome(11, cfg=config("R8", inferred_fail_outcome="unable_to_verify"))
-        self.assertEqual((lenient.kind, lenient.flags), ("unable_to_verify", ()))
+    def test_sternal_zone_only(self):
+        events = [*TAGS, ev("first_paddle_firmly_on_the_chest", 7, "first"), ev("sternal_paddle_placed", 7.1, "s")]
+        outcome = r8(events, header(apical=None, sternal=((0.0, 30.0),)))
+        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("one_zone_in_view",)))
+        self.assertIn("only the sternal zone was in view", outcome.reason)
 
-    def test_visible_paddle_clearly_before_the_first_placement_is_contradictory(self):
-        outcome = self.outcome(4)
-        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("contradictory",)))
+    def test_no_first_placement_tag_is_the_same(self):
+        outcome = r8([*TAGS, ev("apical_paddle_placed", 7, "a")], header(**ONE_ZONE))
+        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("one_zone_in_view",)))
 
     def test_visible_zone_without_its_placement_is_placement_missing(self):
         outcome = self.outcome(None)
         self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("placement_missing",)))
 
-    def test_sternal_zone_only(self):
-        events = [*TAGS, ev("first_paddle_firmly_on_the_chest", 7, "first"), ev("sternal_paddle_placed", 7.1, "s")]
-        outcome = r8(events, header(apical=None, sternal=((0.0, 30.0),)))   # sternal first: inferred mistake
-        self.assertEqual((outcome.kind, outcome.flags), ("unable_to_verify", ("inferred_fail_policy_undecided",)))
-
-    def test_no_first_placement_is_not_determinable(self):
-        events = [*TAGS, ev("apical_paddle_placed", 7)]
-        outcome = r8(events, header(**ONE_ZONE))
-        self.assertEqual(outcome.kind, "unable_to_verify")
-        self.assertIn("no first placement time", outcome.reason)
+    def test_the_inference_settings_are_gone(self):
+        for name in ("inferred_fail_outcome", "placement_match_window_seconds"):
+            with self.subTest(name):
+                self.assertNotIn(name, R8.engine.settings)
 
 
 class ZoneWindows(unittest.TestCase):
@@ -136,15 +138,15 @@ class ZoneWindows(unittest.TestCase):
 
     def test_zone_out_of_view_during_the_placement_phase_does_not_count(self):
         # The sternal zone is visible only after 20 s, so during placement only the apical zone was in view:
-        # its missing sternal placement is not placement_missing; the one-zone inference applies.
+        # its missing sternal placement is not placement_missing; it is a one-zone view (D-116).
         events = [*TAGS, ev("first_paddle_firmly_on_the_chest", 7, "first"), ev("apical_paddle_placed", 7.1, "a")]
         outcome = r8(events, header(apical=((0.0, 30.0),), sternal=((20.0, 30.0),)))
-        self.assertEqual(outcome.kind, "pass_inferred")
+        self.assertEqual(outcome.flags, ("one_zone_in_view",))
 
     def test_zone_in_view_for_only_part_of_the_phase_does_not_count_as_visible(self):
         events = [*TAGS, ev("first_paddle_firmly_on_the_chest", 7, "first"), ev("apical_paddle_placed", 7.1, "a")]
         outcome = r8(events, header(apical=((0.0, 30.0),), sternal=((0.0, 9.0),)))
-        self.assertEqual(outcome.kind, "pass_inferred")
+        self.assertEqual(outcome.flags, ("one_zone_in_view",))
 
 
 class Fallback(unittest.TestCase):

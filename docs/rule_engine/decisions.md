@@ -312,7 +312,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** A2, A4, A7; Increments 19 and 22. **Resolved:** OQ-011.
 
 ### D-013 R8: one-visible-zone inference, owned by the rule engine
-- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Date / by / status:** 2026-10-10 · Arnikan · approved; **the inference part is superseded by
+  D-116** (2026-10-19): with one zone in view R8 gives Unable to Verify
 - **Decision:**
   - **Both placement zones visible:** compare the apical and sternal placement times directly.
   - **Only one zone visible:** compare that zone's placement time with the first placement time.
@@ -356,7 +357,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** R8; P-015; setting `assume_first_taken_is_apical`. **Open question:** OQ-006.
 
 ### D-015 Whether an inferred Fail counts as Fail is undecided
-- **Date / by / status:** 2026-10-10 · Arnikan · undecided
+- **Date / by / status:** 2026-10-10 · Arnikan · undecided; **no longer applicable** (D-116,
+  2026-10-19): R8 has no inferred result, and the setting is removed
 - **Decision:** One setting, `inferred_fail_outcome`. Until it is decided, an inferred Fail is
   reported as Unable to Verify, flagged `inferred_fail_policy_undecided`.
 - **Affects:** R8; P-015. **Open question:** OQ-005.
@@ -872,6 +874,23 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** P-009, P-011, P-012, P-014, P-016, P-021, P-034, P-035, P-036; R3, R4, R6, and
   R7/A6 and A8 when built; the output contract (v11). **Resolves:** OQ-060.
 
+### D-116 R8 has no one-zone inference: one zone in view is Unable to Verify
+- **Date / by / status:** 2026-10-19 · Arnikan · approved. **Supersedes the inference part of
+  D-013**; D-015 no longer applies.
+- **Decision:** when only one placement zone is in view (one placement seen, the other paddle's
+  zone not covered over the placement phase), R8 gives **Unable to Verify**, flagged
+  **`one_zone_in_view`**. There is no Pass – Inferred and no inferred mistake.
+  - The both-zones direct comparison is unchanged, and so are `placement_missing` (D-058), the
+    parallel placement (D-098) and the off-by-default apical-first fallback (D-014, D-060).
+  - The settings that only the inference used are removed: `inferred_fail_outcome` (D-015) and
+    `placement_match_window_seconds`. The flag `inferred_fail_policy_undecided` is gone, and R8
+    no longer raises `contradictory` (R4 still does).
+- **Reason:** under the team's labelling (A-027), `first_paddle_firmly_on_the_chest` (canonical
+  `first_paddle_placed`) is the **apical** placement, not the earliest placement. Comparing the
+  visible zone's placement with it is circular: with only the apical zone in view it always
+  "matches" and gives a false Pass – Inferred, even when the sternal paddle went first.
+- **Affects:** R8 (P-015); the output contract (v12). **Assumption:** A-027. **Closes:** OQ-005.
+
 ### D-039 Multiple shocks: no shock time is chosen
 - **Date / by / status:** 2026-10-13 · Arnikan · approved
 - **Decision:** With more than one shock indication there is no shock time, not even from a
@@ -1335,6 +1354,25 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Reason:** teammates and the supervisor need to see the built rules work, but a demo result
   must never be mistaken for an approved assessment.
 - **Affects:** P-017, P-027; [demo_walkthrough.md](demo_walkthrough.md).
+
+### D-117 The annotation exporter is a development and evaluation tool, not the runtime input
+- **Date / by / status:** 2026-10-19 · Arnikan · approved
+- **Decision:** keep `annotation/export_rule_engine_records.py`, `annotation/audit_rule_engine_checks.py`
+  and `rules/adapters/annotation.py`. They are a **development and evaluation tool**, not the
+  runtime input path.
+  - **The runtime input** will be the pipeline's procedure transcript. Its format is not defined
+    yet. When it is, a transcript adapter will be added alongside the existing adapter, and the
+    engine core will not change.
+- **Reasons:**
+  1. Until the models produce output, annotated timelines are the only real procedure data for
+     testing the engine, the demo and the camera-angle evidence.
+  2. Running the engine on annotations gives a ground-truth baseline for the evaluation. With
+     perfect perception, any disagreement with human evaluators is a rule error. Comparing
+     model-based runs with this baseline shows how much error the models add.
+- **Planned (not now):** once the transcript format is defined, switch the exporter to write that
+  format and remove the separate annotation adapter, so that annotations and model output share
+  one input path ([implementation_plan.md](implementation_plan.md), "Future").
+- **Affects:** P-001, P-028, P-029, P-030, P-031, P-037.
 
 ## Working method
 

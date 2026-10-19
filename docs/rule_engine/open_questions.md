@@ -23,7 +23,7 @@ first, so that section can be printed for supervisor meetings.
 | ID | Old no. | Owner | Also involves | Status | Question (short) |
 |---|---|---|---|---|---|
 | OQ-002 | E-2 | supervisor | Arnikan | open | Overall result when some rules are Unable to Verify |
-| OQ-005 | E-3a | supervisor | Arnikan | open | Does an inferred Fail count as Fail? |
+| OQ-005 | E-3a | supervisor | Arnikan | closed | Does an inferred Fail count as Fail? (no longer applicable, D-116) |
 | OQ-010 | E-4a | supervisor | Sanjeevan, Arnikan | open | Confirm the command names, accepted phrases and order |
 | OQ-012 | E-6 | supervisor | Ananth | open | Approve the chest regions; evidence of a paddle outside its zone (R3) |
 | OQ-013 | E-7 | supervisor | Arnikan | open | Which steps must precede the shock indication (R5)? |
@@ -36,7 +36,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-060 | new (2026-10-17) | supervisor | Arnikan | answered | Should paddle removal still support an inferred Pass for R3 and R4? |
 | OQ-061 | new (2026-10-17) | supervisor | Arnikan | open | Should the shock-on-screen inference apply when the direct evidence was visible but absent? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
-| OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
+| OQ-006 | E-3b | team | supervisor | open | Is the apical-first fallback clinically acceptable? (the R8 window part no longer applies, D-116) |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
 | OQ-014 | E-8 | supervisor | Arnikan | answered | Approval of the A8 5-second limit |
 | OQ-004 | E-3 | Ananth | Arnikan | open | Who produces per-paddle placement events? |
@@ -104,9 +104,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   **`unable_to_verify`**, flagged `overall_policy_undecided`, and the explanation names the
   undecided setting. It is never reported as Pass.
 
-### OQ-005 Does an inferred Fail count as Fail?
+### OQ-005 Does an inferred Fail count as Fail? — *closed (no longer applicable)*
 - **Old no.:** E-3a · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
-  2026-10-10 · **Status:** open
+  2026-10-10 · **Status:** closed
 - **Question:** When only one placement zone is visible, R8 infers which paddle was placed
   first. If that inference says sternal came first (a mistake), should it fail the learner, or
   be reported as "Unable to Verify"?
@@ -114,6 +114,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Why it matters:** An inferred mistake is less certain than an observed one.
 - **Interim behaviour:** Reported as Unable to Verify, flagged
   `inferred_fail_policy_undecided` (D-015).
+- **Closed 2026-10-19 (D-116):** R8 no longer infers the order from one zone, so there is no
+  inferred mistake to decide on. With one zone in view, R8 gives Unable to Verify
+  (`one_zone_in_view`).
 
 ### OQ-010 Confirm the command names, accepted phrases and order
 - **Old no.:** E-4a · **Owner:** supervisor · **Also involves:** Sanjeevan (phrase matching),
@@ -298,6 +301,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   fallback ever be switched on?
 - **Affects:** R8; P-015.
 - **Interim behaviour:** 0.5 s (placeholder, A-002). The fallback is off (D-014).
+- **Update 2026-10-19 (D-116):** the first part no longer applies: R8 has no one-zone inference,
+  and `placement_match_window_seconds` is removed. The fallback question remains. Note that under
+  the team's labelling (A-027) "the first paddle taken" is the apical paddle by definition, so the
+  fallback would always say "apical first"; it stays off.
 
 ### OQ-036 Evaluator checklist format and its mapping to rules
 - **Old no.:** Brief §9 · **Owner:** team · **Also involves:** supervisor (the checklist mirrors
@@ -422,7 +429,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   (audio thresholds), Arnikan (rule-engine windows and tolerances) · **Raised:** 2026-10-10 ·
   **Status:** open
 - **Question:** Choose the confidence thresholds, simultaneous window, gel minimum gap, R8
-  placement-match window, duration tolerance and R6 removal-before-screen tolerance from pilot
+  placement-match window (removed, D-116), duration tolerance and R6 removal-before-screen tolerance from pilot
   validation.
 - **Affects:** P-004, P-005, P-006, P-011, P-015, P-034; R1, R2, R3, R6, R8.
 - **Interim behaviour:** The placeholder values in A-002.

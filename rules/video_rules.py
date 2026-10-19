@@ -25,10 +25,10 @@ GEL_ZONES = (("apical", "apical_gel_applied", "apical_gel", "apical_zone"),
 DERIVED = "derived_placement"              # the result rests on a placement derived from the boxes (D-081, D-088)
 PARALLEL = "possible_parallel_placement"   # cause flag: one parallel placement fails R2 and R8 (D-091, D-098)
 PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while its zone was in view (D-058)
-CONTRADICTORY = "contradictory"            # R8: the visible paddle placed clearly before the first placement; R4: a press only after the shock
-INFERRED_UNDECIDED = "inferred_fail_policy_undecided"   # R8: an inferred mistake while D-015 is undecided
+CONTRADICTORY = "contradictory"            # R4: a press only after the shock on the screen
+ONE_ZONE = "one_zone_in_view"              # R8: one placement seen, the other paddle's zone not in view (D-116)
 DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
-FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, DERIVED_GEL)
+FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, ONE_ZONE, DERIVED_GEL)
 
 
 def _evidence_flags(events):
@@ -626,7 +626,7 @@ def _removal_missing(ctx, shock):
 # ---- R8 ---------------------------------------------------------------------------------------------
 
 @rule("R8", requires=(APICAL, STERNAL, FIRST_PLACED, FIRST_TAKEN, SECOND_TAKEN, BOTH_PLACED),
-      description="Apical paddle placed before the sternal paddle (D-013)")
+      description="Apical paddle placed before the sternal paddle (D-013, D-116)")
 def apical_before_sternal(ctx, definition, results):
     """R8 (P-015): which paddle was placed first, following diagram (f).
 
@@ -636,12 +636,11 @@ def apical_before_sternal(ctx, definition, results):
     3. A zone counts as visible when it is covered over the placement phase (D-092, D-099). A paddle
        whose zone was visible but whose placement is missing -> Unable to Verify, `placement_missing`
        (D-058).
-    4. One placement observed, the other zone not visible -> the one-zone inference against the first
-       placement (D-013): the same time -> that paddle was first; clearly later -> the other was first;
-       clearly earlier -> Unable to Verify, `contradictory`. Apical first -> Pass - Inferred; sternal
-       first -> the inferred_fail_outcome setting (undecided: Unable to Verify, D-015).
-    5. Not determinable (no placement and no zone visible, or no first placement) -> Unable to
-       Verify, or "assumed apical first" when assume_first_taken_is_apical is on (D-014, D-060).
+    4. One placement observed, the other zone not visible -> Unable to Verify, `one_zone_in_view`
+       (D-116). There is no one-zone inference: first_paddle_placed is the apical placement under the
+       team's labelling (A-027), so comparing the visible placement with it would be circular.
+    5. Not determinable (no placement and no zone visible) -> Unable to Verify, or "assumed apical
+       first" when assume_first_taken_is_apical is on (D-014, D-060).
     """
     parallel = _parallel(ctx, "R8")
     if parallel is not None:
@@ -663,10 +662,9 @@ def apical_before_sternal(ctx, definition, results):
                           f"{_paddle(name)} placement was observed, so the order cannot be established (R3 reports "
                           "the missing placement, D-058)", flags=(PLACEMENT_MISSING,),
                           evidence=tuple(anchors[n].event_id for n in seen), uses=tuple(anchors[n] for n in seen))
-    first = ctx.anchor("first_placement")
-    if len(seen) == 1 and first.present:
-        return _one_zone(ctx, seen[0], anchors[seen[0]], first)
-    return _not_determinable(ctx, first)
+    if len(seen) == 1:
+        return _one_zone(ctx, seen[0], anchors[seen[0]])
+    return _not_determinable(ctx)
 
 
 def _paddle(name):
@@ -711,45 +709,25 @@ def _direct(ctx, apical, sternal):
                   f"{apical.time:g} s", evidence=evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)
 
 
-def _one_zone(ctx, name, seen, first):
-    """D-013: the visible paddle's placement against the first placement (placement_match_window_seconds)."""
-    events = [e for e in ctx.events if e.event_id == seen.event_id]
-    flags = _evidence_flags(events)
-    window = ctx.config.engine.value("placement_match_window_seconds")
-    relation = checks.relation(seen.time, first.time, window)
-    evidence = (seen.event_id, first.event_id)
-    timestamps = {name: seen.time, FIRST_PLACED: first.time}
+def _one_zone(ctx, name, seen):
+    """D-116: one placement seen and the other paddle's zone not in view: the order can't be established.
+
+    The first-placement tag can't stand in for the other paddle: under the team's labelling (A-027) it
+    is the apical placement, so with only the apical zone in view it would always "match" and give a
+    false Pass - Inferred, even when the sternal paddle went first.
+    """
+    flags = (ONE_ZONE, *_evidence_flags([e for e in ctx.events if e.event_id == seen.event_id]))
     other = STERNAL if name == APICAL else APICAL
-    if relation == checks.BEFORE:
-        return unable("R8", f"the {_paddle(name)} paddle was placed at {seen.time:g} s, clearly before the first "
-                      f"placement ({first.time:g} s): the evidence contradicts itself", evidence=evidence,
-                      flags=(CONTRADICTORY, *flags), uses=(seen, first), timestamps=timestamps)
-    first_paddle = name if relation == checks.SIMULTANEOUS else other
-    how = (f"the {_paddle(name)} paddle (the only zone in view) was placed at the first placement time"
-           if first_paddle == name else
-           f"the {_paddle(name)} paddle (the only zone in view) was placed at {seen.time:g} s, clearly after the first "
-           f"placement ({first.time:g} s), so the {_paddle(other)} paddle was first")
-    if first_paddle == APICAL:
-        return passed("R8", f"apical paddle first (inferred): {how}", evidence, inferred=True, uses=(seen, first),
-                      flags=flags, timestamps=timestamps)
-    setting = ctx.config.engine.settings["inferred_fail_outcome"]
-    if setting.undecided:
-        return unable("R8", f"sternal paddle first (inferred): {how}; whether an inferred mistake is a Fail is "
-                      "undecided (D-015)", evidence=evidence, flags=(INFERRED_UNDECIDED, *flags), uses=(seen, first),
-                      timestamps=timestamps)
-    if setting.value == "fail":
-        return failed("R8", "wrong_order", f"sternal paddle first (inferred): {how}", evidence=evidence,
-                      uses=(seen, first), flags=flags, timestamps=timestamps)
-    return unable("R8", f"sternal paddle first (inferred): {how}; inferred mistakes are not failed (D-015)",
-                  evidence=evidence, uses=(seen, first), flags=flags, timestamps=timestamps)
+    return unable("R8", f"only the {_paddle(name)} zone was in view: its paddle was placed at {seen.time:g} s, but the "
+                  f"{_paddle(other)} placement couldn't be seen, so the order can't be established (D-116)",
+                  evidence=(seen.event_id,), flags=flags, uses=(seen,), timestamps={name: seen.time})
 
 
-def _not_determinable(ctx, first):
-    why = ("no placement could be observed and no placement zone was in view" if first.present
-           else "no first placement time")
+def _not_determinable(ctx):
+    why = "no placement could be observed and no placement zone was in view"
     if ctx.config.engine.value("assume_first_taken_is_apical"):
         taken = ctx.named(FIRST_TAKEN)
         return assumed("R8", f"assumed apical first (the first paddle taken is taken to be apical): {why}; "
                        "to be checked by the evaluator (D-014, D-060)",
                        evidence=(taken[0].event_id,) if taken else ())
-    return unable("R8", f"the order cannot be established: {why}", uses=(first,))
+    return unable("R8", f"the order cannot be established: {why}")

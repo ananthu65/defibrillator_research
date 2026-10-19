@@ -76,11 +76,11 @@ class RepositoryConfig(unittest.TestCase):
 
     def test_engine_placeholders_and_undecided_policies_are_marked(self):
         self.assertIn("simultaneous_window_seconds", self.config.engine.placeholders)
-        self.assertIn("placement_match_window_seconds", self.config.engine.placeholders)
+        self.assertIn("gel_minimum_gap_seconds", self.config.engine.placeholders)
         self.assertEqual(self.config.engine.undecided, [
             "coverage_policy.outcomes.unknown", "expected_counts.apical_gel_applied",
             "expected_counts.both_paddle_buttons_pressed", "expected_counts.gel_applied", "expected_counts.paddles_firmly_on_chest",
-            "expected_counts.sternal_gel_applied", "inferred_fail_outcome", "unable_to_verify_outcome"])
+            "expected_counts.sternal_gel_applied", "unable_to_verify_outcome"])
         self.assertIs(self.config.engine.value("assume_first_taken_is_apical"), False)
         self.assertIsNone(self.config.engine.value("unable_to_verify_outcome"))
         self.assertEqual(self.config.engine.coverage_outcomes["covered"].value, "fail")
@@ -264,7 +264,7 @@ class InvalidEngineSettings(unittest.TestCase):
         self.assertRejected("missing keys", lambda d: d["confidence_thresholds"].pop("audio"))
 
     def test_negative_window(self):
-        self.assertRejected("nonnegative", lambda d: d.update(placement_match_window_seconds={"value": -0.1}))
+        self.assertRejected("nonnegative", lambda d: d.update(gel_minimum_gap_seconds={"value": -0.1}))
 
     def test_fallback_must_be_boolean(self):
         self.assertRejected("true or false", lambda d: d.update(assume_first_taken_is_apical="no"))
@@ -308,8 +308,7 @@ class InvalidEngineSettings(unittest.TestCase):
                     RuleEngineConfig.from_dict({**copy.deepcopy(RULES), "engine": str(path)})
 
     def test_every_allowed_policy_value_is_accepted(self):
-        for name, values in (("inferred_fail_outcome", ["fail", "unable_to_verify"]),
-                             ("unable_to_verify_outcome", ["fail", "faculty_review"])):
+        for name, values in (("unable_to_verify_outcome", ["fail", "faculty_review"]),):
             for value in values:
                 with self.subTest(name=name, value=value):
                     data = copy.deepcopy(ENGINE)

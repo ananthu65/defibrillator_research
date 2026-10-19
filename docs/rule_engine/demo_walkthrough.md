@@ -29,10 +29,10 @@ then gives one overall result with its reasons.
 flowchart LR
     REC["Recording<br/>(video + audio)"] --> VID["Video models<br/>(Ananth)"]
     REC --> AUD["Audio command detection<br/>(Sanjeevan)"]
-    REC --> ANN["CVAT annotations<br/>(development data, today)"]
+    REC --> ANN["CVAT annotations<br/>(development / evaluation)"]
     VID --> TL["Timeline:<br/>events + header<br/>(what was visible)"]
     AUD --> TL
-    ANN -->|"rule engine's exporter<br/>and adapter"| TL
+    ANN -->|"development / evaluation:<br/>exporter and adapter"| TL
     TL --> RE["Rule engine<br/>(this work)"]
     RE --> REP["JSON report<br/>(versioned contract)"]
     REP --> FB["Feedback and app<br/>(Sanjeevan)"]
@@ -231,7 +231,9 @@ On the interim export of 2026-10-16:
 
 **Annotation data for development** ([how-to for Ananth](../annotation/rule_engine_export_howto.md)).
 CVAT is frozen, and the training pipeline and Ananth's files are untouched. The rule engine reads
-the backups through its own exporter (annotation JSON only, never the videos).
+the backups through its own exporter (annotation JSON only, never the videos). The exporter and
+the annotation adapter are a development and evaluation tool, not the runtime input: in
+production the engine will read the pipeline's procedure transcript (D-117).
 - **Step 9b: exporter and audit.** Every tag, the duration, and when each zone, the screen and each
   paddle is visible. A separate audit lists annotation problems to fix.
 - **Step 9c: per-paddle placements** derived from the paddle and zone boxes, needed by R8 and R2.
@@ -282,11 +284,15 @@ the backups through its own exporter (annotation JSON only, never the videos).
 - **R1's interim gel check counts tags.** It treats a zone in view as "the gel would have been
   seen", but an arm can hide the bottle's nozzle (A-026).
 - **R3 doesn't judge "paddle outside its zone"** until the chest regions are approved (OQ-012).
+- **R8 needs both placement zones in view.** With one zone (for example LL) it is Unable to
+  Verify (D-116): the team labels the first-placement tag as the apical paddle (A-027), so it can't
+  tell which paddle went first.
+- **The first/second paddle tags are assumed to mean apical/sternal (A-027).** The models never
+  saw a sternal-first learner, so whether they learned the paddle or the order is untested.
 - **R3's "missing" and R4's "not pressed" can't happen yet.** A shock on the screen always infers a
   Pass for them. Whether that should change is OQ-061.
 - **Settings still undecided:**
   - unknown coverage is treated as Unable to Verify (OQ-001);
-  - an inferred mistake in R8 is Unable to Verify (OQ-005);
   - Unable to Verify overall is undecided (OQ-002).
 - **Departures from the original proposal,** each with its reason in
   [supervisor_briefing.md, section 3](supervisor_briefing.md#3-where-the-system-departs-from-the-original-proposal):

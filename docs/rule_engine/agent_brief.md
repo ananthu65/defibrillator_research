@@ -81,7 +81,7 @@ once, report under both IDs.
 |---|---|---|---|---|
 | 1 | R1 Gel applied twice | Gel applied once to each placement zone (sternal on the chest, apical on the left side of the ribs), in either order, within the approved time period. Gel must come **before** the paddles are placed: a shock without gel harms the patient (changed 2026-10-17, D-109, D-110; replaces "order relative to paddle placement is NOT checked"). | Approved time period (null for now) | `missing`, `applied_once`, `after_placement`, `outside_time_period` |
 | 2 | R2 Second paddle after first is placed | First paddle taken → first paddle placed firmly → second paddle taken. "Taken" = first frame where it is clearly visible. | First paddle placement | `simultaneous`, `taken_before_first_placed`, `first_missing` |
-| 3 | R8 Apical before sternal | Apical paddle placed before sternal paddle. Both zones visible: compare the two placement times (Pass – Direct or Fail). Only one zone visible: inferred from that zone's placement time vs `first_paddle_placed` (see `implementation_plan.md`, Increment 12) | Per-paddle placement events, first placement time, zone visibility | `wrong_order`, `simultaneous` |
+| 3 | R8 Apical before sternal | Apical paddle placed before sternal paddle. Both zones visible: compare the two placement times (Pass – Direct or Fail). Only one zone visible: Unable to Verify (changed 2026-10-19, D-116; first written as "inferred from that zone's placement time vs `first_paddle_placed`", which is circular because the team labels `first_paddle_firmly_on_the_chest` as the apical paddle, A-027) | Per-paddle placement events, first placement time, zone visibility | `wrong_order`, `simultaneous` |
 | 4 | R3 Paddles firmly on chest | Both paddles stable in approved zones before shock; else Pass – Inferred if `shock_delivered_on_screen` is confidently confirmed (changed 2026-10-19, D-115: a paddle removal doesn't show a shock, so it no longer infers R3; first written as "`shock_delivered_on_screen` OR `paddles_removed_after_shock`") | Shock time | `not_in_zone`, `placed_after_shock` |
 | 5 | R4 Both discharge buttons pressed | After placement, before shock; else Pass – Inferred as for R3 | Placement, shock time | `before_placement`, `not_pressed` |
 | 6 | R5 Shock confirmed on screen | One new shock indication after the preceding steps | Preceding steps | `missing`, `wrong_order` |
@@ -96,9 +96,9 @@ once, report under both IDs.
 | 15 | A8 Pre-shock pause | "Stop CPR" to "Start CPR" within **5 seconds** (approved) | Stop and start commands | `pre_shock_pause`, mistake label "Pre-Shock Pause" |
 
 Notes:
-- Shock-based inference (R5 as used for R3/R4; R6 removed as a source on 2026-10-19, D-115) never establishes order. R8 has its own
-  one-visible-zone inference instead (updated 2026-10-10; see `implementation_plan.md`,
-  Increment 12). The inference lives in the rule engine; upstream only reports what is visible.
+- Shock-based inference (R5 as used for R3/R4; R6 removed as a source on 2026-10-19, D-115) never establishes order. R8 had its own
+  one-visible-zone inference (updated 2026-10-10), removed on 2026-10-19 (D-116): R8 now needs
+  both placements observed. Upstream only reports what is visible.
 - "Continue CPR" before the shock means continue compressions; after the shock it means
   restart. Classify by position relative to the shock.
 - Every recording has exactly one shock. More than one is a data anomaly.

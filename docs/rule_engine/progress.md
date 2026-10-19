@@ -4203,3 +4203,109 @@ expected results. The pipeline command exits with 0.
 
 ### Next
 Wait for Arnikan before committing.
+
+## Team assumption on the first/second paddle tags; R8's one-zone inference removed (2026-10-19)
+
+Not committed (on instruction).
+
+### Decisions recorded
+- **A-027 (the team: Ananth, Sanjeevan, Arnikan, 2026-10-19):** `first_paddle_taken` and
+  `first_paddle_firmly_on_the_chest` mean the **apical** paddle, and `second_paddle_taken` the
+  **sternal** paddle.
+  - In every annotated video the apical paddle went first, and the models are trained on these
+    labels.
+  - The vocabulary and the CVAT mapping are unchanged.
+  - **Untested risk:** it is unknown whether the models learned the paddle's appearance or its
+    order. Only a reversed-order recording can tell.
+- **D-116 (Arnikan):** R8 has no one-zone inference. One placement seen with the other zone out of
+  view → Unable to Verify, `one_zone_in_view`. The number D-115 was already taken (the removal
+  decision), so this is D-116.
+  - It supersedes the inference part of D-013. D-015 and OQ-005 no longer apply.
+  - The settings `inferred_fail_outcome` and `placement_match_window_seconds`, and the flag
+    `inferred_fail_policy_undecided`, are removed. R8 no longer raises `contradictory`.
+
+### Who reads the four tags, and how
+"Time order" means the reader treats the tag as "whichever came first"; "identity" means it
+treats it as the apical or sternal paddle.
+
+| Reader | Tags read | Treated as | With a sternal-first learner (labels per A-027) |
+|---|---|---|---|
+| Context anchor `first_placement` (`rules/context.py`) | `first_paddle_placed` | time order ("the first placement") | the anchor is the **apical** placement, later than the real first one |
+| R1 `_first_placement`, gel phase (`video_rules.py`) | `first_paddle_placed` (or the earliest per-paddle placement), else `first_paddle_taken` | time order | with tags only, the gel phase ends at the apical placement: gel put on between the sternal and apical placements counts as "before placement", so `after_placement` can be missed. With per-paddle placements it ends correctly at the sternal one |
+| **R2** (`video_rules.py`) | `first_paddle_placed` vs `second_paddle_taken`; window `first_paddle_taken` → `second_paddle_taken` | time order | **Fail `taken_before_first_placed`**, even when the learner placed the sternal paddle before taking the apical (R2's own step done right). Run: sternal taken 3 s, apical taken 6 s, apical firm 9 s → "second paddle taken at 3 s, before the first was placed at 9 s". The mistake is really R8's, so it is double-counted. With no first-placement tag, the window is empty (the "first" was taken after the "second") → Unable to Verify |
+| R3 (`video_rules.py`) | `paddles_firmly_on_chest`; `first_paddle_taken` as the start of the placement phase | both paddles (neither); time order for the window | the coverage window starts at the apical taken, later than the real start (only reached if the shock isn't an inference source) |
+| R4, R5 | `paddles_firmly_on_chest` | both paddles (neither) | unaffected |
+| R8 `_placement_phase` | starts at `first_paddle_taken`; ends at `paddles_firmly_on_chest`, else `second_paddle_taken` | time order | the phase starts at the apical taken (late) and may end at the sternal taken (early, even before it starts → whole recording) |
+| R8 one-zone inference (**removed**, D-116) | `first_paddle_placed` | time order | apical zone only: the apical placement always matched the tag → **false Pass – Inferred** |
+| R8 fallback `assume_first_taken_is_apical` (off) | `first_paddle_taken` | identity | consistent with A-027, but then it always says "apical first" (circular); stays off |
+| Preparation counts (`prepare.py`, `engine.yaml`) | each tag counted (exactly 1; `paddles_firmly_on_chest` undecided) | neither | unaffected |
+| **Step 9c** (`derive_paddle_placements.py`) | T1 = `first_paddle_firmly_on_the_chest` as "the earlier placement"; T2 = `paddles_firmly_on_chest` as an upper bound | time order (T1); both (T2) | **both zones in view:** the earlier (sternal) placement is far from T1 (the apical placement) → **no event for either paddle**, review issue `placement_disagrees_with_tag` (run: sternal frame 30, apical and T1 frame 60 → "the earlier placement (frame 30) is 30 frames from first_paddle_firmly_on_the_chest (frame 60)"). R8 then can't see the reversal: with both zones visible and no placement it is `placement_missing`. **Apical zone only:** the apical placement is kept (not earlier than T1 − 15); R8 now gives `one_zone_in_view` instead of the old false Pass – Inferred. **No T1:** no events unless the two are within the parallel window |
+| Step 9d gel phase (`derive_gel_applications.py`) | T1, else the earliest 9c placement, else `first_paddle_taken` | time order | ends at the apical placement (late), as for R1 |
+| Rule-engine audit (`audit_rule_engine_checks.py`) | `first_paddle_firmly_on_the_chest` (presence, `first_placement_tag_missing`); the gel-phase end | presence; time order | the information line is unaffected; the gel-hand check uses a late phase end |
+| Ananth's scripts (`build_yolo_video_dataset.py`, `create_grouped_video_split.py`, `audit_cvat_backups.py`) | the tag labels as training events | identity (the models' labels, A-027) | not changed (not ours) |
+
+**What this shows:** apart from R8's removed inference, the readers that matter are R2, R1 and
+Steps 9c and 9d. They read "first" as time order, which A-027 says it isn't. For a sternal-first
+learner:
+- **R2** fails, double-counting R8's mistake;
+- **9c** drops both derived placements (with a review issue), so R8 can't see the reversal;
+- **R1 and 9d** may end the gel phase late.
+
+None of these was changed; they need a decision.
+
+### What was done
+- **R8 (`rules/video_rules.py`):**
+  - `_one_zone` now returns Unable to Verify with `one_zone_in_view`;
+  - `_not_determinable` no longer depends on a first-placement time;
+  - the both-zones path, `placement_missing`, the parallel placement and the fallback are
+    unchanged.
+- **Settings removed:** `inferred_fail_outcome` and `placement_match_window_seconds`, from
+  `engine.yaml` and `rules/config.py`.
+- **Output contract version 12:**
+  - flag `inferred_fail_policy_undecided` removed and `one_zone_in_view` added;
+  - `contradictory` comes from R4 only;
+  - R8's `wrong_order` comes only from two observed placements.
+- **Demo:** no scenario relied on the inference; all seven still match.
+
+### Tests (677 → 676)
+- **R8, the old one-zone inference tests replaced:**
+  - apical zone only → Unable to Verify, `one_zone_in_view`, whatever the timing (before, at,
+    after the tag);
+  - **the circular case:** a sternal-first timeline (sternal taken 3 s, apical taken 6 s, apical
+    firm and apical placed 9 s) with the apical zone only, which used to give Pass – Inferred, is
+    now Unable to Verify;
+  - sternal zone only;
+  - no first-placement tag;
+  - the inference settings are gone.
+  - The zone-window tests now expect `one_zone_in_view`.
+- **Config tests:** the undecided list, the policy values and the negative-window check updated
+  for the removed settings.
+
+Full suite: **676 tests run, all pass, 1 skipped** (charging sound). The demo matches all seven
+expected results. The pipeline command exits with 0.
+
+### Documents updated
+- **Registers:** `assumptions.md` (A-027; the A-002 placeholder list); `decisions.md` (D-116; D-013
+  and D-015 status lines); `open_questions.md` (OQ-005 closed; OQ-006 narrowed; OQ-018 note).
+- **`decision_flow.yaml`:** P-015.
+- **`pathways.md`:** the P-015 table; W-58 rewritten; W-59.
+- **`diagrams.md`:** (f).
+- **The rest:**
+  - `anomalies.md`, `output_contract.md` (v12), `rules_status.md`, `camera_angle_evidence.md` (LL:
+    R8 unverifiable);
+  - `supervisor_briefing.md` (the R8 paragraph, the departures row, OQ-005 and OQ-006);
+  - `demo_walkthrough.md` (limitations);
+  - `agent_brief.md` (the R8 row and note, with change notes);
+  - `implementation_plan.md` (the R8 logic section and placeholders), `upstream_requirements.md`;
+  - `progress.md`, `ai_usage_log.md`.
+- The vocabulary, the CVAT mapping and Ananth's files are unchanged.
+
+### Open items for Arnikan
+- **R2 under A-027:** keep the time-order reading (a sternal-first learner also fails R2), or
+  change R2?
+- **Step 9c:** T1 is checked as "the earlier placement". Under A-027 it is the apical placement,
+  so sternal-first videos lose both derived placements.
+- **R1 and 9d:** the gel phase ends at the first-placement tag, which is the apical placement.
+
+### Next
+Wait for Arnikan. Nothing is committed.

@@ -12,7 +12,6 @@ confidence_thresholds:   # events below the threshold are not used as evidence (
 
 simultaneous_window_seconds:    {value: 0.5, placeholder: true}  # two events this close count as simultaneous
 gel_minimum_gap_seconds:        {value: 0.4, placeholder: true}  # R1: two gel events closer than this are one application (0.4 since 2026-10-17, OQ-018)
-placement_match_window_seconds: {value: 0.5, placeholder: true}  # R8: visible-zone placement "same time" as first_paddle_placed
 assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
 duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
 # R6: the screen may show the shock slightly after the discharge, so a correct learner can remove
@@ -50,7 +49,6 @@ coverage_policy:
     apical_gel:     []
     sternal_gel:    []
 
-inferred_fail_outcome:    {value: unable_to_verify, undecided: true, note: flagged inferred_fail_policy_undecided}
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}
 
 # Timeline-level anomalies that prevent an overall Pass (P-017). With one of these, a Fail stays

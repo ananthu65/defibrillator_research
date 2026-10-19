@@ -74,7 +74,7 @@ the paddle removal, D-093, D-115), and annotation-like evidence.
 |---|---|---|---|---|
 | R1 Gel applied twice | gel tags | partly (two applications seen in 1 of 12) | **direct** | partly (3 of 13) |
 | R2 Second paddle after first placed | first taken, first placement, second taken; both zones for `first_placement_not_observed` | partly (second taken in 7 of 12; the sternal zone is never in view, so `first_placement_not_observed` can't be confirmed) | **direct** | direct when the placement is tagged; `first_placement_not_observed` only where both zones are in view throughout the window (apical partly visible in 10 of 13) |
-| R8 Apical before sternal | per-paddle placements (derived, after the gate) and the zones | partly (one-zone inference only) | **direct** (both zones throughout) | partly (apical zone partly visible) |
+| R8 Apical before sternal | per-paddle placements (derived, after the gate) and both zones | **unverifiable** (one zone only: no one-zone inference since D-116) | **direct** (both zones throughout) | partly (apical zone partly visible) |
 | R3 Paddles firmly on chest before the shock | placement and the shock time; or inference from the shock on screen (never the removal, D-115) | **unverifiable** (no shock time; a removal doesn't infer it) | **direct** | partly (shock seen in 9 of 13) |
 | R4 Both buttons pressed | button press, placement, the shock time; or inference from the shock on screen | **unverifiable** (no shock time; pressed in 2 of 12, but not judged without the shock) | **direct** | **direct** |
 | R5 Shock confirmed on screen | the screen | **unverifiable** | **direct** | partly |

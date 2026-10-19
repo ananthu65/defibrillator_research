@@ -25,7 +25,7 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   - confidence thresholds: annotation 1.0, video 0.5, audio 0.5;
   - simultaneous window: 0.5 s;
   - minimum gap between two gel applications: 0.4 s (1.0 s until 2026-10-17, OQ-018);
-  - R8 placement-match window: 0.5 s;
+  - R8 placement-match window: removed with the one-zone inference (D-116);
   - header duration tolerance: 0.5 s;
   - R6 removal-before-screen tolerance: 0.5 s (D-105).
 - **Why:** The brief says engineering values are chosen in pilot validation, not given by the
@@ -273,3 +273,23 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **If wrong:** use only the per-zone path (past the 9d gate), or give Unable to Verify instead.
 - **Detected by:** the proxy check in progress.md (Increment 17) and the 9d validation report.
 - **Related:** D-113, A-023.
+
+### A-027 "First" and "second" paddle tags mean the apical and sternal paddle
+- **Assumption (the team: Ananth, Sanjeevan, Arnikan, 2026-10-19):** in every annotated video the
+  apical paddle was taken and placed first. The team therefore treats `first_paddle_taken` and
+  `first_paddle_firmly_on_the_chest` as the **apical** paddle, and `second_paddle_taken` as the
+  **sternal** paddle. The video models are trained on these labels, so a learner who takes the
+  sternal paddle first is expected to produce `second_paddle_taken` before `first_paddle_taken`.
+- **The vocabulary is unchanged:** the names and the CVAT mapping stay as they are
+  (`first_paddle_firmly_on_the_chest` → `first_paddle_placed`, D-047). This is an assumption about
+  what they mean, not a rename.
+- **Untested risk:** order and identity never differed in the training data, so it is unknown
+  whether the models learned the paddle's appearance or its order. Only a recording with the
+  reversed order can test it. If the assumption is wrong, a reversed order would go unseen.
+- **Consequences for the rules:** R8's one-zone inference compared the visible placement with
+  `first_paddle_placed`, which under this assumption is the apical placement, so it was circular;
+  it is removed (D-116). Several other rules and helpers read the four tags as time order
+  ("whichever came first"); they are listed in progress.md (2026-10-19) and not changed yet.
+- **Status:** active (team decision).
+- **Detected by:** a recording with the sternal paddle first, run through the models.
+- **Related:** D-013, D-014, D-047, D-051, D-086, D-116.

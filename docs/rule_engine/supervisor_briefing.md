@@ -44,7 +44,9 @@ Overview diagrams:
 - [what a missing event means](diagrams.md#d-what-a-missing-event-means-p-007-p-008-p-013);
 - [the overall result](diagrams.md#g-overall-result-p-017-built).
 
-Today the rules run on the team's annotated videos. Those results are marked as development data,
+Today the rules run on the team's annotated videos, through a development and evaluation tool
+rather than the final input path; with perfect perception they also give a baseline for judging
+the rules themselves (D-117). Those results are marked as development data,
 not real assessments (D-066).
 
 ## 2. The built rules
@@ -76,10 +78,10 @@ The order must be: first paddle taken → first paddle placed firmly → second 
 **R8 Apical paddle placed before sternal** ([diagram](diagrams.md#f-r8-apical-before-sternal-p-015-built-in-increment-12-pending-until-approved)).
 - **Both placements seen:** they are compared directly. Sternal first is "wrong order", and both
   together is "simultaneous".
-- **Only one zone in view:** the visible paddle's placement is compared with the moment the first
-  paddle went on. The same moment means that paddle was first; clearly later means the other was
-  first. Apical first → Pass – Inferred. Sternal first is an inferred mistake, reported as Unable
-  to Verify until you decide whether it may fail a learner.
+- **Only one zone in view:** Unable to Verify. Which paddle went first can't be established from
+  one zone. (An earlier version inferred it from the first-placement tag, but the team labels that
+  tag as the apical paddle, so the inference could pass a learner who placed the sternal paddle
+  first.)
 - **Both paddles placed together:** both R2 and R8 fail, marked as one cause.
 
 **R3 Paddles placed firmly on the chest** ([diagram](diagrams.md#l-r3-paddles-placed-firmly-on-the-chest-p-035-built-in-increment-15-pending-until-approved)).
@@ -122,7 +124,7 @@ The order must be: first paddle taken → first paddle placed firmly → second 
 | **No severity levels:** any mistake fails the procedure, and there is no "critical error" class (D-001, D-019) | Defibrillation is life-critical: a missed verbal safety command is as serious as a missed physical step |
 | **R1 redefined:** gel applied **twice, once on each placement zone**, in either order, and still **before placement** (D-109, D-110). An earlier version dropped "before placement" (D-018); it is restored | Twice, one per zone, is the procedure taught. A shock without gel harms the patient, so gel must come first |
 | **R2 redefined:** the second paddle may be taken only after the first is **placed** (D-051) | This is the procedure taught |
-| **New rule R8: apical paddle before sternal** (D-052), including an inferred result when only one zone is visible (D-013) | It is a taught step. Some camera angles show only one zone |
+| **New rule R8: apical paddle before sternal** (D-052). Judged only when both placements are seen; with one zone in view it is Unable to Verify (D-116) | It is a taught step |
 | **New rule A8: pre-shock pause** from "stop CPR" to "start CPR" at most **5 s**, approved by you (D-016) | A taught limit on the pause in compressions |
 | **R7 and A6 are one check**, reported under both IDs and counted as one mistake (D-044) | They describe the same step |
 | **A7 checks the command order only.** A missing command is reported by its own rule, not again by A7. "Stop" before "continue" is A4's mistake only (D-027) | One mistake is reported once |
@@ -163,13 +165,9 @@ Each question shows what the system does until it is answered.
 - **OQ-059: parallel placement.** Both paddles placed together fails R2 and R8. One mistake or
   two?
   - *Until then:* two, marked as one cause.
-- **OQ-005: inferred mistake.** With one zone in view, if the inference shows sternal first,
-  should that fail the learner?
-  - *Until then:* Unable to Verify.
-- **OQ-006: matching and fallback.** How close must the visible paddle's placement be to the
-  first placement to count as "the same moment"? And may "the first paddle taken is the apical
-  one" ever be assumed as a last resort?
-  - *Until then:* 0.5 s (placeholder); the assumption is off.
+- **OQ-006: fallback.** May "the first paddle taken is the apical one" ever be assumed as a last
+  resort, when no placement can be seen at all?
+  - *Until then:* off.
 - **OQ-022: paddle lifted and placed again before the shock.** Acceptable or a mistake? Which
   placement counts?
   - *Until then:* the earliest counts; the repeat is flagged for review, never a Fail by itself.

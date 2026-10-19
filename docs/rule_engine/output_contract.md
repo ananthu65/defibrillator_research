@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 11
+**Report version:** 12
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -37,6 +37,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 9 | 2026-10-17 | **Failure code added** (R1): `after_placement`, gel applied only after the first paddle placement (D-109). **Rule flag added:** `derived_gel_application`, a result resting on a gel application derived from the boxes (D-111). **New regions:** `apical_gel` and `sternal_gel` (whether gel on that zone could have been seen; set only past the 9d gate, D-112) appear in `context.zone_visibility` and `context.header.coverage`. **Meaning changed:** R1's `applied_once` and `missing` are now per zone (one gel application on each placement zone, D-110). R1 is implemented (Increment 17), so `applied_once`, `outside_time_period` and `missing` (R1) are built. R1 still reports `pending` until it is approved |
 | 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
 | 11 | 2026-10-19 | **Three flags removed** (D-115): `shock_time_from_removal` and `command_before_removal` (the shock time is never taken from the paddle removal; the `shock_time_fallback` setting is gone) and `inferred_from_removal` (R3 and R4 no longer infer from the removal: it doesn't show that a shock was delivered). R3 and R4 infer only from the shock on the screen; without a shock time they are Not evaluable because of R5 |
+| 12 | 2026-10-19 | **Rule flag removed:** `inferred_fail_policy_undecided`. **Rule flag added:** `one_zone_in_view` (R8). R8 has no one-zone inference any more: with only one zone in view it is Unable to Verify, never Pass – Inferred, because the first-placement tag is the apical placement under the team's labelling (A-027, D-116). **Meaning changed:** `contradictory` now comes from R4 only; R8's `wrong_order` only from two observed placements. The settings `inferred_fail_outcome` and `placement_match_window_seconds` no longer appear in `configuration` |
 
 ## How to get the report
 
@@ -98,7 +99,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 11,
+  "report_version": 12,
   "kind": "rule_engine_report",
   "development_data": false,
   "demo_notice": null,
@@ -202,9 +203,9 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `unresolved_commands` | built | An ambiguous command could not be classified, so the continue or restart time may be incomplete |
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
 | `placement_missing` | built (R8) | R8: a paddle's zone was in view during the placement phase but its placement was not observed, so the order cannot be judged; R3 reports the missing placement (D-058) |
-| `contradictory` | built (R8, R4) | The evidence contradicts itself, so Unable to Verify. R8: the only visible paddle was placed clearly before the first placement. R4: the buttons were pressed only after the shock on the screen |
+| `contradictory` | built (R4) | The evidence contradicts itself, so Unable to Verify: the buttons were pressed only after the shock on the screen. (R8 no longer raises it, v12) |
 | `derived_gel_application` | built (v9) | R1: the result rests on a per-zone gel application derived from the annotated hand and zone boxes (only past the 9d gate, D-112), not on a tag |
-| `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: the one-zone inference shows the sternal paddle first, an inferred mistake; reported as Unable to Verify until it is decided whether an inferred mistake is a Fail |
+| `one_zone_in_view` | built (v12) | R8: only one placement zone was in view, so which paddle went first can't be established; Unable to Verify (D-116) |
 | `possible_parallel_placement` | built (v5) | **Shared cause flag.** Both paddles were placed at the same time, a learner mistake seen in the derived placements (only once the gate is approved). It appears on **both R2 and R8**, each failed with `simultaneous`. They are separate checklist criteria, but **one action caused both failures**, so the feedback can say so (D-098). Whether this counts as one mistake or two is OQ-059 |
 | `derived_placement` | built (v5) | The result rests on a paddle placement derived from the annotated boxes by the exporter (direct evidence, method recorded), not on a tag (D-081, D-088) |
 | `annotation_coverage_assumed` | built (v3) | The timeline comes from annotation data (its header is flagged so). Every result carries it, and the report is development data, not an assessment (D-066) |
@@ -244,7 +245,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
 | `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
 | `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
-| `wrong_order` | built (R5, R8; A4, A7 planned) | R5, R8, A4, A7 | Steps or commands in the wrong order. For R5: the shock came before one of the preceding steps (once they are set, D-100). For R8: the sternal paddle was placed before the apical (directly, or by inference once `inferred_fail_outcome` is decided as fail) |
+| `wrong_order` | built (R5, R8; A4, A7 planned) | R5, R8, A4, A7 | Steps or commands in the wrong order. For R5: the shock came before one of the preceding steps (once they are set, D-100). For R8: the sternal paddle was placed before the apical, with both placements observed (D-116) |
 | `not_in_zone` | planned | R3 | A paddle was outside its approved zone. Not produced until the supervisor approves the chest regions (OQ-012); until then R3 checks placement timing and presence only (D-106) |
 | `placed_after_shock` | built (R3) | R3 | Paddles placed firmly on the chest only after the shock on the screen (D-106) |
 | `before_placement` | built (R4) | R4 | Buttons pressed before the paddles were placed (D-108) |

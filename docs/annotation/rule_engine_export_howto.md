@@ -10,6 +10,10 @@ duration, when each placement zone, the defibrillator screen and each paddle is 
 the gel applications derived from the gel-bottle hand (`learner_hand`). Two scripts read these
 directly from the CVAT backups. Please run them once on the **final** backup set and send me the outputs listed below.
 
+These scripts are a development and evaluation tool, not the rule engine's runtime input: in
+production the engine will read the pipeline's procedure transcript (D-117). The annotated
+results also serve as a ground-truth baseline to compare the model-based runs with.
+
 ## It changes nothing in your training data
 
 - **Nothing is edited:** the scripts don't change any existing file: not your scripts

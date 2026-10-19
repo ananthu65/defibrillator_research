@@ -20,12 +20,12 @@ flowchart LR
     end
     subgraph arnikan["Arnikan: rule engine"]
         eng["Rule engine<br/>P-001 to P-031"]
-        ann["Annotation exporter<br/>(development data, see h)"]
+        ann["Annotation exporter<br/>(development / evaluation, see h)"]
     end
     rec --> vid --> merge
     rec --> asr --> merge
     merge --> eng
-    ann -.-> eng
+    ann -.->|"development / evaluation"| eng
     eng --> fb --> app
     eng --> app
 ```
@@ -34,8 +34,8 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A0["P-028 Annotation exporter<br/>(CVAT backups, built; see h)"]
-    A["P-001 / P-030 Adapter<br/>(annotation built; models later)"]
+    A0["P-028 Annotation exporter<br/>(development / evaluation;<br/>CVAT backups, built; see h)"]
+    A["P-001 / P-030 Adapter<br/>(annotation: development / evaluation;<br/>transcript adapter later, D-117)"]
     A0 --> A
     B["P-002 Validate timeline"]
     C["P-003 Map names"]
@@ -133,7 +133,8 @@ flowchart TD
 
 Zones count as visible when covered over the placement phase, from the first paddle taken to
 paddles firmly on chest (D-092, D-099). Derived placements reach R8 only past the gate (D-088).
-A parallel placement fails R2 as well, separately, with the same cause flag (D-098).
+A parallel placement fails R2 as well, separately, with the same cause flag (D-098). With only
+one zone in view the order can't be established: there is no one-zone inference (D-116).
 
 ```mermaid
 flowchart TD
@@ -145,16 +146,9 @@ flowchart TD
     D1 -->|same time| FS["Fail simultaneous"]
     BOTH -->|no| Z{"A zone in view during the<br/>placement phase, but its<br/>placement missing?"}
     Z -->|yes| PM["Unable to Verify<br/>placement_missing (D-058)<br/>R3 reports the missing placement"]
-    Z -->|no| ONE{"One placement observed<br/>and a first placement time?"}
-    ONE -->|yes| I{"Visible paddle placed at<br/>the first placement time?<br/>(within 0.5 s)"}
-    I -->|same time| W1["That paddle was first<br/>(inferred)"]
-    I -->|clearly later| W2["The other paddle was first<br/>(inferred)"]
-    I -->|clearly earlier| C["Unable to Verify<br/>contradictory"]
-    W1 --> O{"Apical first?"}
-    W2 --> O
-    O -->|yes| PI["Pass – Inferred"]
-    O -->|no| IF["Inferred mistake: inferred_fail_outcome<br/>undecided → Unable to Verify<br/>inferred_fail_policy_undecided<br/>(fail → Fail wrong_order)"]
-    ONE -->|"no: nothing observed and no zone<br/>in view, or no first placement"| N{"Fallback switched on?<br/>(off by default)"}
+    Z -->|no| ONE{"One placement observed,<br/>the other zone not in view?"}
+    ONE -->|yes| U1["Unable to Verify<br/>one_zone_in_view (D-116)<br/>no inference: the first-placement tag<br/>is the apical placement (A-027)"]
+    ONE -->|"no: nothing observed<br/>and no zone in view"| N{"Fallback switched on?<br/>(off by default)"}
     N -->|no| U["Unable to Verify"]
     N -->|yes| AS["Assumed apical first<br/>to be checked by the evaluator<br/>overall cannot be Pass (D-060)"]
 ```
@@ -184,7 +178,9 @@ flowchart TD
 (D-083), and sends Arnikan only the records, the export manifest and the audit outputs, never
 media (D-085). The training pipeline is untouched: none of its scripts or files change, and it
 never reads the exporter's output. Until the final export arrives, Increment 10 uses the
-smoke-run export of 39 corrected backups (D-084).
+smoke-run export of 39 corrected backups (D-084). This whole path is for development and
+evaluation, not the runtime input: in production the engine will read the pipeline's procedure
+transcript (D-117).
 
 ```mermaid
 flowchart LR
@@ -207,7 +203,7 @@ flowchart LR
         CONV --> AUD2
         BUILD -. "box geometry reused by import only (D-079)" .-> EXP
     end
-    subgraph arnikan["Arnikan: rule engine"]
+    subgraph arnikan["Arnikan: rule engine (development / evaluation path)"]
         REC[("records.jsonl + export_manifest.json<br/>gitignored data/rule_engine/<br/>never committed (D-084)")]
         REP["Audit outputs<br/>review list, information"]
         SMOKE[("Interim: smoke-run export<br/>39 corrected backups (D-084)")]

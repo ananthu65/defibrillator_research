@@ -100,8 +100,8 @@ agree; it can be a small wrapper around the event list, so the `Event` schema do
 ### Zone visibility
 
 **Zone visibility** is required for R8. In some camera angles only one placement zone is
-visible, and R8 then uses its one-zone inference. The rule engine must know which zones were
-visible, and when.
+visible, and R8 is then Unable to Verify (no one-zone inference since D-116). The rule engine must
+know which zones were visible, and when.
 
 | Canonical name *(proposed)* | Meaning |
 |---|---|
@@ -148,7 +148,7 @@ the objects, and not silently corrected.
 
 | Check | Why |
 |---|---|
-| **Placement zones never move while the paddles do.** A zone box that follows a paddle's motion is a mislabelled paddle (or a paddle labelled as a zone) | Zone visibility (R8's one-zone inference) and "in zone" (R3) would be judged against a moving target |
+| **Placement zones never move while the paddles do.** A zone box that follows a paddle's motion is a mislabelled paddle (or a paddle labelled as a zone) | Zone visibility (R8, R2, R6) and "in zone" (R3) would be judged against a moving target |
 | **At most one apical and one sternal paddle per frame** | Two boxes of one paddle class in one frame means one is the other paddle, so per-paddle placements would be wrong |
 | **Paddle identity kept over time.** The apical paddle stays apical from when it is taken until it is put back, and is not swapped with the sternal one between frames or after occlusion | R8 (apical before sternal) depends entirely on which paddle is which |
 

@@ -189,6 +189,11 @@ every policy setting.
 
 ### R8 logic: apical before sternal (decided 2026-10-10)
 
+> **Changed 2026-10-19 (D-116):** the one-zone rows below are withdrawn. With only one zone in
+> view R8 gives Unable to Verify (`one_zone_in_view`). Under the team's labelling (A-027),
+> `first_paddle_placed` is the apical placement, so comparing with it was circular. The settings
+> `placement_match_window_seconds` and `inferred_fail_outcome` are removed.
+
 In some camera angles only one placement zone is annotated. Every recording has at least one,
 and the two zones are far apart. The inference lives in the rule engine; upstream only reports
 what is visible (placement events and zone visibility).
@@ -266,6 +271,11 @@ fixtures go in `tests/fixtures/rule_engine/`.
 | 25 | Checklist renderer skeleton + feedback handover | `render.py`, `checklist.yaml` | many-to-one mapping | Checklist format |
 | 26 | Documentation: how to add a rule / label / source; config reference | `docs/rule_engine/*.md` | — | — |
 
+**Future (not now, D-117):** once the pipeline's procedure-transcript format is defined, add a
+transcript adapter alongside the annotation adapter (the engine core does not change). Then
+switch the annotation exporter to write that format and remove the separate annotation adapter,
+so that annotations and model output share one input path.
+
 ---
 
 ## D. Engineering placeholders
@@ -275,11 +285,11 @@ All live in `configs/rule_engine/engine.yaml`, each marked `placeholder: true`:
 - Confidence threshold per source: annotation 1.0 (human), video 0.5, audio 0.5.
 - Simultaneous window: 0.5 s.
 - Gel minimum gap between two applications: 0.4 s (1.0 s until 2026-10-17; OQ-018).
-- R8 placement-match window (`placement_match_window_seconds`): 0.5 s.
+- R8 placement-match window (`placement_match_window_seconds`): 0.5 s (removed 2026-10-19, D-116).
 - R8 fallback `assume_first_taken_is_apical`: `false` (off).
 - Header duration tolerance (`duration_tolerance_seconds`): 0.5 s.
 - Coverage policy for `unknown`: interim Unable to Verify, `undecided: true`.
-- Inferred Fail outcome (`inferred_fail_outcome`): interim Unable to Verify, `undecided: true`.
+- Inferred Fail outcome (`inferred_fail_outcome`): interim Unable to Verify, `undecided: true` (removed 2026-10-19, D-116).
 - Unable to Verify overall outcome: `undecided`.
 - Expected counts per canonical event (`expected_counts`, Increment 9a): exactly 1 for both paddles
   taken, first placement, apical and sternal placements, removal and shock on screen; unlimited
