@@ -97,50 +97,36 @@ flowchart TD
 
 ## (e) Shock time, phases and command resolution (P-009, P-010, P-011; D-093)
 
-The shock time comes only from the screen. `shock_time_fallback` is `none` (decided); the dashed
-removal branch runs only when the setting is `removal`.
+The shock time comes only from the screen. It is never inferred, from the paddle removal or
+anything else, and there is no fallback setting (D-093, D-115).
 
 ```mermaid
 flowchart TD
     S0{"How many confident<br/>shock indications<br/>on the screen?"} -->|two or more| N1["No shock time<br/>multiple_shocks<br/>(not guessed)"]
     S0 -->|one| T1["Shock time = shock on screen"]
-    S0 -->|none| F{"shock_time_fallback?"}
-    F -->|"none (decided, D-093)"| N0["No shock time, never inferred<br/>no_shock<br/>shock-dependent rules:<br/>Not evaluable because of R5"]
-    F -.->|removal| R{"Paddle removal?"}
-    R -.->|yes| T2["Shock time = first removal<br/>shock_time_from_removal<br/>(delays look shorter)"]
-    R -.->|no| N2["No shock time<br/>no_shock"]
+    S0 -->|"none (even if the paddles<br/>were removed, D-115)"| N0["No shock time, never inferred<br/>no_shock<br/>shock-dependent rules:<br/>Not evaluable because of R5"]
     T1 --> PH["P-010 Phases: before / at / after"]
-    T2 -.-> PH
     PH --> CR{"P-011 'Resume compressions'<br/>relative to the shock"}
-    CR -.->|"before removal<br/>(fallback removal only)"| UR1["Unresolved<br/>command_before_removal"]
     CR -->|"within simultaneous_window_seconds<br/>(configurable, placeholder 0.5 s)"| UR2["Unresolved<br/>command_near_shock"]
     CR -->|before| CO["Continue"]
     CR -->|after| ST["Start"]
     N1 --> UR3["Commands unresolved<br/>no_shock_time"]
     N0 --> UR3
-    N2 -.-> UR3
 ```
 
 ### (e2) Which start command is the restart (P-012)
 
 Every start command goes through these checks **on its own**. Commands that do not count are
 set aside, and the **earliest remaining** one is the restart, so a later start can still be
-the restart. The dashed removal branch (D-024, D-053, D-059) runs only with
-`shock_time_fallback: removal` (D-093). With the decided setting, the shock time is either from
-the screen or absent.
+the restart. The shock time is either from the screen or absent (D-093, D-115).
 
 ```mermaid
 flowchart TD
-    K{"For each start command:<br/>how was the shock time<br/>established? P-009"} -->|"no shock time<br/>(no shock on screen, D-093;<br/>or two shocks)"| A0["Ambiguous, not a mistake<br/>no_shock_time<br/>no restart time; R7/A6, A8, A7<br/>Not evaluable because of R5"]
+    K{"For each start command:<br/>is there a shock time? P-009"} -->|"no shock time<br/>(no shock on screen, D-093;<br/>or two shocks)"| A0["Ambiguous, not a mistake<br/>no_shock_time<br/>no restart time; R7/A6, A8, A7<br/>Not evaluable because of R5"]
     K -->|shock on screen| B{"This command at or<br/>before the shock?"}
     B -->|yes| B1["Does not count: a mistake<br/>start_command_before_shock<br/>(A7 reports it)"]
     B -->|no| RS["Candidate: after the shock"]
-    K -.->|"from paddle removal<br/>(fallback removal only)"| C{"This command at or<br/>before the removal?"}
-    C -.->|yes| C1["Ambiguous, not a mistake<br/>command_before_removal (D-053)<br/>R7/A6, A8 → Unable to Verify"]
-    C -.->|no| RR["Candidate: after the removal"]
-    RES["Unresolved resume command<br/>before the removal (D-024)"] -.->|"also makes the restart ambiguous (D-059)"| C1
     RS --> E["Restart = earliest candidate"]
-    RR -.-> E
 ```
 
 ## (f) R8: apical before sternal (P-015, built in Increment 12; pending until approved)
@@ -318,8 +304,7 @@ the discharge, D-105).
 
 ```mermaid
 flowchart TD
-    S{"Shock time?<br/>(screen only, D-093)"} -->|"none, or several shocks"| NE["Not evaluable<br/>because of R5<br/>(even with a removal)"]
-    S -->|"from the removal itself<br/>(fallback removal only)"| U0["Unable to Verify<br/>shock_time_from_removal"]
+    S{"Shock time?<br/>(screen only, D-093)"} -->|"none, or several shocks"| NE["Not evaluable<br/>because of R5<br/>(even with a removal:<br/>it doesn't show a shock, D-115)"]
     S -->|yes| RB{"Removal tagged more than<br/>w before the shock?"}
     RB -->|yes| F1["Fail<br/>removed_before_shock"]
     RB -->|no| DE{"Past the gate: a derived placement<br/>ended by a real exit more than w<br/>before the shock, that paddle<br/>not on again at the shock?"}
@@ -339,22 +324,21 @@ flowchart TD
 ## (l) R3: paddles placed firmly on the chest (P-035, built in Increment 15; pending until approved)
 
 Placement timing and presence only; `not_in_zone` waits for the approved chest regions (OQ-012,
-D-106). `w` is `simultaneous_window_seconds`.
+D-106). `w` is `simultaneous_window_seconds`. The only inference source is the shock on the
+screen; a paddle removal never infers (D-115).
 
 ```mermaid
 flowchart TD
-    S{"Shock time?<br/>(screen only, D-093)"} -->|yes| T{"paddles_firmly_on_chest<br/>at or before shock + w?"}
+    S{"Shock time?<br/>(screen only, D-093)"} -->|"no (even with a removal, D-115)"| NE["Not evaluable<br/>because of R5"]
+    S -->|yes| T{"paddles_firmly_on_chest<br/>at or before shock + w?"}
     T -->|yes| P1["Pass – Direct"]
     T -->|no| D{"Past the gate: both derived<br/>placements before shock + w?"}
     D -->|yes| P2["Pass – Direct<br/>derived_placement"]
     D -->|no| L{"Tagged only after<br/>the shock?"}
     L -->|yes| F1["Fail placed_after_shock"]
-    L -->|no| I
-    S -->|no| I{"An event in inference_sources?<br/>(shock on screen, removal; D-102)"}
-    I -->|yes| P3["Pass – Inferred<br/>(from the removal:<br/>inferred_from_removal)"]
-    I -->|no| N{"Shock time?"}
-    N -->|no| NE["Not evaluable<br/>because of R5"]
-    N -->|yes| W{"Low-confidence<br/>firm placement?"}
+    L -->|no| I{"The shock on screen an<br/>inference source? (default: yes)"}
+    I -->|yes| P3["Pass – Inferred<br/>from the shock"]
+    I -->|no| W{"Low-confidence<br/>firm placement?"}
     W -->|yes| U1["Unable to Verify"]
     W -->|no| Z{"Both placement zones visible<br/>first paddle taken → shock?"}
     Z -->|yes| F2["Fail missing"]
@@ -364,28 +348,28 @@ flowchart TD
 ## (m) R4: both discharge buttons pressed (P-036, built in Increment 16; pending until approved)
 
 The placement is the firm-placement tag, or past the gate the later derived placement. `w` is
-`simultaneous_window_seconds`. With both inference sources listed, the coverage branch is
-unreachable (D-107, OQ-061).
+`simultaneous_window_seconds`. The only inference source is the shock on the screen, so the
+coverage branch is unreachable by default (OQ-061); a paddle removal never infers (D-115).
 
 ```mermaid
 flowchart TD
     S{"Shock time?<br/>(screen only)"} -->|yes| V{"A press after placement − w<br/>and at or before shock + w?"}
     V -->|"yes, placement known"| P1["Pass – Direct"]
     V -->|"yes, no placement"| P2["Pass – Direct<br/>order_not_checked"]
-    V -->|no| E
-    S -->|no| E{"A press clearly before<br/>the placement? (without a shock<br/>time: and no later press)"}
+    V -->|no| E{"A press clearly before<br/>the placement?"}
     E -->|yes| F1["Fail before_placement"]
-    E -->|no| L{"Shock time and presses<br/>only after the shock?"}
+    E -->|no| L{"Presses only<br/>after the shock?"}
     L -->|yes| U0["Unable to Verify<br/>contradictory"]
-    L -->|no| I{"A source in inference_sources?<br/>(shock on screen, removal)"}
-    I -->|yes| P3["Pass – Inferred<br/>(removal: inferred_from_removal)"]
-    I -->|no| N{"Shock time?"}
-    N -->|no| NE["Not evaluable<br/>because of R5"]
-    N -->|yes| W{"Low-confidence press?"}
+    L -->|no| I{"The shock on screen an<br/>inference source? (default: yes)"}
+    I -->|yes| P3["Pass – Inferred<br/>from the shock"]
+    I -->|no| W{"Low-confidence press?"}
     W -->|yes| U1["Unable to Verify"]
     W -->|no| Z{"Both paddles visible<br/>placement → shock?"}
     Z -->|yes| F2["Fail not_pressed"]
     Z -->|"no: partly, never, no track"| U2["Unable to Verify"]
+    S -->|"no (even with a removal, D-115)"| E0{"A press clearly before the<br/>placement, and none after it?"}
+    E0 -->|yes| F1
+    E0 -->|no| NE["Not evaluable<br/>because of R5"]
 ```
 
 ## (n) Step 9d: derived per-zone gel application (P-037; D-111, D-112)

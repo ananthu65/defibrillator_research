@@ -47,7 +47,7 @@ def requires(rule_id, anchor, blocked_by):
 
 
 def restart_ambiguity(rule_id, ctx):
-    """P-021: rules needing the restart (R7/A6, A8) give Unable to Verify when it is timing-ambiguous (D-053, D-059)."""
+    """P-021: rules needing the restart (R7/A6, A8) give Unable to Verify when it is timing-ambiguous (D-054)."""
     anchor = ctx.anchor("start_compressions")
     if not anchor.ambiguous:
         return None

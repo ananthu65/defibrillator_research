@@ -215,11 +215,8 @@ decision_points:
     inputs: [shock anchor (screen only, D-093), paddles_removed_after_shock events, derived placements with end_seconds and ended_by_exit (past the gate), placement zone coverage from the shock to the end of the recording, rules.yaml shock_to_removal_seconds]
     branches:
       - condition: No shock time (no shock on the screen, or several)
-        outcome: Not evaluable because of R5, even if a removal is tagged
+        outcome: Not evaluable because of R5, even if a removal is tagged - a removal doesn't show a shock (D-115)
         next: P-020
-      - condition: Shock time taken from the removal itself (shock_time_fallback removal)
-        outcome: Unable to Verify; the removal can't be judged against its own time
-        flags: [shock_time_from_removal]
       - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
         outcome: Fail removed_before_shock
         failure_codes: [removed_before_shock]
@@ -520,8 +517,8 @@ decision_points:
     name: Shock time
     stage: context
     status: built
-    decides: When the shock happened, if that can be established; only from the shock on screen unless shock_time_fallback is removal (D-093)
-    inputs: [multiple_shocks anomaly, confident shock indications, engine.yaml shock_time_fallback, confident paddle removals (fallback removal only)]
+    decides: When the shock happened, if that can be established; only from the shock on screen, never inferred (D-093, D-115)
+    inputs: [multiple_shocks anomaly, confident shock indications]
     branches:
       - condition: multiple_shocks anomaly present
         outcome: No shock time (not guessed, even if a removal exists); both shocks listed as candidates
@@ -529,19 +526,12 @@ decision_points:
       - condition: One confident shock on screen
         outcome: Shock time is its start
         next: P-010
-      - condition: No shock on screen, shock_time_fallback none (the decided setting, D-093)
-        outcome: No shock time, never inferred; shock-dependent rules are not evaluable because of R5, and resume commands stay unresolved
+      - condition: No shock on screen (whether or not the paddles were removed)
+        outcome: No shock time, never inferred - a paddle removal doesn't show that a shock was delivered (D-115); shock-dependent rules are not evaluable because of R5, and resume commands stay unresolved
         flags: [no_shock]
-      - condition: No shock on screen, shock_time_fallback removal, and a confident paddle removal
-        outcome: Shock time is the first removal; every timing result using it is flagged (D-023; D-024, D-053, D-054, D-059 then apply)
-        next: P-010
-        flags: [shock_time_from_removal, multiple_candidates]
-      - condition: No shock on screen, shock_time_fallback removal, and no removal either
-        outcome: No shock time; shock-dependent rules report not evaluable because of R5
-        flags: [no_shock]
-    config: [engine.yaml shock_time_fallback]
+    config: []
     code: rules/context.py (_shock_anchor)
-    decisions: [D-023, D-030, D-039, D-040, D-093]
+    decisions: [D-030, D-039, D-040, D-093, D-115]
     assumptions: [A-006]
     open_questions: [OQ-057]
 
@@ -576,9 +566,6 @@ decision_points:
       - condition: No shock time (no shock, or multiple shocks)
         outcome: Unresolved
         flags: [no_shock_time]
-      - condition: Shock time from removal (shock_time_fallback removal only, D-093) and the command is before the removal
-        outcome: Unresolved
-        flags: [command_before_removal, shock_time_from_removal]
       - condition: Within simultaneous_window_seconds of the shock time
         outcome: Unresolved
         flags: [command_near_shock]
@@ -586,12 +573,11 @@ decision_points:
         outcome: continue_compressions_command
         next: P-012
       - condition: After the shock
-        outcome: start_compressions_command (carries shock_time_from_removal under the fallback)
+        outcome: start_compressions_command
         next: P-012
-        flags: [shock_time_from_removal]
     config: [vocabulary.yaml resolve_by_shock, engine.yaml simultaneous_window_seconds]
     code: rules/context.py (_resolve)
-    decisions: [D-024, D-041, D-017]
+    decisions: [D-041, D-017, D-115]
     assumptions: [A-010]
     open_questions: [OQ-009]
 
@@ -615,19 +601,16 @@ decision_points:
       - condition: A start command at or before a confirmed on-screen shock (start anchor only; each start command is checked on its own, so a later one can still be the restart)
         outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
         flags: [start_command_before_shock]
-      - condition: Shock time from removal (shock_time_fallback removal only, D-093) and a start command at or before the removal, or an unresolved resume command before it (start anchor only)
-        outcome: Timing-ambiguous (the real shock was at an unknown earlier time); not counted, not a mistake; listed as ambiguous; a later start is still used but the anchor stays flagged (D-053, D-059). With no ambiguous command the restart is certain and carries no fallback flag (D-059)
-        flags: [command_before_removal, shock_time_from_removal]
       - condition: No shock time (start anchor only)
-        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054). With shock_time_fallback none, every rule needing the restart is already not evaluable because of R5 (D-093)
+        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054). Every rule needing the restart is already not evaluable because of R5 (D-093)
         flags: [no_shock_time]
       - condition: An ambiguous command is unresolved (continue and start anchors)
         outcome: Anchor may be incomplete
         flags: [unresolved_commands]
     config: []
     code: rules/context.py (_earliest, _start_anchor)
-    decisions: [D-025, D-053, D-054, D-059, D-040, D-012]
-    assumptions: [A-014]
+    decisions: [D-025, D-054, D-040, D-012, D-115]
+    assumptions: []
     open_questions: [OQ-022]
 
   - id: P-013
@@ -662,19 +645,8 @@ decision_points:
         outcome: Not evaluable because of that rule (one mistake reported once)
       - condition: Required facts absent (e.g. no shock time)
         outcome: Not evaluable because of the step that provides them, with its flags
-      - condition: Restart needed (R7/A6, A8) but timing-ambiguous commands exist (Anchor.ambiguous, including unresolved resume commands before the removal, D-059)
+      - condition: Restart needed (R7/A6, A8) but timing-ambiguous commands exist (Anchor.ambiguous - no shock time, D-054)
         outcome: Unable to Verify, never Fail; A7 does not report ambiguous commands as sequence errors
-        flags: [command_before_removal]
-      - condition: R7/A6 under the removal fallback, no ambiguous start, delay from the removal already exceeds the limit (D-059)
-        outcome: Fail too_late (the real delay is even longer)
-        failure_codes: [too_late]
-        flags: [shock_time_from_removal]
-      - condition: R7/A6 under the removal fallback, no ambiguous start, delay from the removal within the limit (D-059)
-        outcome: Unable to Verify (the real delay may exceed the limit)
-        flags: [shock_time_from_removal]
-      - condition: A8 under the removal fallback, no ambiguous start (D-059)
-        outcome: Stop to restart measured normally, without the fallback flag (it does not depend on the shock time)
-        failure_codes: [pre_shock_pause]
       - condition: Direct evidence present, in order and in time
         outcome: Pass – Direct
       - condition: Direct evidence shows the mistake clearly
@@ -690,8 +662,8 @@ decision_points:
         next: P-008
     config: [configs/rules.yaml rules, configs/rules.yaml timing_limits]
     code: rules/checks.py, rules/registry.py, rules/engine.py (Increments 6 and 7)
-    decisions: [D-001, D-002, D-003, D-043, D-045, D-053, D-054, D-057, D-059]
-    assumptions: [A-014, A-016]
+    decisions: [D-001, D-002, D-003, D-043, D-045, D-054, D-057]
+    assumptions: [A-016]
     open_questions: []
 
   - id: P-015
@@ -736,26 +708,25 @@ decision_points:
     open_questions: [OQ-004, OQ-005, OQ-006, OQ-059]
 
   - id: P-016
-    name: R3/R4 inferred pass from shock or removal
+    name: R3/R4 inferred pass from the shock on screen
     stage: rule
     status: built
     decides: Whether placement (R3) or button pressing (R4) passes by inference when the direct evidence is missing (Increments 15 and 16). Direct evidence and coverage are P-035 (R3) and P-036 (R4)
-    inputs: [R3/R4 inference_sources (rules.yaml), confident shock on screen or removal]
+    inputs: [R3/R4 inference_sources (rules.yaml; the shock on screen only), confident shock on screen]
     branches:
       - condition: Direct evidence weak or missing; the first source listed in inference_sources that is confirmed is the shock on screen
-        outcome: Pass – Inferred, naming the shock (D-107)
-      - condition: Direct evidence weak or missing; the removal confirmed (and the shock not, or not listed), with or without a shock time
-        outcome: Pass – Inferred, naming the removal; linked to the contradiction that paddles are sometimes removed without a successful shock (A-021, D-102); the overall result then can't be Pass, because R5 fails or is Unable to Verify
-        flags: [inferred_from_removal]
+        outcome: Pass – Inferred, naming the shock (D-057)
+      - condition: Only a paddle removal confirmed
+        outcome: No inference - a removal doesn't show that a shock was delivered (D-115); the rules refuse it as a source (a configuration error)
       - condition: No listed source confirmed
         outcome: Back to the rule (P-035, P-036) - no shock time, Not evaluable because of R5; otherwise its coverage step
       - condition: Both sources listed (the proposal)
-        outcome: R3's missing and R4's not_pressed are unreachable - with a shock time there is a shock on screen, without one a removal infers or the rule is Not evaluable (D-107, OQ-061)
+        outcome: R3's missing and R4's not_pressed are unreachable - with a shock time there is a shock on screen, which infers; without one the rule is Not evaluable because of R5 (OQ-061)
     config: [configs/rules.yaml R3/R4 parameters.inference_sources]
     code: rules/video_rules.py (_inferred, used by paddles_firmly_on_chest and both_buttons_pressed)
-    decisions: [D-004, D-057, D-102, D-106, D-107, D-108]
-    assumptions: [A-021]
-    open_questions: [OQ-012, OQ-060, OQ-061]
+    decisions: [D-004, D-057, D-106, D-108, D-115]
+    assumptions: []
+    open_questions: [OQ-012, OQ-061]
 
   - id: P-035
     name: R3 paddles placed firmly on the chest
@@ -773,8 +744,7 @@ decision_points:
         outcome: Fail placed_after_shock (direct evidence of the mistake comes before the inference)
         failure_codes: [placed_after_shock]
       - condition: No direct evidence (or no shock time to judge it against); an event in inference_sources confirmed
-        outcome: Pass – Inferred, naming the supporting event (D-057, D-102, D-107)
-        flags: [inferred_from_removal]
+        outcome: Pass – Inferred, naming the shock on screen (D-057, D-115)
         next: P-016
       - condition: No inference and no shock time
         outcome: Not evaluable because of R5
@@ -793,9 +763,9 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_firmly_on_chest)
-    decisions: [D-010, D-057, D-088, D-092, D-093, D-102, D-106, D-107]
-    assumptions: [A-019, A-021]
-    open_questions: [OQ-012, OQ-022, OQ-060, OQ-061]
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115]
+    assumptions: [A-019]
+    open_questions: [OQ-012, OQ-022, OQ-061]
 
   - id: P-036
     name: R4 both discharge buttons pressed
@@ -817,8 +787,7 @@ decision_points:
         outcome: Unable to Verify; the screen showed the shock before any press
         flags: [contradictory]
       - condition: No direct evidence (or no shock time to judge it against); a source in inference_sources confirmed
-        outcome: Pass – Inferred (D-107)
-        flags: [inferred_from_removal]
+        outcome: Pass – Inferred from the shock on screen (D-057, D-115)
         next: P-016
       - condition: No inference and no shock time
         outcome: Not evaluable because of R5
@@ -827,7 +796,7 @@ decision_points:
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
       - condition: No inference; both paddles visible throughout placement .. shock (the recording's start when no placement is known)
-        outcome: Fail not_pressed (unreachable while either source is in inference_sources, D-107)
+        outcome: Fail not_pressed (unreachable while the shock on screen is an inference source, OQ-061)
         failure_codes: [not_pressed]
       - condition: No inference; a paddle not visible throughout that window (partly, never, or no track)
         outcome: Unable to Verify, never Fail
@@ -837,9 +806,9 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R4 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_paddle, sternal_paddle)]
     code: rules/video_rules.py (both_buttons_pressed); rules/coverage.py (region_missing)
-    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-102, D-107, D-108]
-    assumptions: [A-021]
-    open_questions: [OQ-023, OQ-060, OQ-061]
+    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115]
+    assumptions: []
+    open_questions: [OQ-023, OQ-061]
 
   - id: P-038
     name: R1 gel applied twice, once to each zone, before placement
@@ -994,16 +963,16 @@ decision_points:
     decides: Whether a rule needing the restart (R7/A6, A8) can identify it
     inputs: [start anchor and its ambiguous commands]
     branches:
-      - condition: A start or resume command is timing-ambiguous
+      - condition: A start or resume command is timing-ambiguous (no shock time, D-054)
         outcome: Unable to Verify, never Fail, citing the ambiguous commands
-        flags: [command_before_removal]
+        flags: [no_shock_time]
       - condition: No ambiguous command
         outcome: Go on
         next: P-022
     config: []
     code: rules/checks.py (restart_ambiguity)
-    decisions: [D-053, D-054, D-059]
-    assumptions: [A-014]
+    decisions: [D-054]
+    assumptions: []
     open_questions: []
 
   - id: P-022

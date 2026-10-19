@@ -183,16 +183,14 @@ low-confidence rule.
 ### Stage: context
 
 #### P-009 Shock time (built)
-The shock time comes only from the screen (D-093). `engine.yaml` `shock_time_fallback` is `none`;
-the removal rows apply only when it is set to `removal`.
+The shock time comes only from the screen (D-093). It is never inferred, from the paddle removal
+or anything else, and there is no fallback setting (D-115).
 
 | Condition | Outcome | Flags |
 |---|---|---|
 | Two or more shocks | No shock time (not guessed) | `multiple_shocks` |
 | One shock on screen | Shock time = the shock | — |
-| No shock on screen (fallback `none`, the decided setting) | **No shock time; never inferred**, even if the paddles were removed. Shock-dependent rules are Not evaluable because of R5; resume commands stay unresolved | `no_shock` |
-| No shock on screen, but a paddle removal (fallback `removal` only) | Shock time = first removal; every timing result using it is flagged | `shock_time_from_removal` (+ `multiple_candidates` if several removals) |
-| No shock on screen and no removal (fallback `removal`) | No shock time | `no_shock` |
+| No shock on screen | **No shock time; never inferred**, even if the paddles were removed (D-115). Shock-dependent rules are Not evaluable because of R5; resume commands stay unresolved | `no_shock` |
 
 #### P-010 Phase of a time (built)
 | Condition | Phase |
@@ -206,10 +204,9 @@ the removal rows apply only when it is set to `removal`.
 | Condition | Outcome | Flags |
 |---|---|---|
 | No shock time | Unresolved | `no_shock_time` |
-| Shock time from removal (fallback `removal` only), command before the removal | Unresolved (D-024) | `command_before_removal`, `shock_time_from_removal` |
 | Within 0.5 s of the shock | Unresolved | `command_near_shock` |
 | Before the shock | "Continue compressions" | — |
-| After the shock | "Start compressions" | `shock_time_from_removal` under the fallback |
+| After the shock | "Start compressions" | — |
 
 #### P-012 Anchor selection (built): which event gives each key time
 | Condition | Outcome | Flags |
@@ -219,8 +216,6 @@ the removal rows apply only when it is set to `removal`.
 | Only a low-confidence candidate | Absent | `low_confidence_evidence` |
 | No candidate | Absent, with a reason | — |
 | A start command at or before a confirmed on-screen shock | Not the restart (D-025); a mistake A7 reports | `start_command_before_shock` |
-| Shock time from removal, and a start command at or before the removal, or an unresolved "resume" before it | Timing-ambiguous: not the restart, **not a mistake** (D-053, D-059); a later start is still used, but stays flagged | `command_before_removal`, `shock_time_from_removal` |
-| Shock time from removal, no start or unresolved "resume" before the removal | The first start after the removal is definitely the restart; no fallback flag on the restart itself (D-059) | — |
 | No shock time (start only) | No restart time; start commands are ambiguous, not mistakes (D-054) | `no_shock_time` |
 
 Each start command is checked on its own, so a later start can still be the restart when an
@@ -276,7 +271,7 @@ elapsed times and checks it used.
 #### P-021 Restart ambiguity (R7/A6, A8)
 | Condition | Outcome | Flags |
 |---|---|---|
-| A start or "resume" command is timing-ambiguous | **Unable to Verify, never Fail** | `command_before_removal` |
+| A start or "resume" command is timing-ambiguous (no shock time, D-054) | **Unable to Verify, never Fail** | `no_shock_time` |
 | None | Go on → P-022 | — |
 
 #### P-022 Occurrences of the required event
@@ -320,10 +315,7 @@ elapsed times and checks it used.
 | Rule not yet approved | Reported as pending; the overall result cannot be Pass (D-055) |
 | A rule it depends on failed or was not evaluable | "Not evaluable because of …" |
 | Required facts missing (e.g. no shock time) | "Not evaluable because of …", with the facts' flags |
-| The restart is needed (R7/A6, A8), but a start or "resume" command is timing-ambiguous | **Unable to Verify, never Fail**; A7 does not report it (D-053, D-054, D-059) |
-| R7/A6 under the removal fallback, no ambiguous start, delay **from the removal** already over the limit | **Fail `too_late`**: the real delay is even longer (D-059) |
-| R7/A6 under the removal fallback, no ambiguous start, delay from the removal within the limit | Unable to Verify, `shock_time_from_removal`: the real delay may be over the limit (D-059) |
-| A8 under the removal fallback, no ambiguous start | Stop → restart measured normally, without the fallback flag (D-059) |
+| The restart is needed (R7/A6, A8), but a start or "resume" command is timing-ambiguous | **Unable to Verify, never Fail**; A7 does not report it (D-054) |
 | Evidence present, in order and in time | Pass – Direct |
 | Evidence clearly shows the mistake | Fail, with the rule's failure code |
 | Evidence weak **or missing**, and the rule has an approved inference (R3, R4) | → P-016, **before** the coverage step (D-057) |
@@ -367,15 +359,15 @@ the chest regions (OQ-012, D-106).
 | Shock time; a `paddles_firmly_on_chest` tag at or before the shock (within `simultaneous_window_seconds` after it counts as at it) | Pass – Direct | — |
 | Shock time; past the gate, both derived placements at or before the shock | Pass – Direct | `derived_placement` |
 | Shock time; only tags clearly after the shock | Fail; comes before the inference | `placed_after_shock` |
-| No direct evidence (or no shock time to judge it against); an event in `inference_sources` confirmed | Pass – Inferred (D-057, D-102, D-107) | `inferred_from_removal` if from the removal |
+| No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (D-057, D-115) | — |
 | No inference and no shock time | **Not evaluable because of R5** | — |
 | No inference; a low-confidence firm placement | Unable to Verify | `low_confidence_evidence` |
 | No inference; both placement zones visible throughout first paddle taken → shock | Fail | `missing` |
 | No inference; a zone not visible throughout that window (for example one paddle visible: the tag is not made then, A-019) | Unable to Verify, never Fail | — |
 
-With the proposal's sources the coverage rows are unreachable: a shock time always means a shock
-on the screen, which is itself an inference source, and without one a removal infers or the rule
-is Not evaluable (D-107, OQ-061).
+With the shock on screen as the inference source, the coverage rows are unreachable: a shock time
+always means a shock on the screen, which infers, and without one the rule is Not evaluable
+because of R5 (OQ-061). A paddle removal never infers (D-115).
 
 #### P-038 R1: gel applied twice, once to each zone, before placement (built, Increment 17; pending until approved)
 The gel phase ends at the first placement (else `first_paddle_taken`). The order between the
@@ -406,10 +398,10 @@ one counts; the count stays undecided (OQ-023).
 | Shock time; a valid press, no placement observed | Pass – Direct, order not checked; the overall result can't be Pass | `order_not_checked` |
 | A press clearly before the placement, none valid (without a shock time: only if no press came after the placement) | Fail; comes before the inference | `before_placement` |
 | Shock time; presses only clearly after the shock | Unable to Verify | `contradictory` |
-| No direct evidence (or no shock time to judge it against); a source in `inference_sources` confirmed | Pass – Inferred (P-016) | `inferred_from_removal` if from the removal |
+| No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (P-016) | — |
 | No inference and no shock time | **Not evaluable because of R5** | — |
 | No inference; a low-confidence press | Unable to Verify | `low_confidence_evidence` |
-| No inference; both paddles visible throughout the placement → the shock (the recording's start when no placement is known) | Fail (unreachable while either source is listed) | `not_pressed` |
+| No inference; both paddles visible throughout the placement → the shock (the recording's start when no placement is known) | Fail (unreachable while the shock on screen is an inference source) | `not_pressed` |
 | No inference; a paddle not visible throughout that window | Unable to Verify, never Fail | — |
 
 #### P-034 R6: paddles removed after the shock (built, Increment 14; pending until approved)
@@ -417,8 +409,7 @@ one counts; the count stays undecided (OQ-023).
 
 | Condition | Outcome | Code and flags |
 |---|---|---|
-| No shock time (no shock on the screen, or several) | **Not evaluable because of R5**, even if a removal is tagged (D-093) | — |
-| Shock time taken from the removal itself (`shock_time_fallback: removal` only) | Unable to Verify | `shock_time_from_removal` |
+| No shock time (no shock on the screen, or several) | **Not evaluable because of R5**, even if a removal is tagged: a removal doesn't show a shock (D-093, D-115) | — |
 | Removal clearly before the shock (more than `removal_before_screen_tolerance_seconds`: the screen may show the shock after the discharge, D-105) | Fail | `removed_before_shock` |
 | Past the gate: a derived placement ended by a real exit clearly before the shock, that paddle not placed again by the shock | Fail | `removed_before_shock`; `derived_placement` |
 | Removal after the shock, or before it within `removal_before_screen_tolerance_seconds` (treated as at the shock) | Pass – Direct; limit unset, so the overall result can't be Pass (D-062); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
@@ -440,18 +431,16 @@ one counts; the count stays undecided (OQ-023).
 | First placement not seen, a zone not visible throughout that window | Unable to Verify | — |
 
 #### P-016 R3/R4 inferred pass (built, Increments 15–16; direct evidence and coverage in P-035 and P-036)
-Either source is enough (D-107). The first source listed in `inference_sources` that is confirmed
-is cited, so the shock on the screen is cited whenever it is there.
+The only inference source is the shock on the screen (D-115). A paddle removal is never one: it
+doesn't show that a shock was delivered, and the rules refuse it as a source.
 
 | Condition | Outcome | Flags |
 |---|---|---|
 | Direct evidence weak **or missing**; the shock on screen confirmed | Pass – Inferred, citing the shock (D-057) | — |
-| Direct evidence weak or missing; the removal confirmed (no shock listed or seen), **with or without a shock time** | Pass – Inferred, citing the removal. Paddles are sometimes removed without a successful shock (A-021); the overall result then still can't be Pass, because R5 fails or is Unable to Verify (D-102, OQ-060) | `inferred_from_removal` |
 | No listed source confirmed | Back to the rule: no shock time → Not evaluable because of R5; otherwise its coverage step | — |
 
-**With both sources listed (the proposal), R3's `missing` and R4's `not_pressed` are
-unreachable:** with a shock time there is a shock on the screen, which infers; without one, a
-removal infers, and otherwise the rule is Not evaluable because of R5 (D-107; OQ-061 asks the
+**R3's `missing` and R4's `not_pressed` are unreachable:** with a shock time there is a shock on
+the screen, which infers; without one the rule is Not evaluable because of R5 (OQ-061 asks the
 supervisor).
 
 ### Stage: overall policy
@@ -521,24 +510,15 @@ today.
 2. P-007: coverage **not covered**. P-008 → **Unable to Verify**. The learner is not blamed
    for missing data (D-004).
 
-> **W-5, W-6, W-14, W-15, W-16, W-19 and W-24 apply only with `shock_time_fallback: removal`.**
-> With the decided setting `none` (D-093), a recording with no shock on screen has no shock time
+> **W-5, W-6, W-14, W-15, W-16, W-19 and W-24 are withdrawn** (D-115): they described the
+> removal fallback, which no longer exists. A recording with no shock on screen has no shock time
 > at all: see W-54.
 
-### W-5 No shock on screen, paddles removed at 52 s → timing flagged (fallback `removal` only)
-1. P-009: no shock indication; first removal at 52 s → shock time **52 s**, flagged
-   `shock_time_from_removal`.
-2. "Start compressions" at 55 s, and none before the removal → P-012: the restart is
-   **definitely** 55 s, so the restart itself carries no fallback flag (D-059).
-3. Shock → restart = 3 s, flagged `shock_time_from_removal`. Removal comes after the real
-   shock, so the real delay was **longer** than 3 s.
-4. R7/A6 (Increment 21): see W-15 and W-16. A8 (Increment 23): see W-19.
+### W-5 No shock on screen, paddles removed at 52 s → timing flagged (fallback `removal` only) — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
-### W-6 Under the removal fallback, "resume compressions" at 50 s
-1. Shock time from removal at 52 s (W-5).
-2. P-011: the command is before the removal → **unresolved**, `command_before_removal`
-   (D-024). It counts as neither continue nor restart.
-3. P-012: the continue and start anchors are flagged `unresolved_commands`.
+### W-6 Under the removal fallback, "resume compressions" at 50 s — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
 ### W-7 Two shocks 0.3 s apart → no shock time
 1. P-005: two confident shocks → `multiple_shocks`, within the 0.5 s window ("possibly the
@@ -580,34 +560,14 @@ today.
 1. Video events from camera "T" and camera "LS".
 2. P-002: rejected, `multiple_camera_angles`; no assessment is produced (D-032).
 
-### W-14 Under the removal fallback, "start compressions" before the removal → Unable to Verify
-1. P-009: no shock on screen; paddles removed at 52 s → shock time **52 s** (from removal),
-   flagged `shock_time_from_removal`. The real shock was at an unknown time before 52 s.
-2. Explicit "start compressions" at 50 s, and again at 58 s.
-3. P-012: the 50 s command is **timing-ambiguous**. It may have been the genuine restart after
-   the real shock, so it is not counted and is **not a mistake**. It is listed as ambiguous and
-   flagged `command_before_removal` (D-053). The 58 s command is used as the restart time, but
-   the anchor stays flagged.
-4. R7/A6 (Increment 21) and A8 (Increment 23): the restart is ambiguous → **Unable to Verify**,
-   not Fail, not even `too_late` or `pre_shock_pause` measured to 58 s.
-5. A7 (Increment 22) does **not** report the 50 s command as a sequence error. Compare W-10,
-   where the shock was confirmed on screen and an early start command is a sequence problem.
+### W-14 Under the removal fallback, "start compressions" before the removal → Unable to Verify — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
-### W-15 R7/A6 under the removal fallback, delay from the removal already too long → Fail
-*(Planned, D-059. The R7 limit is not approved yet, OQ-016; a limit of 10 s is used here for
-illustration only.)*
-1. No shock on screen; removal at 52 s → shock time 52 s (`shock_time_from_removal`).
-2. No start command before 52 s. First start after it at 64 s → definitely the restart.
-3. Delay from the removal = 12 s, already over 10 s. The real shock was earlier, so the real
-   delay is even longer.
-4. R7/A6 → **Fail `too_late`**, a confident Fail even under the fallback, flagged
-   `shock_time_from_removal` for transparency.
+### W-15 R7/A6 under the removal fallback, delay from the removal already too long → Fail — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
-### W-16 R7/A6 under the removal fallback, delay from the removal within the limit → Unable to Verify
-*(Planned, D-059; illustrative 10 s limit.)*
-1. As W-15, but the first start after the removal is at 58 s → delay from the removal = 6 s.
-2. The real delay is longer than 6 s by an unknown amount, so it may exceed 10 s.
-3. R7/A6 → **Unable to Verify**, flagged `shock_time_from_removal`.
+### W-16 R7/A6 under the removal fallback, delay from the removal within the limit → Unable to Verify — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
 ### W-17 R8, one zone visible, its paddle has no placement event → Unable to Verify
 *(Built in Increment 12, D-058.)*
@@ -625,22 +585,11 @@ illustration only.)*
 2. P-015: the order cannot be compared → **Unable to Verify**, `placement_missing`, and **not**
    Fail `wrong_order`. R3 reports the missing sternal placement.
 
-### W-19 A8 under the removal fallback, no ambiguous start → measured normally
-*(Planned, D-059.)*
-1. Removal at 52 s (the shock time comes from removal). "Stop compressions" at 48 s; first
-   start after the removal at 55 s; no start before the removal.
-2. The restart is certain (P-012), and stop → restart = 7 s does not depend on the shock time,
-   so it carries no fallback flag.
-3. A8 (limit 5 s, approved, D-016) → **Fail `pre_shock_pause`**.
+### W-19 A8 under the removal fallback, no ambiguous start → measured normally — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
-### W-20 R3 with no direct placement evidence, removal confirmed → Pass – Inferred
-*(Built in Increment 15; D-057, D-106.)*
-1. The camera never shows both paddles stable in their zones (no `paddles_firmly_on_chest`).
-2. P-014: R3 has an approved inference, so it is checked **before** the coverage step.
-3. P-016: paddle removal is confidently confirmed → **Pass – Inferred**, naming the removal
-   event. The coverage step (P-008) is not reached.
-4. If no shock appeared on the screen (paddles removed without a successful shock), R5 is Fail
-   `missing` or Unable to Verify, so the overall result is still not Pass (D-102, A-021).
+### W-20 R3 with no direct placement evidence, removal confirmed → Pass – Inferred — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): R3 no longer infers from the paddle removal. With no direct evidence and no shock on the screen, R3 is Not evaluable because of R5; with a shock on the screen, it is Pass – Inferred from the shock.*
 
 ### W-21 Overall result with a pending rule → Incomplete
 *(Planned, D-055.)*
@@ -663,14 +612,8 @@ illustration only.)*
 3. P-017: no rule fails → **Incomplete**, never Pass, exactly as if R8 were pending. Any Fail
    elsewhere would still make the overall result Fail.
 
-### W-24 Under the removal fallback, "resume compressions" before the removal → restart ambiguous
-*(D-059; the context part is built and tested.)*
-1. Shock time from removal at 52 s. "Resume compressions" at 49 s → P-011: unresolved,
-   `command_before_removal`.
-2. "Start compressions" at 58 s → P-012: used as the restart time, but the restart is
-   **ambiguous** (the 49 s command may have been the real restart). It is flagged
-   `command_before_removal`.
-3. R7/A6 and A8 → **Unable to Verify**, never Fail. A7 does not report the 49 s command.
+### W-24 Under the removal fallback, "resume compressions" before the removal → restart ambiguous — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
 
 ### W-25 "Stand clear" said after the shock, and again before it → Pass
 *(Shared checks, built in Increment 6; A3 itself is built in Increment 18.)*
@@ -905,17 +848,17 @@ illustration only.)*
 4. Every rule is pending → **Incomplete**, `development_data`, every result flagged.
 
 ### W-54 An LL video: no screen, no shock time, nothing guessed
-*(Built; D-093, D-094.)*
+*(Built; D-093, D-094, D-115.)*
 1. P-001/P-030: LL shows the apical zone throughout. There is no sternal zone track and no
    `defibrillator_screen` track, so the sternal zone and the screen are **unknown**. The paddles
    were removed at 15.94 s.
-2. P-009 (fallback `none`): no shock on screen → **no shock time**, `no_shock`. The removal is
-   not used.
+2. P-009: no shock on screen → **no shock time**, `no_shock`. The removal is never used as a
+   shock (D-115).
 3. R5 (Increment 13): no shock on screen while the screen is unknown → **Unable to Verify**,
    never Fail. Had the screen been in view throughout and no shock seen, R5 would fail.
-4. Every shock-dependent rule (R6, R7/A6, A1–A4, A7, A8; R3's direct check) → **Not evaluable
-   because of R5**. Resume commands stay unresolved (`no_shock_time`).
-5. R3/R4 can still pass by inference from the removal (P-016, unchanged).
+4. Every shock-dependent rule (R3, R4, R6, R7/A6, A1–A4, A7, A8) → **Not evaluable because of
+   R5**. Resume commands stay unresolved (`no_shock_time`).
+5. R3/R4 don't infer from the removal: it doesn't show that a shock was delivered (D-115).
 
 ### W-55 R2: the first placement isn't seen
 *(Built in Increment 11; D-095, D-097.)*
@@ -1057,13 +1000,8 @@ illustration only.)*
 3. If `inference_sources` didn't include the shock: the sternal zone was not visible over
    5–15 s → **Unable to Verify**. With both zones visible throughout → **Fail `missing`**.
 
-### W-69 R3 from the removal, without a shock on the screen
-*(Built in Increment 15; D-093, D-102.)*
-1. No shock on the screen; paddles removed at 20 s.
-2. P-035: no shock time, so a firm placement tag can't be checked directly. The removal is an
-   inference source → **Pass – Inferred**, citing the removal. R5 is Fail or Unable to Verify,
-   so the overall result is not Pass (A-021).
-3. Without the removal → **Not evaluable because of R5**.
+### W-69 R3 from the removal, without a shock on the screen — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): without a shock on the screen R3 is Not evaluable because of R5, even with a removal tagged.*
 
 ### W-70 R3 from derived placements
 *(Built in Increment 15; D-088, D-106.)*
@@ -1073,13 +1011,8 @@ illustration only.)*
 4. Only one derived placement, or one after the shock → not direct evidence; the inference or
    coverage decides.
 
-### W-71 R3 and R4 from the removal alone, in a view without the screen
-*(Built in Increment 16; D-107, A-021.)*
-1. An LL view: no screen, so no shock time. Paddles removed at 20 s; no firm placement and no press
-   tagged.
-2. P-016: the removal is confirmed → R3 and R4 are each **Pass – Inferred**, citing the removal and
-   flagged `inferred_from_removal` (the reason names A-021).
-3. R5 is Unable to Verify (no screen), so the overall result is not Pass.
+### W-71 R3 and R4 from the removal alone, in a view without the screen — *withdrawn*
+*Withdrawn on 2026-10-19 (D-115): in a view without the screen, R3 and R4 are Not evaluable because of R5; a removal doesn't infer them.*
 
 ### W-72 R4 with a press and a placement
 *(Built in Increment 16; D-108.)*

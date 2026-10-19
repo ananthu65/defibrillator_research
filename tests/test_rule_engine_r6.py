@@ -128,12 +128,6 @@ class WithoutShockTime(unittest.TestCase):
                   ev("paddles_removed_after_shock", 20)]
         self.assertEqual(r6(events).blocked_by, "R5")
 
-    def test_shock_time_taken_from_the_removal_is_unable_to_verify(self):
-        """shock_time_fallback removal: the removal can't be judged against its own time."""
-        outcome = r6([ev("paddles_removed_after_shock", 20)], cfg=config(shock_time_fallback="removal"))
-        self.assertEqual(outcome.kind, "unable_to_verify")
-        self.assertIn("shock_time_from_removal", outcome.flags)
-
 
 class RemovalMissing(unittest.TestCase):
     """D-104: missing only if both placement zones were visible from the shock (15 s) to the end (30 s)."""

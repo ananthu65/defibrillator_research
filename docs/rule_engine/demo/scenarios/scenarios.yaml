@@ -46,13 +46,13 @@ scenarios:
     config: demo
     title: The defibrillator screen is not in view
     shows: >-
-      No shock time without the screen: R5 is Unable to Verify (the screen couldn't be seen, so
-      it is not the learner's fault) and R6 is Not evaluable because of R5. R3 and R4 pass by
-      inference from the paddle removal, flagged inferred_from_removal.
+      No shock time without the screen, and a paddle removal never stands in for the shock: R5 is
+      Unable to Verify (the screen couldn't be seen, so it is not the learner's fault), and R3, R4 and
+      R6, which need the shock time, are Not evaluable because of R5.
     expected:
       overall: incomplete
-      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [pass_inferred, null],
-              R4: [pass_inferred, null], R5: [unable_to_verify, null], R6: [not_evaluable, null]}
+      rules: {R1: [pass_direct, null], R2: [pass_direct, null], R8: [pass_direct, null], R3: [not_evaluable, null],
+              R4: [not_evaluable, null], R5: [unable_to_verify, null], R6: [not_evaluable, null]}
 
   - id: low_confidence_removal
     file: 05_low_confidence_removal.json

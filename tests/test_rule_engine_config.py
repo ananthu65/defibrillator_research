@@ -66,12 +66,12 @@ class RepositoryConfig(unittest.TestCase):
         self.assertEqual((period.value, period.no_limit, period.approved), (None, False, False))
         self.assertIn("may be no limit", period.note)
 
-    def test_r3_r4_inference_sources_follow_the_proposal(self):
-        # D-102: kept as in the proposal despite the observed contradiction (A-021, OQ-060)
+    def test_r3_r4_infer_only_from_the_shock_on_screen(self):
+        # D-115: a paddle removal doesn't show that a shock was delivered, so it is never a source
         for rule_id in ("R3", "R4"):
             with self.subTest(rule_id):
                 sources = self.config.rule(rule_id).parameters["inference_sources"]
-                self.assertEqual(sources, ["shock_delivered_on_screen", "paddles_removed_after_shock"])
+                self.assertEqual(sources, ["shock_delivered_on_screen"])
                 self.assertTrue(all(s in self.config.vocabulary.events for s in sources))
 
     def test_engine_placeholders_and_undecided_policies_are_marked(self):

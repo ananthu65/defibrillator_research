@@ -19,10 +19,8 @@ duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may en
 # the paddles before the screen updates. A removal (tag or derived placement end) up to this long
 # before the shock on screen counts as at the shock (D-105). Separate from simultaneous_window_seconds.
 removal_before_screen_tolerance_seconds: {value: 0.5, placeholder: true, note: "interim export: 0 of 20 LS/T removals before the screen (D-105)"}
-# Where the shock time comes from when no shock is seen on the screen (D-093): none (decided
-# 2026-10-17: never inferred, so shock-dependent rules are Not evaluable) | removal (the first
-# paddle removal, flagged shock_time_from_removal; D-023, D-024, D-053, D-054, D-059 then apply).
-shock_time_fallback:            {value: none, note: decided 2026-10-17 (D-093); removal kept available}
+# The shock time comes only from the shock seen on the screen; it is never inferred, from the paddle
+# removal or anything else (D-093, D-115). There is no fallback setting.
 
 # What a missing required event means, by coverage status (rules/coverage.py).
 # Coverage status of an event comes from the timeline header (explicit coverage, analyses_run);

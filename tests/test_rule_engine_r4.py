@@ -1,4 +1,4 @@
-"""Increment 16: R4, both discharge buttons pressed (P-036; D-057, D-093, D-102, D-107, D-108)."""
+"""Increment 16: R4, both discharge buttons pressed (P-036; D-057, D-093, D-108, D-115)."""
 import copy
 from dataclasses import replace
 import unittest
@@ -18,10 +18,10 @@ from schemas.event import Event
 CATALOGUE = yaml.safe_load((ROOT / "configs/rules.yaml").read_text(encoding="utf-8"))
 EXPORT = load_export_config()
 FPS = 25.0
-PROPOSAL = ["shock_delivered_on_screen", "paddles_removed_after_shock"]
+SHOCK_ONLY = ["shock_delivered_on_screen"]   # D-115: the removal is never an inference source
 
 
-def config(sources=PROPOSAL):
+def config(sources=SHOCK_ONLY):
     rules = [{"id": "R4", "status": "approved", "parameters": {"inference_sources": sources}}]
     return RuleEngineConfig.from_dict({**copy.deepcopy(CATALOGUE), "rules": rules})
 
@@ -117,40 +117,41 @@ class DirectEvidence(unittest.TestCase):
 
 
 class Inference(unittest.TestCase):
-    """D-057, D-102, D-107: either source is enough."""
+    """D-057, D-115: the shock on screen infers the press; a paddle removal never does."""
 
-    def test_inferred_from_the_shock_on_its_own(self):
-        outcome = r4([PLACED, SHOCK], cfg=config(["shock_delivered_on_screen"]))
+    def test_inferred_from_the_shock(self):
+        outcome = r4([PLACED, SHOCK, REMOVED])
         self.assertEqual((outcome.kind, outcome.evidence, outcome.flags), ("pass_inferred", ("shock",), ()))
 
-    def test_inferred_from_the_removal_on_its_own_without_a_shock_time(self):
-        """A view without the screen: removal alone gives Pass - Inferred, linked to A-021."""
-        for cfg in (R4, config(["paddles_removed_after_shock"])):
-            with self.subTest(sources=cfg.rule("R4").parameters["inference_sources"]):
-                outcome = r4([PLACED, REMOVED], cfg=cfg)
-                self.assertEqual((outcome.kind, outcome.evidence, outcome.flags),
-                                 ("pass_inferred", ("removed",), ("inferred_from_removal",)))
-                self.assertIn("A-021", outcome.reason)
+    def test_a_removal_without_a_shock_on_screen_infers_nothing(self):
+        """A view without the screen: no shock time, and the removal doesn't show a shock (D-115)."""
+        outcome = r4([PLACED, REMOVED])
+        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
 
-    def test_a_press_without_a_shock_time_is_judged_by_the_inference(self):
-        self.assertEqual(r4([PLACED, press(13), REMOVED]).kind, "pass_inferred")
-        alone = r4([PLACED, press(13)])
-        self.assertEqual((alone.kind, alone.blocked_by), ("not_evaluable", "R5"))
+    def test_the_removal_is_refused_as_an_inference_source(self):
+        outcome = r4([PLACED, SHOCK], cfg=config(["shock_delivered_on_screen", "paddles_removed_after_shock"]))
+        self.assertEqual(outcome.kind, "engine_error")
+
+    def test_a_press_without_a_shock_time_is_not_evaluable(self):
+        for events in ([PLACED, press(13), REMOVED], [PLACED, press(13)]):
+            with self.subTest(events=[e.event_name for e in events]):
+                outcome = r4(events)
+                self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
 
     def test_without_a_shock_time_an_early_press_fails_only_if_no_later_press(self):
         self.assertEqual(r4([press(8), PLACED], cfg=NO_INFERENCE).failure_code, "before_placement")
         later = r4([press(8, "early"), PLACED, press(13, "late")], cfg=NO_INFERENCE)
         self.assertEqual((later.kind, later.blocked_by), ("not_evaluable", "R5"))
 
-    def test_shock_not_a_source_and_no_removal_is_coverage(self):
-        outcome = r4([PLACED, SHOCK], cfg=config(["paddles_removed_after_shock"]))
+    def test_no_inference_source_is_coverage(self):
+        outcome = r4([PLACED, SHOCK], cfg=NO_INFERENCE)
         self.assertEqual(outcome.failure_code, "not_pressed")        # both paddles visible throughout
 
     def test_nothing_and_no_shock_time_is_not_evaluable_because_of_r5(self):
         self.assertEqual(r4([PLACED]).blocked_by, "R5")
 
-    def test_with_the_proposal_sources_not_pressed_is_unreachable(self):
-        """With a shock time there's a shock on screen; without one, only a removal can infer, else R5."""
+    def test_with_the_shock_as_a_source_not_pressed_is_unreachable(self):
+        """With a shock time there's a shock on screen, which infers; without one, Not evaluable because of R5."""
         self.assertEqual(r4([PLACED, SHOCK]).kind, "pass_inferred")
         self.assertEqual(r4([PLACED]).kind, "not_evaluable")
 

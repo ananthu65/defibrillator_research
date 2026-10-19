@@ -220,7 +220,9 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** R3, R4; P-014, P-016.
 
 ### D-102 R3/R4 inference from removal follows the proposal despite an observed contradiction
-- **Date / by / status:** 2026-10-17 · Arnikan · approved (the supervisor is asked in OQ-060)
+- **Date / by / status:** 2026-10-17 · Arnikan · approved (the supervisor is asked in OQ-060);
+  **withdrawn by D-115** (2026-10-19): R3/R4 no longer infer from the removal. The "follows the
+  proposal" attribution was not verified; the inference came from the brief.
 - **Decision:** the proposal lets a confirmed paddle removal (`paddles_removed_after_shock`)
   support Pass – Inferred for R3 and R4, as the shock on the screen does. Both sources are
   kept, **although in the videos paddles are sometimes removed without a successful shock**.
@@ -615,7 +617,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   - **No shock time** (no shock on the screen, or several, D-093, D-039) → **Not evaluable
     because of R5**, even if a removal is tagged.
   - **A shock time taken from the removal itself** (only with `shock_time_fallback: removal`)
-    → Unable to Verify: a removal can't be judged against its own time.
+    → Unable to Verify: a removal can't be judged against its own time. *Withdrawn by D-115: the
+    shock time is never taken from the removal, so this case can't arise.*
   - **With a shock time:**
     - a removal after the shock → Pass;
     - a removal before the shock but within `simultaneous_window_seconds` → treated as at the
@@ -682,7 +685,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ### D-107 R3/R4 inference: either source is enough, removal even without a shock time
 - **Date / by / status:** 2026-10-17 · Arnikan · approved (follows the proposal; the supervisor is
-  asked in OQ-060 and OQ-061)
+  asked in OQ-060 and OQ-061); **withdrawn by D-115** (2026-10-19) as far as the removal goes: R3/R4
+  infer only from the shock on the screen
 - **Decision:** R3 and R4 can each be **Pass – Inferred** when either `shock_delivered_on_screen`
   or `paddles_removed_after_shock` is confidently confirmed. **One is enough.**
   - `inference_sources` lists both for R3 and R4, in that order. The first listed source that is
@@ -806,7 +810,7 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ### D-023 Shock time falls back to paddle removal, flagged
 - **Date / by / status:** 2026-10-13 · Arnikan · approved; **replaced by D-093** (2026-10-17) as
-  the default. It now applies only with `shock_time_fallback: removal`.
+  the default; **withdrawn by D-115** (2026-10-19): the fallback and its setting are removed.
 - **Decision:** If no shock is confirmed on screen, the shock time is taken from the first
   paddle removal. Every timing result that uses it is flagged `shock_time_from_removal`.
 - **Reason:** Removal happens after the shock, so delays measured from it look shorter.
@@ -837,6 +841,36 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Reason:** a time inferred from a later event is not an observed shock time. Rules that need
   it should not be judged on an estimate.
 - **Affects:** P-009, P-011, P-012; R6, R7/A6, A1–A8. **Open question:** OQ-057.
+- **Updated by D-115 (2026-10-19):** the removal fallback and its setting are removed from the
+  code, and so is R3/R4's inference from the removal. The "A6 clause" attribution above was not
+  verified against the proposal.
+
+### D-115 A paddle removal is never evidence of a shock
+- **Date / by / status:** 2026-10-19 · Arnikan · approved. **Withdraws D-023, D-024, D-053, D-059,
+  D-102 and D-107.**
+- **Decision:** a paddle removal (`paddles_removed_after_shock`) is never taken as evidence that a
+  shock was delivered, or of when it was. Both places where the engine did so are removed:
+  - **The shock time from the removal:** the `shock_time_fallback` setting and its code are
+    removed. The shock time comes only from the shock seen on the screen. With none, there is no
+    shock time, and every shock-dependent rule is Not evaluable because of R5. The flags
+    `shock_time_from_removal` and `command_before_removal` are gone.
+  - **R3/R4 inference from the removal:** `inference_sources` lists only the shock on the screen.
+    The rules refuse the removal as a source (a configuration error, D-063), and the flag
+    `inferred_from_removal` is gone. Without a shock on the screen, R3 and R4 are Not evaluable
+    because of R5.
+- **Where the idea came from:** Arnikan checked the original documents and found **no inference
+  rule** stating that a paddle removal implies a shock. The two uses came from the rule engine
+  brief: R7/A6's "Shock time (R5, or R6 as fallback)", and R3's "Pass – Inferred if
+  `shock_delivered_on_screen` OR `paddles_removed_after_shock`". Earlier entries credited them to
+  the proposal (D-093's "A6 clause", D-102's "follows the proposal"); those attributions were not
+  verified against the proposal.
+- **Reason:** paddles are sometimes removed without a successful shock (the observation behind
+  A-021 and D-102), so a removal doesn't show that a shock happened, nor when.
+- **Unchanged:** R6 still judges the removal against the shock on the screen (D-104, D-105). R5
+  still uses the removal tag only as the end of the window in which the screen must have been
+  visible (D-101); that is not an inference.
+- **Affects:** P-009, P-011, P-012, P-014, P-016, P-021, P-034, P-035, P-036; R3, R4, R6, and
+  R7/A6 and A8 when built; the output contract (v11). **Resolves:** OQ-060.
 
 ### D-039 Multiple shocks: no shock time is chosen
 - **Date / by / status:** 2026-10-13 · Arnikan · approved
@@ -858,7 +892,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** A2, R7/A6, A7, A8; P-011.
 
 ### D-024 Under the removal fallback, commands before the removal stay unresolved
-- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved; **withdrawn by D-115** (2026-10-19, no
+  removal fallback)
 - **Decision:** When the shock time comes from removal, every "resume compressions" command
   before the removal time is left unresolved and flagged `command_before_removal`.
 - **Reason:** The real shock was earlier than the removal, so "before removal" does not prove
@@ -876,7 +911,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   case where the shock time is not known exactly.
 
 ### D-053 A start command before the removal is timing-ambiguous, not a mistake
-- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved; **withdrawn by D-115** (2026-10-19, no
+  removal fallback)
 - **Decision:** Under the removal fallback, an explicit "start compressions" said before the
   removal is treated like a "resume compressions" there (D-024). The real shock happened at an
   unknown time before the removal, so the command may be a genuine restart. Therefore:
@@ -895,7 +931,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** R7/A6, A7, A8; P-012, P-014. **Resolved:** OQ-039.
 
 ### D-059 R7/A6 and A8 under the removal fallback
-- **Date / by / status:** 2026-10-13 · Arnikan · approved
+- **Date / by / status:** 2026-10-13 · Arnikan · approved; **withdrawn by D-115** (2026-10-19, no
+  removal fallback)
 - **Decision:** When the shock time comes from paddle removal:
   - **Ambiguous restart:** an unresolved "resume compressions" before the removal (D-024) makes
     the restart ambiguous, exactly like an explicit start command before the removal (D-053).

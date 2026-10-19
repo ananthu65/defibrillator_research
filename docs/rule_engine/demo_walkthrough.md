@@ -83,7 +83,7 @@ Detailed version: [diagram (b)](diagrams.md#b-inside-the-rule-engine) and
 
 Results also carry **flags** that explain them, for example:
 - `timing_not_checked`: no clinical time limit was given yet;
-- `inferred_from_removal`: the inference rests on a paddle removal;
+- `derived_placement`: the result rests on a placement derived from the annotated boxes;
 - `possible_parallel_placement`: one action caused two failures.
 
 **Overall**, applied in this order ([diagram (g)](diagrams.md#g-overall-result-p-017-built)):
@@ -161,15 +161,14 @@ as one mistake or two is for the supervisor (OQ-059).
 ```
 
 ### Scenario 4: the defibrillator screen is not in view (`screen_not_visible`)
-**Shows:** the shock time comes only from the screen, never estimated (D-093). With the screen out
-of view:
+**Shows:** the shock time comes only from the screen, never estimated (D-093), and a paddle
+removal never stands in for the shock (D-115). With the screen out of view:
 - **R5** is Unable to Verify: not the learner's fault, the camera couldn't see it.
-- **R6** is Not evaluable because of R5.
-- **R3 and R4** still pass by inference from the paddle removal, as the proposal allows. They are
-  flagged `inferred_from_removal`, because paddles are sometimes removed without a successful
-  shock (OQ-060).
+- **R3, R4 and R6**, which need the shock time, are Not evaluable because of R5, although the
+  paddles were removed.
 ```
-  R3 Paddles placed firmly on ...  Pass (inferred)     inferred_from_removal  paddles firmly on the chest inferred from paddles_removed_aft...
+  R3 Paddles placed firmly on ...  Not evaluable (R5)  no_shock  not evaluable because of R5: no shock seen on the screen ...
+  R4 Both discharge buttons pr...  Not evaluable (R5)  no_shock  not evaluable because of R5: no shock seen on the screen ...
   R5 Shock confirmed on screen     Unable to Verify    coverage_policy_undecided  no shock seen on the screen ... not visible throughout it ...
   R6 Paddles removed after shock   Not evaluable (R5)  no_shock  not evaluable because of R5: no shock seen on the screen ...
   Overall: INCOMPLETE - timing not checked for R1
@@ -215,7 +214,8 @@ commit them.
 On the interim export of 2026-10-16:
 - **R8 is Unable to Verify in every video:** the derived per-paddle placements are held back until
   their review is approved (see section 5).
-- **R6 is Not evaluable in the views without the screen.**
+- **R3, R4 and R6 are Not evaluable in the views without the screen:** no shock time, and a
+  removal never stands in for it (D-115).
 - **R1 fails "missing" in four videos** (P12_LL, P12_T, P31_LL, P31_T) that have no `Gel applied`
   tag at all while a zone was in view. This is worth checking against the videos: it may be
   untagged gel rather than a learner mistake.
@@ -263,7 +263,8 @@ the backups through its own exporter (annotation JSON only, never the videos).
   and when.
 - **The shock time comes only from the screen.** It is never estimated from the paddle removal,
   because paddles are sometimes removed without a successful shock. Without the screen in view,
-  the rules that need the shock time say "not evaluable because of R5" (D-093).
+  the rules that need the shock time say "not evaluable because of R5" (D-093). The removal is
+  never evidence of a shock at all (D-115).
 - **Clinical values are configuration, never invented.** Every time limit records who gave and
   who approved it. Until then it is empty, and the rule checks presence and order only, so the
   overall result can't be Pass. "No limit" can be recorded as an approved answer (D-005, D-062,
@@ -281,10 +282,8 @@ the backups through its own exporter (annotation JSON only, never the videos).
 - **R1's interim gel check counts tags.** It treats a zone in view as "the gel would have been
   seen", but an arm can hide the bottle's nozzle (A-026).
 - **R3 doesn't judge "paddle outside its zone"** until the chest regions are approved (OQ-012).
-- **R3's "missing" and R4's "not pressed" can't happen yet.** With the proposal's inference, a
-  shock on the screen or a removal always infers a Pass. Whether that should change is OQ-061.
-- **An inference from a removal can be wrong,** because paddles are sometimes removed without a
-  successful shock. Such results can't lead to an overall Pass (A-021, OQ-060).
+- **R3's "missing" and R4's "not pressed" can't happen yet.** A shock on the screen always infers a
+  Pass for them. Whether that should change is OQ-061.
 - **Settings still undecided:**
   - unknown coverage is treated as Unable to Verify (OQ-001);
   - an inferred mistake in R8 is Unable to Verify (OQ-005);
@@ -295,7 +294,6 @@ the backups through its own exporter (annotation JSON only, never the videos).
   - R1 redefined (twice, once per zone, before placement);
   - R2 redefined (after the first paddle is *placed*);
   - new rules R8 and A8;
-  - the shock time only from the screen (replacing the proposal's removal fallback);
   - R7 and A6 as one check;
   - A7 checking the order only.
 

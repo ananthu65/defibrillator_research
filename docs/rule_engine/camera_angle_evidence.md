@@ -64,8 +64,8 @@ an unknown label, and it belongs on Ananth's fix list.
 
 ## Which rules each view can check
 
-These assume the final system (video and audio), the decided setting `shock_time_fallback:
-none`, and annotation-like evidence.
+These assume the final system (video and audio), the shock time only from the screen (never from
+the paddle removal, D-093, D-115), and annotation-like evidence.
 - **Direct:** the evidence is visible in (nearly) all videos.
 - **Partly:** only in some videos, only by inference, or only some failure codes.
 - **Unverifiable:** never from this view.
@@ -75,8 +75,8 @@ none`, and annotation-like evidence.
 | R1 Gel applied twice | gel tags | partly (two applications seen in 1 of 12) | **direct** | partly (3 of 13) |
 | R2 Second paddle after first placed | first taken, first placement, second taken; both zones for `first_placement_not_observed` | partly (second taken in 7 of 12; the sternal zone is never in view, so `first_placement_not_observed` can't be confirmed) | **direct** | direct when the placement is tagged; `first_placement_not_observed` only where both zones are in view throughout the window (apical partly visible in 10 of 13) |
 | R8 Apical before sternal | per-paddle placements (derived, after the gate) and the zones | partly (one-zone inference only) | **direct** (both zones throughout) | partly (apical zone partly visible) |
-| R3 Paddles firmly on chest before the shock | placement and the shock time; or inference from the shock on screen or removal | partly: Pass – Inferred from removal only; `placed_after_shock` can't be checked | **direct** | partly (shock seen in 9 of 13) |
-| R4 Both buttons pressed | button press, placement; or inference | partly (pressed in 2 of 12; otherwise inferred from removal) | **direct** | **direct** |
+| R3 Paddles firmly on chest before the shock | placement and the shock time; or inference from the shock on screen (never the removal, D-115) | **unverifiable** (no shock time; a removal doesn't infer it) | **direct** | partly (shock seen in 9 of 13) |
+| R4 Both buttons pressed | button press, placement, the shock time; or inference from the shock on screen | **unverifiable** (no shock time; pressed in 2 of 12, but not judged without the shock) | **direct** | **direct** |
 | R5 Shock confirmed on screen | the screen | **unverifiable** | **direct** | partly |
 | R6 Paddles removed after the shock | removal and the shock time | **unverifiable** (no shock time) | **direct** | partly |
 | A5 Shock command | audio | from audio in any view (a timing tolerance, if approved, needs the shock time) | as LL | as LL |

@@ -4126,3 +4126,80 @@ On the interim export of 2026-10-16 (38 videos):
 
 ### Next
 Wait for Arnikan before committing and before Increment 18.
+
+## Removing every "paddle removal implies a shock" inference (2026-10-19)
+
+The demo and the supervisor briefing were committed and pushed on instruction (6a5845b).
+
+### Why
+Arnikan checked the original documents and found **no inference rule** stating that a paddle
+removal implies a shock was delivered. The engine had two such uses, both from the rule engine
+brief rather than the proposal:
+- R7/A6's "Shock time (R5, or R6 as fallback)": the shock time taken from the removal (D-023);
+- R3's "Pass – Inferred if `shock_delivered_on_screen` OR `paddles_removed_after_shock`" (D-102,
+  D-107).
+
+Earlier documents credited these to the proposal (D-093's "A6 clause", D-102's "follows the
+proposal") without that being verified.
+
+### Decision recorded (Arnikan)
+- **D-115:** a paddle removal is never evidence that a shock was delivered, or of when it was. It
+  withdraws D-023, D-024, D-053, D-059, D-102 and D-107, retires A-014 and A-021, and answers
+  OQ-060.
+
+### What was removed or changed
+- **Shock time:**
+  - the `shock_time_fallback` setting is removed from `engine.yaml` and `config.py`; an engine
+    file that still has it is rejected;
+  - its code paths are removed from `rules/context.py` (shock anchor, command resolution, start
+    anchor) and R6's fallback guard;
+  - the flags `shock_time_from_removal` and `command_before_removal` are gone.
+- **R3/R4:**
+  - `inference_sources` is `[shock_delivered_on_screen]` in `rules.yaml` and the demo config;
+  - the rules refuse the removal as a source (`engine_error`, D-063);
+  - the flag `inferred_from_removal` is gone.
+  - Without a shock on the screen, R3 and R4 are Not evaluable because of R5.
+- **Unchanged:**
+  - R6 still judges the removal against the shock on the screen (D-104, D-105);
+  - R5 still uses the removal tag only as the end of its screen window (D-101), which is not an
+    inference.
+- **Output contract version 11:** the three flags removed.
+- **Demo:** the "screen not visible" scenario now expects R3, R4 and R6 Not evaluable because of
+  R5.
+- **Interim data:** in views without the screen (LL, and T videos without a shock tag), R3 and
+  R4 are now Not evaluable instead of Pass – Inferred.
+
+### Tests (690 → 677)
+- **Removed:** the fallback tests in `test_rule_engine_context.py`, and R6's fallback guard test.
+- **Rewritten:**
+  - the R3/R4 inference tests: the shock infers; a removal infers nothing; the removal is refused
+    as a source; the catalogue lists only the shock;
+  - the shared-check tests, to use flags that still exist;
+  - the config test (only the shock as a source).
+- **New:** a test that there is no fallback setting.
+
+Full suite: **677 tests run, all pass, 1 skipped** (charging sound). The demo matches all seven
+expected results. The pipeline command exits with 0.
+
+### Documents updated
+- **Registers:**
+  - `decisions.md`: D-115 new; D-023, D-024, D-053, D-059, D-102 and D-107 marked withdrawn; D-093
+    and D-104 notes;
+  - `assumptions.md`: A-014 and A-021 retired;
+  - `open_questions.md`: OQ-060 answered; OQ-057 and OQ-061 corrected.
+- **`decision_flow.yaml`:** P-009, P-011, P-012, P-014, P-016, P-021, P-034, P-035, P-036.
+- **`pathways.md`:**
+  - the tables;
+  - W-5, W-6, W-14, W-15, W-16, W-19, W-24, W-20, W-69 and W-71 marked withdrawn;
+  - W-54.
+- **`diagrams.md`:** (e), (e2), (k), (l), (m).
+- **The rest:**
+  - `anomalies.md`, `output_contract.md` (v11), `rules_status.md`, `methods.md`,
+    `implementation_plan.md` and `camera_angle_evidence.md`;
+  - `upstream_requirements.md` and `agent_brief.md` (the R3 and R7/A6 rows, with change notes);
+  - `supervisor_briefing.md`: the shock-time row is no longer a departure, and OQ-060 is removed;
+  - `demo_walkthrough.md`, `configs/rules.yaml` and the demo config.
+- `progress.md` and `ai_usage_log.md` keep their history unchanged.
+
+### Next
+Wait for Arnikan before committing.

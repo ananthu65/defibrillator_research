@@ -1,10 +1,8 @@
-"""Shared-check tests. Several use the paddle-removal fallback, so they run with
-shock_time_fallback: removal (D-093); the decided setting (none) is tested in test_rule_engine_context."""
-from dataclasses import replace
+"""Shared-check tests."""
 import unittest
 
 from rules import checks
-from rules.config import ClinicalValue, Setting, load_rules_config
+from rules.config import ClinicalValue, load_rules_config
 from rules.context import build_context
 from rules.coverage import TimelineHeader
 from rules.outcome import (ASSUMED, FAIL, NOT_EVALUABLE, PASS_DIRECT, PASS_INFERRED, PENDING, UNABLE, RuleOutcome,
@@ -13,9 +11,7 @@ from rules.prepare import prepare_timeline
 from schemas.event import Event
 from schemas.rule_result import RuleStatus
 
-DEFAULT = load_rules_config()
-CONFIG = replace(DEFAULT, engine=replace(DEFAULT.engine, settings={
-    **DEFAULT.engine.settings, "shock_time_fallback": Setting("shock_time_fallback", "removal")}))
+CONFIG = load_rules_config()
 AUDIO_RAN = {"analyses_run": {"video": True, "audio": True}}
 
 
@@ -33,7 +29,6 @@ def context(events, header=None):
 
 
 SHOCK = ev("shock_delivered_on_screen", 30, event_id="shock")
-REMOVAL = ev("paddles_removed_after_shock", 33, event_id="removal")
 APPROVED_5 = ClinicalValue("x", 5, approved_by="Dr X", approved_on="2026-10-10", source="s")
 
 
@@ -64,9 +59,9 @@ class Outcome(unittest.TestCase):
                 self.assertEqual(outcome.to_rule_result().status, status)
 
     def test_reason_text_carries_code_kind_timing_and_flags(self):
-        result = failed("A8", "pre_shock_pause", "7 s", flags=("shock_time_from_removal",), timing_checked=True)
+        result = failed("A8", "pre_shock_pause", "7 s", flags=("multiple_candidates",), timing_checked=True)
         self.assertEqual(result.to_rule_result().reason,
-                         "7 s [failure code: pre_shock_pause; flags: shock_time_from_removal]")
+                         "7 s [failure code: pre_shock_pause; flags: multiple_candidates]")
         self.assertEqual(passed("R7", "restart", ("s",), timing_checked=False).to_rule_result().reason,
                          "restart [timing not checked]")
         self.assertEqual(not_evaluable("A1", "R5", "no shock").to_rule_result().reason, "no shock [not evaluable]")
@@ -83,9 +78,9 @@ class Outcome(unittest.TestCase):
         self.assertEqual(r7.as_rule("A6").evidence, r7.evidence)
 
     def test_flags_of_merges_anchors_elapsed_and_strings(self):
-        ctx = context([REMOVAL, cmd("start_compressions_command", 36, "s")])
+        ctx = context([SHOCK, cmd("start_compressions_command", 36, "s"), cmd("start_compressions_command", 40, "s2")])
         merged = flags_of(ctx.shock, ctx.elapsed("shock", "start_compressions"), "extra", ("extra", "more"), None)
-        self.assertEqual(merged, ("shock_time_from_removal", "extra", "more"))
+        self.assertEqual(merged, ("multiple_candidates", "extra", "more"))
 
 
 class Dependencies(unittest.TestCase):
@@ -117,10 +112,10 @@ class RequiredFacts(unittest.TestCase):
 
 class RestartAmbiguity(unittest.TestCase):
     def test_ambiguous_restart_is_unable_to_verify_never_fail(self):
-        ctx = context([REMOVAL, cmd("start_compressions_command", 31, "early"), cmd("start_compressions_command", 40)])
+        ctx = context([cmd("start_compressions_command", 31, "early")])   # no shock time: timing unknown (D-054)
         outcome = checks.restart_ambiguity("R7", ctx)
         self.assertEqual((outcome.kind, outcome.evidence), (UNABLE, ("early",)))
-        self.assertIn("command_before_removal", outcome.flags)
+        self.assertIn("no_shock_time", outcome.flags)
 
     def test_unambiguous_restart_means_go_on(self):
         self.assertIsNone(checks.restart_ambiguity("R7", context([SHOCK, cmd("start_compressions_command", 35)])))
@@ -158,29 +153,32 @@ class Occurrences(unittest.TestCase):
         self.assertEqual((self.evaluate([SHOCK]).kind, self.evaluate([SHOCK]).failure_code), (FAIL, "missing"))
 
     def test_anchor_flags_are_carried_onto_the_result(self):
-        ctx = context([REMOVAL, cmd("stand_clear_command", 25, "c")], AUDIO_RAN)
+        ctx = context([SHOCK, ev("first_paddle_firmly_on_the_chest", 12), ev("first_paddle_firmly_on_the_chest", 14),
+                       cmd("stand_clear_command", 25, "c")], AUDIO_RAN)
+        placed = ctx.anchor("first_placement")
         outcome = checks.occurrences("A3", ctx, "stand_clear_command", valid=lambda e: e.start < ctx.shock.time,
-                                     invalid_code="after_shock", what="stand clear", uses=(ctx.shock,))
+                                     invalid_code="after_shock", what="stand clear", uses=(placed,))
         self.assertEqual(outcome.kind, PASS_DIRECT)
-        self.assertIn("shock_time_from_removal", outcome.flags)
+        self.assertIn("multiple_candidates", outcome.flags)
 
 
 class MissingLadder(unittest.TestCase):
     """Diagram (c): weak or missing evidence → approved inference first → coverage (ctx.missing)."""
 
     def test_inference_is_checked_before_coverage(self):
-        # R3-like: no direct placement evidence, removal confirmed; coverage alone would say Fail
-        ctx = context([REMOVAL], AUDIO_RAN)
+        # R3-like: no direct placement evidence, the shock on screen confirmed; coverage alone would say Fail
+        ctx = context([SHOCK], AUDIO_RAN)
         outcome = checks.missing("R3", ctx, "paddles_firmly_on_chest", what="paddles on chest",
-                                 inference=("shock_delivered_on_screen", "paddles_removed_after_shock"))
-        self.assertEqual((outcome.kind, outcome.evidence), (PASS_INFERRED, ("removal",)))
-        self.assertIn("inferred from paddles_removed_after_shock", outcome.reason)
+                                 inference=("shock_delivered_on_screen",))
+        self.assertEqual((outcome.kind, outcome.evidence), (PASS_INFERRED, ("shock",)))
+        self.assertIn("inferred from shock_delivered_on_screen", outcome.reason)
 
     def test_earliest_supporting_event_is_cited(self):
-        ctx = context([SHOCK, REMOVAL], AUDIO_RAN)
-        outcome = checks.missing("R4", ctx, "both_paddle_buttons_pressed", what="buttons",
-                                 inference=("paddles_removed_after_shock", "shock_delivered_on_screen"))
-        self.assertEqual(outcome.evidence, ("shock",))
+        # the shared check is generic: of several supporting events, the earliest is cited
+        ctx = context([SHOCK, ev("both_paddle_buttons_pressed", 28, event_id="press")], AUDIO_RAN)
+        outcome = checks.missing("R3", ctx, "paddles_firmly_on_chest", what="paddles on chest",
+                                 inference=("shock_delivered_on_screen", "both_paddle_buttons_pressed"))
+        self.assertEqual(outcome.evidence, ("press",))
 
     def test_no_inference_available_falls_through_to_coverage(self):
         outcome = checks.missing("R3", context([ev("Gel applied", 1)], AUDIO_RAN), "paddles_firmly_on_chest",
@@ -253,12 +251,12 @@ class Timing(unittest.TestCase):
         self.assertIn("[timing not checked; flags: timing_not_checked]", outcome.to_rule_result().reason)
 
     def test_timed_fails_over_the_limit_and_carries_elapsed_flags(self):
-        ctx = context([REMOVAL, cmd("stop_compressions_command", 25, "stop"), cmd("start_compressions_command", 31, "early"),
-                       cmd("start_compressions_command", 40, "start")])
+        ctx = context([SHOCK, cmd("stop_compressions_command", 25, "stop"), cmd("start_compressions_command", 40, "start"),
+                       cmd("start_compressions_command", 45, "again")])
         outcome = checks.timed("A8", ctx.elapsed("stop_compressions", "start_compressions"), APPROVED_5,
                                code="pre_shock_pause", what="stop to restart", evidence=("stop", "start"))
         self.assertEqual((outcome.kind, outcome.failure_code, outcome.timestamps), (FAIL, "pre_shock_pause", {"seconds": 15}))
-        self.assertIn("command_before_removal", outcome.flags)  # the elapsed time's flags travel with the result
+        self.assertIn("multiple_candidates", outcome.flags)  # the elapsed time's flags travel with the result
 
     def test_timed_within_the_limit(self):
         ctx = context([SHOCK, cmd("stop_compressions_command", 27, "stop"), cmd("start_compressions_command", 31, "start")])

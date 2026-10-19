@@ -247,7 +247,7 @@ class RegisterIds(unittest.TestCase):
         code = raised_in_code()
         self.assertIn("duplicate_event_id", code["rejections"])
         self.assertIn("multiple_shocks", code["anomalies"])
-        self.assertIn("shock_time_from_removal", code["flags"])
+        self.assertIn("no_shock", code["flags"])
 
 
 if __name__ == "__main__":

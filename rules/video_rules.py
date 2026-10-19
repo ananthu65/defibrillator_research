@@ -4,7 +4,7 @@ Registered rules run only when their status in configs/rules.yaml is `approved`;
 are reported as pending (D-043). Definitions and failure codes: docs/rule_engine/rules_status.md.
 """
 from rules import checks
-from rules.context import MULTIPLE_SHOCKS, SHOCK_FROM_REMOVAL
+from rules.context import MULTIPLE_SHOCKS
 from rules.coverage import COVERED, LOW_CONFIDENCE_FLAG
 from rules.outcome import assumed, failed, passed, unable
 from rules.registry import rule
@@ -27,9 +27,8 @@ PARALLEL = "possible_parallel_placement"   # cause flag: one parallel placement 
 PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while its zone was in view (D-058)
 CONTRADICTORY = "contradictory"            # R8: the visible paddle placed clearly before the first placement; R4: a press only after the shock
 INFERRED_UNDECIDED = "inferred_fail_policy_undecided"   # R8: an inferred mistake while D-015 is undecided
-INFERRED_FROM_REMOVAL = "inferred_from_removal"   # R3/R4: inferred from a removal, which can happen without a shock (A-021)
 DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
-FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, INFERRED_FROM_REMOVAL, DERIVED_GEL)
+FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, INFERRED_UNDECIDED, DERIVED_GEL)
 
 
 def _evidence_flags(events):
@@ -264,11 +263,17 @@ def _first_placement_missing(ctx, second):
 # ---- R3 ---------------------------------------------------------------------------------------------
 
 def _inference_sources(ctx, definition, rule_id):
-    """R3/R4 parameters.inference_sources: canonical events that support Pass - Inferred (D-102)."""
+    """R3/R4 parameters.inference_sources: canonical events that support Pass - Inferred (D-115).
+
+    The paddle removal is never one: a removal doesn't show that a shock was delivered (D-115).
+    """
     sources = definition.parameters.get("inference_sources")
     if not isinstance(sources, list) or [s for s in sources if s not in ctx.config.vocabulary.events]:
         # a configuration error: recorded as engine_error (D-063), never a result about the learner
         raise ValueError(f"{rule_id} inference_sources must be a list of canonical events, got {sources!r}")
+    if REMOVAL in sources:
+        raise ValueError(f"{rule_id} inference_sources must not include {REMOVAL}: a paddle removal doesn't show "
+                         "that a shock was delivered (D-115)")
     return sources
 
 
@@ -286,8 +291,8 @@ def paddles_firmly_on_chest(ctx, definition, results):
          `derived_placement`;
        - only tags clearly after the shock -> Fail `placed_after_shock`.
     2. Otherwise (no direct evidence, or no shock time to judge it against): the inference first, the
-       first confirmed event in inference_sources (D-057, D-102, D-107) -> Pass - Inferred; from a
-       removal it is flagged `inferred_from_removal` (A-021).
+       first confirmed event in inference_sources (D-057, D-115): the shock on screen -> Pass -
+       Inferred. A paddle removal is never an inference source (D-115).
     3. No shock time -> Not evaluable because of R5.
     4. Coverage: the tag isn't made when only one paddle is visible (A-019), so a missing tag is
        Fail `missing` only if both placement zones were visible throughout the placement phase,
@@ -353,17 +358,13 @@ def _firm_placement_missing(ctx, shock):
 
 
 def _inferred(ctx, rule_id, sources, what):
-    """D-102, D-107: Pass - Inferred from the first source in inference_sources that is confirmed; one is
-    enough. A removal can happen without a successful shock, so an inference from it is flagged (A-021)."""
+    """D-057, D-115: Pass - Inferred from the first source in inference_sources that is confirmed."""
     for source in sources:
         found = ctx.named(source)
         if found:
             event = found[0]
-            caveat = ("; paddles are sometimes removed without a successful shock (A-021, D-102)"
-                      if source == REMOVAL else "")
-            return passed(rule_id, f"{what} inferred from {source} at {event.start:g} s{caveat}", (event.event_id,),
-                          inferred=True, flags=(INFERRED_FROM_REMOVAL,) if source == REMOVAL else (),
-                          timestamps={source: event.start})
+            return passed(rule_id, f"{what} inferred from {source} at {event.start:g} s", (event.event_id,),
+                          inferred=True, timestamps={source: event.start})
     return None
 
 
@@ -382,7 +383,7 @@ def both_buttons_pressed(ctx, definition, results):
     2. With a shock time: a valid press -> Pass - Direct (no placement observed: its order is not
        checked, `order_not_checked`); only presses clearly after the shock -> Unable to Verify,
        `contradictory` (the screen showed the shock before the press).
-    3. Otherwise the inference from inference_sources (D-057, D-102, D-107) -> Pass - Inferred.
+    3. Otherwise the inference from inference_sources (the shock on screen; D-057, D-115) -> Pass - Inferred.
     4. No shock time -> Not evaluable because of R5.
     5. Coverage: Fail `not_pressed` only if both paddles were visible throughout from the placement
        to the shock (D-108); otherwise Unable to Verify. Low confidence is never a Fail (D-010).
@@ -540,8 +541,7 @@ def paddles_removed_after_shock(ctx, definition, results):
     """R6 (P-034). paddles_removed_after_shock means the paddles were removed; it doesn't prove a shock.
 
     1. No shock time (it comes only from the screen, D-093) -> Not evaluable because of R5, even if a
-       removal is tagged. A shock time taken from the removal itself (fallback removal) -> Unable to
-       Verify: the removal can't be judged against its own time.
+       removal is tagged: a removal doesn't show a shock (D-115).
     2. A removal clearly before the shock (more than removal_before_screen_tolerance_seconds: the
        screen may show the shock after the discharge, D-105) -> Fail `removed_before_shock` (the
        proposal: "a paddle is visibly removed before shock").
@@ -557,9 +557,6 @@ def paddles_removed_after_shock(ctx, definition, results):
     blocked = checks.requires("R6", shock, "R5")
     if blocked is not None:
         return blocked
-    if SHOCK_FROM_REMOVAL in shock.flags:
-        return unable("R6", "the shock time was taken from the paddle removal itself (shock_time_fallback removal), "
-                      "so the removal cannot be judged against it", uses=(shock,))
     window = ctx.config.engine.value("removal_before_screen_tolerance_seconds")   # D-105
     removals = ctx.named(REMOVAL)
     if removals and removals[0].start < shock.time - window:

@@ -31,10 +31,10 @@ first, so that section can be printed for supervisor meetings.
 | OQ-021 | E-14a | supervisor | Ananth, Arnikan | open | Gel applied more than twice |
 | OQ-022 | E-14b | supervisor | Ananth, Arnikan | open | Paddles lifted and placed again before the shock |
 | OQ-023 | E-14c | supervisor | Ananth, Arnikan | open | Discharge buttons pressed more than once |
-| OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen (supersedes the proposal's A6 clause) |
+| OQ-057 | new (2026-10-17) | supervisor | Arnikan | open | No shock time without the screen |
 | OQ-059 | new (2026-10-17) | supervisor | Arnikan, Sanjeevan | open | Does a parallel placement count as one mistake or two? |
-| OQ-060 | new (2026-10-17) | supervisor | Arnikan | open | Should paddle removal still support an inferred Pass for R3 and R4? |
-| OQ-061 | new (2026-10-17) | supervisor | Arnikan | open | Should either inference source apply when the direct evidence was visible but absent? |
+| OQ-060 | new (2026-10-17) | supervisor | Arnikan | answered | Should paddle removal still support an inferred Pass for R3 and R4? |
+| OQ-061 | new (2026-10-17) | supervisor | Arnikan | open | Should the shock-on-screen inference apply when the direct evidence was visible but absent? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | R8 placement-match window; is the apical-first fallback clinically acceptable? |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -203,23 +203,25 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   `expected_counts.both_paddle_buttons_pressed` is undecided, so repeated presses are not checked
   as a count (D-071).
 
-### OQ-057 No shock time without the screen (supersedes the proposal's A6 clause)
+### OQ-057 No shock time without the screen
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan (to mention
   it) · **Raised:** 2026-10-17 · **Status:** open
-- **Question:** The rule engine now takes the shock time only from the shock seen on the
-  defibrillator screen, and never infers it from paddle removal (D-093). This supersedes the A6
-  clause of the proposal. In a view without the screen, every shock-dependent rule is therefore
-  Not evaluable. Is the supervisor content with this?
-- **Affects:** R6, R7/A6, A1–A8; the choice of camera angle (OQ-038).
-- **Interim behaviour:** `shock_time_fallback: none`. The removal fallback is kept behind the
-  setting `removal`.
+- **Question:** The rule engine takes the shock time only from the shock seen on the
+  defibrillator screen, and never infers it, from the paddle removal or anything else (D-093,
+  D-115). In a view without the screen, every shock-dependent rule (R3, R4, R6, R7/A6, A1–A8) is
+  therefore Not evaluable. Is the supervisor content with this?
+- **Affects:** R3, R4, R6, R7/A6, A1–A8; the choice of camera angle (OQ-038).
+- **Interim behaviour:** no shock on the screen → no shock time. There is no fallback (D-115).
+- **Correction (2026-10-19):** this question first said the removal fallback "supersedes the A6
+  clause of the proposal". Arnikan found no such inference rule in the original documents; the
+  fallback came from the rule engine brief (D-115).
 - **Supporting observation (2026-10-17):** in the videos, the paddles are sometimes removed
   without a successful shock. A removal therefore doesn't show when, or whether, a shock happened,
   which supports D-093 (no shock time from removal). D-093 stays.
 
-### OQ-060 Should paddle removal still support an inferred Pass for R3 and R4?
+### OQ-060 Should paddle removal still support an inferred Pass for R3 and R4? — *answered*
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan ·
-  **Raised:** 2026-10-17 · **Status:** open
+  **Raised:** 2026-10-17 · **Status:** answered
 - **Question:** The proposal lets a confirmed paddle removal (`paddles_removed_after_shock`)
   support **Pass – Inferred** for R3 (paddles firmly on the chest) and R4 (both buttons pressed),
   as well as the shock on the screen. In the videos, paddles are sometimes removed **without a
@@ -233,24 +235,27 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   `configs/rules.yaml` R3/R4 `parameters.inference_sources`; removing
   `paddles_removed_after_shock` from it is the only change needed. Inferences from the removal
   are flagged `inferred_from_removal` (D-107). See also OQ-061.
+- **Answer:** No. Arnikan checked the original documents and found no inference rule stating
+  that a paddle removal implies a shock; the inference came from the rule engine brief. R3 and R4
+  infer only from the shock on the screen, and the removal is refused as a source.
+- **Answered:** 2026-10-19 → **D-115**.
 
-### OQ-061 Should either inference source apply when the direct evidence was visible but absent?
+### OQ-061 Should the shock-on-screen inference apply when the direct evidence was visible but absent?
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan ·
-  **Raised:** 2026-10-17 · **Status:** open
-- **Question:** With both inference sources (D-102, D-107), R3 and R4 pass (Pass – Inferred)
-  whenever the shock is on the screen or the paddles are removed. That holds even when the zones
-  (R3) or the paddles (R4) were visible throughout and the firm placement or the button press
-  wasn't tagged, which may mean it didn't happen properly.
+  **Raised:** 2026-10-17 · **Status:** open (narrowed on 2026-10-19: the paddle removal is no longer
+  an inference source, D-115)
+- **Question:** R3 and R4 pass (Pass – Inferred) whenever the shock is shown on the screen. That
+  holds even when the zones (R3) or the paddles (R4) were visible throughout and the firm placement
+  or the button press wasn't tagged, which may mean it didn't happen properly.
   1. Can the training defibrillator deliver a shock **without firm contact** with the chest?
-  2. Since paddles are removed even without a successful shock (A-021), should **either** source
-     still apply when the direct evidence was **visible but absent**?
+  2. Should the shock on the screen still infer R3 and R4 when the direct evidence was **visible
+     but absent**?
 - **Affects:** R3 (P-035), R4 (P-036); P-016.
-- **Why it matters:** while either source is listed, R3's `missing` and R4's `not_pressed` can
-  never be produced (D-106, D-107, D-108). If the answer is "no inference when the evidence was
-  visible", the rules would check coverage before the inference.
-- **Interim behaviour:** the proposal is followed. Inference comes first, from either source;
-  inferences from the removal are flagged `inferred_from_removal`.
-- **Related:** D-102, D-106, D-107, D-108, OQ-060.
+- **Why it matters:** while the shock is an inference source, R3's `missing` and R4's
+  `not_pressed` can never be produced (D-106, D-108). If the answer is "no inference when the
+  evidence was visible", the rules would check coverage before the inference.
+- **Interim behaviour:** inference first, from the shock on the screen only (D-115).
+- **Related:** D-106, D-108, D-115, OQ-060.
 
 ### OQ-059 Does a parallel placement count as one mistake or two?
 - **Old no.:** new (2026-10-17) · **Owner:** supervisor · **Also involves:** Arnikan, Sanjeevan

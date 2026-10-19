@@ -4,9 +4,8 @@ The context never judges the learner and never guesses: when a fact cannot be es
 (no shock, two shocks, a command too close to the shock), it is left absent and flagged, and
 each rule decides what that means for its own result.
 
-Shock time (D-093): only from shock_delivered_on_screen. With engine.yaml shock_time_fallback set
-to `none` (the decided setting), no shock on screen means no shock time. The paddle-removal
-fallback (D-023, D-024, D-053, D-054, D-059) runs only when the setting is `removal`.
+Shock time (D-093, D-115): only from shock_delivered_on_screen. No shock on screen means no shock
+time. A paddle removal is never taken as evidence of a shock or of its time.
 
 Event time rule: all times are event `start` times (see docs/rule_engine/anomalies.md).
 """
@@ -15,20 +14,16 @@ from rules.coverage import Coverage, LOW_CONFIDENCE_FLAG, MissingOutcome
 from rules.prepare import SHOCK_EVENT
 from rules.vocabulary import SOURCE_LABEL_KEY
 
-REMOVAL_EVENT = "paddles_removed_after_shock"
-
 # Context flags (listed in docs/rule_engine/anomalies.md)
-SHOCK_FROM_REMOVAL = "shock_time_from_removal"
 NO_SHOCK = "no_shock"
 MULTIPLE_SHOCKS = "multiple_shocks"
 MULTIPLE_CANDIDATES = "multiple_candidates"
 COMMAND_NEAR_SHOCK = "command_near_shock"
-COMMAND_BEFORE_REMOVAL = "command_before_removal"
 NO_SHOCK_TIME = "no_shock_time"
 UNRESOLVED_COMMANDS = "unresolved_commands"
 START_BEFORE_SHOCK = "start_command_before_shock"
-FLAGS = (SHOCK_FROM_REMOVAL, NO_SHOCK, MULTIPLE_SHOCKS, MULTIPLE_CANDIDATES, COMMAND_NEAR_SHOCK,
-         COMMAND_BEFORE_REMOVAL, NO_SHOCK_TIME, UNRESOLVED_COMMANDS, START_BEFORE_SHOCK)
+FLAGS = (NO_SHOCK, MULTIPLE_SHOCKS, MULTIPLE_CANDIDATES, COMMAND_NEAR_SHOCK, NO_SHOCK_TIME, UNRESOLVED_COMMANDS,
+         START_BEFORE_SHOCK)
 
 START_EVENT = "start_compressions_command"
 ANCHOR_EVENTS = {  # anchor -> canonical event (earliest occurrence is used)
@@ -137,7 +132,7 @@ class ProcedureContext:
 def build_context(prepared, config, header=None):
     coverage = Coverage(prepared, config, header)
     window = config.engine.value("simultaneous_window_seconds")
-    shock = _shock_anchor(prepared, config.engine.value("shock_time_fallback"))
+    shock = _shock_anchor(prepared)
     events, resolutions = [], []
     for event in prepared.events:
         resolution = config.vocabulary.resolution(event.source, event.metadata.get(SOURCE_LABEL_KEY, event.event_name))
@@ -150,8 +145,6 @@ def build_context(prepared, config, header=None):
             events.append(event)
         else:
             metadata = {**event.metadata, "resolved_by": "position relative to shock", "shock_time": shock.time}
-            if SHOCK_FROM_REMOVAL in shock.flags:
-                metadata["resolution_flags"] = [SHOCK_FROM_REMOVAL]
             events.append(replace(event, event_name=resolved, metadata=metadata))
     events.sort(key=lambda e: (e.start, e.end, e.event_id))
     unresolved = tuple(r for r in resolutions if r.resolved_to is None)
@@ -167,8 +160,8 @@ def build_context(prepared, config, header=None):
     return ProcedureContext(prepared, coverage, tuple(events), anchors, tuple(resolutions), zones)
 
 
-def _shock_anchor(prepared, fallback="none"):
-    """The shock time comes only from the shock on screen (D-093), unless shock_time_fallback is removal."""
+def _shock_anchor(prepared):
+    """The shock time comes only from the shock on screen (D-093, D-115); it is never inferred."""
     if prepared.has_anomaly(MULTIPLE_SHOCKS):
         ids = prepared.anomaly(MULTIPLE_SHOCKS).event_ids
         return Anchor("shock", None, candidates=ids, flags=(MULTIPLE_SHOCKS,),
@@ -176,58 +169,35 @@ def _shock_anchor(prepared, fallback="none"):
     shocks = prepared.named(SHOCK_EVENT)
     if shocks:
         return Anchor("shock", shocks[0].start, shocks[0].event_id, SHOCK_EVENT, (shocks[0].event_id,))
-    if fallback != "removal":
-        return Anchor("shock", None, flags=(NO_SHOCK,),
-                      reason="no shock seen on the screen; the shock time is never inferred (D-093)")
-    removals = prepared.named(REMOVAL_EVENT)
-    if removals:
-        flags = (SHOCK_FROM_REMOVAL,) + ((MULTIPLE_CANDIDATES,) if len(removals) > 1 else ())
-        return Anchor("shock", removals[0].start, removals[0].event_id, REMOVAL_EVENT,
-                      tuple(e.event_id for e in removals), flags,
-                      "no shock on screen; shock time taken from paddle removal, which happens after the shock")
-    return Anchor("shock", None, flags=(NO_SHOCK,), reason="no confirmed shock or paddle removal")
+    return Anchor("shock", None, flags=(NO_SHOCK,),
+                  reason="no shock seen on the screen; the shock time is never inferred (D-093)")
 
 
 def _resolve(resolution, time, shock, window):
     """(canonical name or None, flags) for an ambiguous command at `time`."""
     if not shock.present:
         return None, (NO_SHOCK_TIME,)
-    carried = (SHOCK_FROM_REMOVAL,) if SHOCK_FROM_REMOVAL in shock.flags else ()
-    if carried and time < shock.time:  # D-024: the real shock was earlier, so "before removal" proves nothing
-        return None, (COMMAND_BEFORE_REMOVAL,) + carried
     if abs(time - shock.time) <= window:
-        return None, (COMMAND_NEAR_SHOCK,) + carried
+        return None, (COMMAND_NEAR_SHOCK,)
     before, after = resolution
-    return (before if time < shock.time else after), carried
+    return (before if time < shock.time else after), ()
 
 
 def _start_anchor(events, shock, prepared, resolutions=()):
     """D-025: the restart is the earliest start command after the shock; earlier ones do not count.
 
-    Each start command is checked on its own, so a later one can still be the restart.
-    D-053: under the removal fallback, start commands at or before the removal are timing-ambiguous
-    (not counted, not a mistake). D-059: so are "resume" commands left unresolved before the
-    removal (D-024), because they too may have been the restart. D-054: with no shock time at all,
-    every start command is. D-059: under the fallback with no ambiguous command, the restart is
-    certain, so the anchor does not carry shock_time_from_removal (A8's stop -> start does not
-    depend on it).
+    Each start command is checked on its own, so a later one can still be the restart. Start
+    commands at or before the shock do not count and are a sequence mistake. D-054: with no shock
+    time at all, every start command is timing-ambiguous (not counted, not a mistake).
     """
     starts = [e for e in events if e.event_name == START_EVENT]
     if not shock.present:
         return Anchor("start_compressions", None, flags=(NO_SHOCK_TIME,) + shock.flags,
                       reason="no shock time, so the restart command cannot be identified",
                       ambiguous=tuple(e.event_id for e in starts))
-    fallback = SHOCK_FROM_REMOVAL in shock.flags
     after = [e for e in starts if e.start > shock.time]
-    earlier = tuple(e.event_id for e in starts if e.start <= shock.time)
-    if fallback:  # the real shock was at an unknown time before the removal
-        resumes = tuple(r.event_id for r in resolutions if COMMAND_BEFORE_REMOVAL in r.flags)
-        ambiguous = earlier + resumes
-        flags = (SHOCK_FROM_REMOVAL, COMMAND_BEFORE_REMOVAL) if ambiguous else ()
-        before = ()
-    else:
-        flags = (START_BEFORE_SHOCK,) if earlier else ()
-        before, ambiguous = earlier, ()
+    before = tuple(e.event_id for e in starts if e.start <= shock.time)
+    flags, ambiguous = ((START_BEFORE_SHOCK,) if before else ()), ()
     if not after:
         low = (LOW_CONFIDENCE_FLAG,) if prepared.excluded_named(START_EVENT) else ()
         return Anchor("start_compressions", None, flags=flags + low,

@@ -1,22 +1,19 @@
-"""Procedure context tests.
-
-Most of these were written for the paddle-removal fallback (D-023, D-024, D-053, D-054, D-059), which
-applies only with engine.yaml shock_time_fallback: removal (D-093). They therefore run with that
-setting; the decided setting (none: the shock time only from the screen) is tested in
-ShockTimeOnlyFromTheScreen.
-"""
-from dataclasses import replace
+"""Procedure context tests. The shock time comes only from the screen; a paddle removal is never
+taken as a shock or its time (D-093, D-115)."""
+import copy
 import unittest
 
-from rules.config import Setting, load_rules_config
+import yaml
+
+from pipeline.config import ROOT
+from rules.config import EngineSettings, load_rules_config
 from rules.context import build_context
 from rules.coverage import TimelineHeader
+from rules.errors import ConfigError
 from rules.prepare import prepare_timeline
 from schemas.event import Event
 
-DEFAULT = load_rules_config()  # simultaneous_window_seconds = 0.5 (placeholder); shock_time_fallback none
-CONFIG = replace(DEFAULT, engine=replace(DEFAULT.engine, settings={
-    **DEFAULT.engine.settings, "shock_time_fallback": Setting("shock_time_fallback", "removal")}))
+CONFIG = load_rules_config()  # simultaneous_window_seconds = 0.5 (placeholder)
 
 
 def ev(name, t, source="annotation", confidence=1.0, event_id=None, end=None):
@@ -42,28 +39,6 @@ class ShockTime(unittest.TestCase):
         self.assertEqual((shock.time, shock.event_id, shock.event_name, shock.flags),
                          (30, "shock", "shock_delivered_on_screen", ()))
 
-    def test_fallback_to_removal_is_recorded_and_flagged(self):
-        shock = context([REMOVAL]).shock
-        self.assertEqual((shock.time, shock.event_id, shock.event_name), (33, "removal", "paddles_removed_after_shock"))
-        self.assertEqual(shock.flags, ("shock_time_from_removal",))
-        self.assertIn("after the shock", shock.reason)
-
-    def test_every_timing_result_using_the_fallback_is_flagged(self):
-        ctx = context([REMOVAL, cmd("start_compressions_command", 35, "start"), cmd("stop_compressions_command", 25, "stop")])
-        to_start = ctx.elapsed("shock", "start_compressions")
-        self.assertEqual(to_start.seconds, 2)
-        self.assertIn("shock_time_from_removal", to_start.flags)
-        self.assertIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "shock").flags)
-        # D-059: no start or resume before the removal, so the restart is certain; stop -> start (A8)
-        # does not depend on the shock time and carries no fallback flag
-        self.assertNotIn("shock_time_from_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
-        self.assertNotIn("shock_time_from_removal", ctx.elapsed("first_placement", "stop_compressions").flags)
-
-    def test_multiple_removals_without_shock_use_the_earliest(self):
-        shock = context([ev("paddles_removed_after_shock", 40, event_id="r2"), REMOVAL]).shock
-        self.assertEqual((shock.time, shock.candidates), (33, ("removal", "r2")))
-        self.assertEqual(shock.flags, ("shock_time_from_removal", "multiple_candidates"))
-
     def test_no_shock_at_all(self):
         ctx = context([ev("Gel applied", 1)])
         self.assertIsNone(ctx.shock.time)
@@ -82,7 +57,7 @@ class ShockTime(unittest.TestCase):
 
     def test_low_confidence_shock_is_not_the_shock_time(self):
         ctx = context([ev("shock_delivered_on_screen", 30, "video", 0.1), REMOVAL])
-        self.assertEqual(ctx.shock.event_id, "removal")
+        self.assertFalse(ctx.shock.present)   # and the removal never stands in for it (D-115)
 
     def test_phases(self):
         ctx = context([SHOCK])
@@ -90,13 +65,17 @@ class ShockTime(unittest.TestCase):
 
 
 class ShockTimeOnlyFromTheScreen(unittest.TestCase):
-    """D-093: with shock_time_fallback none (the decided setting) the shock time is never inferred."""
+    """D-093, D-115: the shock time is never inferred, and there is no setting to infer it."""
 
-    def test_the_decided_setting_is_none(self):
-        self.assertEqual(DEFAULT.engine.value("shock_time_fallback"), "none")
+    def test_there_is_no_fallback_setting(self):
+        data = copy.deepcopy(yaml.safe_load((ROOT / "configs/rule_engine/engine.yaml").read_text(encoding="utf-8")))
+        self.assertNotIn("shock_time_fallback", data)
+        data["shock_time_fallback"] = {"value": "removal"}
+        with self.assertRaises(ConfigError):
+            EngineSettings.from_dict(data)
 
     def test_no_shock_on_screen_means_no_shock_time_even_with_a_removal(self):
-        ctx = context([REMOVAL, ev("Gel applied", 1)], config=DEFAULT)
+        ctx = context([REMOVAL, ev("Gel applied", 1)])
         self.assertFalse(ctx.shock.present)
         self.assertEqual(ctx.shock.flags, ("no_shock",))
         self.assertIn("never inferred", ctx.shock.reason)
@@ -104,34 +83,19 @@ class ShockTimeOnlyFromTheScreen(unittest.TestCase):
         self.assertIsNone(ctx.elapsed("shock", "first_placement").seconds)
 
     def test_the_shock_on_screen_is_still_the_shock_time(self):
-        self.assertEqual(context([SHOCK, REMOVAL], config=DEFAULT).shock.time, 30)
+        self.assertEqual(context([SHOCK, REMOVAL]).shock.time, 30)
 
     def test_resume_commands_stay_unresolved_and_start_commands_are_ambiguous(self):
         ctx = context([REMOVAL, cmd("resume_compressions_command", 20, "r1"),
-                       cmd("start_compressions_command", 40, "s1")], config=DEFAULT)
+                       cmd("start_compressions_command", 40, "s1")])
         self.assertEqual([(r.event_id, r.resolved_to, r.flags) for r in ctx.resolutions], [("r1", None, ("no_shock_time",))])
         start = ctx.anchor("start_compressions")
         self.assertFalse(start.present)
         self.assertEqual(start.ambiguous, ("s1",))   # not a mistake (D-054)
-        self.assertNotIn("shock_time_from_removal", start.flags)
-        self.assertNotIn("command_before_removal", [f for r in ctx.resolutions for f in r.flags])
 
     def test_a_low_confidence_shock_on_screen_does_not_become_the_removal(self):
-        ctx = context([ev("shock_delivered_on_screen", 30, "video", 0.1), REMOVAL], config=DEFAULT)
+        ctx = context([ev("shock_delivered_on_screen", 30, "video", 0.1), REMOVAL])
         self.assertFalse(ctx.shock.present)
-
-    def test_invalid_setting_is_rejected(self):
-        import copy
-        import yaml
-        from pipeline.config import ROOT
-        from rules.config import EngineSettings
-        from rules.errors import ConfigError
-        data = yaml.safe_load((ROOT / "configs/rule_engine/engine.yaml").read_text(encoding="utf-8"))
-        data = copy.deepcopy(data)
-        data["shock_time_fallback"] = {"value": "estimate"}
-        with self.assertRaisesRegex(ConfigError, "must be one of"):
-            EngineSettings.from_dict(data)
-
 
 class CommandResolution(unittest.TestCase):
     def resolution(self, ctx, event_id):
@@ -177,25 +141,6 @@ class CommandResolution(unittest.TestCase):
         self.assertIn("unresolved_commands", ctx.anchor("start_compressions").flags)
         self.assertIn("unresolved_commands", ctx.anchor("continue_compressions").flags)
         self.assertNotIn("unresolved_commands", ctx.anchor("stop_compressions").flags)
-
-    def test_resolution_against_removal_time_carries_the_fallback_flag(self):
-        ctx = context([REMOVAL, cmd("resume_compressions_command", 40, "r")])
-        self.assertEqual(self.resolution(ctx, "r").resolved_to, "start_compressions_command")
-        self.assertEqual(self.resolution(ctx, "r").flags, ("shock_time_from_removal",))
-
-    def test_under_the_removal_fallback_commands_before_removal_stay_unresolved(self):
-        # D-024 (OQ-029): the real shock was before the removal, so "before removal" is not "before the shock"
-        for t in (10, 25, 32.9):
-            with self.subTest(t=t):
-                ctx = context([REMOVAL, cmd("resume_compressions_command", t, "r")])
-                resolution = self.resolution(ctx, "r")
-                self.assertIsNone(resolution.resolved_to)
-                self.assertEqual(resolution.flags, ("command_before_removal", "shock_time_from_removal"))
-                self.assertEqual(ctx.named("continue_compressions_command"), [])
-
-    def test_under_the_removal_fallback_commands_just_after_removal_are_near_the_shock(self):
-        ctx = context([REMOVAL, cmd("resume_compressions_command", 33.3, "r")])
-        self.assertEqual(self.resolution(ctx, "r").flags, ("command_near_shock", "shock_time_from_removal"))
 
     def test_with_a_real_shock_commands_before_it_are_still_continue(self):
         ctx = context([SHOCK, REMOVAL, cmd("resume_compressions_command", 25, "r")])
@@ -276,61 +221,16 @@ class StartAnchor(unittest.TestCase):
                 # D-054: timing unknown, so ambiguous, not a sequence mistake for A7
                 self.assertEqual((anchor.ambiguous, anchor.ineligible), (("s",), ()))
 
-    def test_under_the_fallback_an_unambiguous_restart_carries_no_fallback_flag(self):
-        # D-059: a start after the removal, with none before it, is definitely the restart
-        ctx = context([REMOVAL, cmd("start_compressions_command", 36, "s")])
-        anchor = ctx.anchor("start_compressions")
-        self.assertEqual((anchor.event_id, anchor.flags), ("s", ()))
-        self.assertEqual((anchor.ambiguous, anchor.ineligible), ((), ()))
-        # R7/A6 still measure from the removal-based shock time, so their delay stays flagged
-        self.assertIn("shock_time_from_removal", ctx.elapsed("shock", "start_compressions").flags)
-
     def test_each_start_command_is_checked_on_its_own(self):
         # (e2): the later start after the shock is still the restart when an earlier one does not count
         anchor = context([SHOCK, cmd("start_compressions_command", 20, "pre"), cmd("start_compressions_command", 31, "post"),
                           cmd("start_compressions_command", 40, "late")]).anchor("start_compressions")
         self.assertEqual((anchor.event_id, anchor.candidates, anchor.ineligible), ("post", ("post", "late"), ("pre",)))
 
-    def test_under_the_fallback_a_start_before_removal_is_ambiguous_not_a_mistake(self):
-        # D-053 (OQ-039): the real shock was at an unknown time before the removal (33 s)
-        for t in (20, 32, 33):
-            with self.subTest(t=t):
-                anchor = context([REMOVAL, cmd("start_compressions_command", t, "early")]).anchor("start_compressions")
-                self.assertFalse(anchor.present)  # not counted as the restart
-                self.assertEqual(anchor.ambiguous, ("early",))
-                self.assertEqual(anchor.ineligible, ())  # not a sequence mistake for A7
-                self.assertEqual(anchor.flags, ("shock_time_from_removal", "command_before_removal"))
-                self.assertNotIn("start_command_before_shock", anchor.flags)
-
-    def test_under_the_fallback_an_unresolved_resume_before_removal_makes_the_restart_ambiguous(self):
-        # D-059 (OQ-041): "resume" at 30 s, before the removal at 33 s, may have been the restart
-        ctx = context([REMOVAL, cmd("resume_compressions_command", 30, "r"), cmd("start_compressions_command", 40, "s")])
-        anchor = ctx.anchor("start_compressions")
-        self.assertEqual((anchor.event_id, anchor.ambiguous), ("s", ("r",)))  # later start still used, but...
-        self.assertEqual(anchor.flags[:2], ("shock_time_from_removal", "command_before_removal"))
-        self.assertIn("command_before_removal", ctx.elapsed("stop_compressions", "start_compressions").flags)
-        self.assertEqual(anchor.ineligible, ())  # never a sequence mistake
-
-    def test_under_the_fallback_only_a_resume_before_removal_leaves_no_restart(self):
-        anchor = context([REMOVAL, cmd("resume_compressions_command", 30, "r")]).anchor("start_compressions")
-        self.assertEqual((anchor.present, anchor.ambiguous), (False, ("r",)))
-        self.assertIn("command_before_removal", anchor.flags)
-
     def test_with_a_shock_on_screen_a_resume_before_it_is_continue_not_ambiguous(self):
         anchor = context([SHOCK, cmd("resume_compressions_command", 20, "r"),
                           cmd("start_compressions_command", 35, "s")]).anchor("start_compressions")
         self.assertEqual((anchor.event_id, anchor.ambiguous, anchor.flags), ("s", (), ()))
-
-    def test_under_the_fallback_a_later_start_is_used_but_the_ambiguity_is_flagged(self):
-        anchor = context([REMOVAL, cmd("start_compressions_command", 31, "early"),
-                          cmd("start_compressions_command", 40, "late")]).anchor("start_compressions")
-        self.assertEqual((anchor.event_id, anchor.ambiguous), ("late", ("early",)))
-        # the early one may have been the real restart, so a delay measured to "late" is uncertain
-        self.assertIn("command_before_removal", anchor.flags)
-        self.assertIn("command_before_removal", context([REMOVAL, cmd("stop_compressions_command", 25),
-                                                         cmd("start_compressions_command", 31, "early"),
-                                                         cmd("start_compressions_command", 40, "late")])
-                      .elapsed("stop_compressions", "start_compressions").flags)
 
     def test_with_a_shock_on_screen_a_start_before_it_is_still_a_mistake(self):
         anchor = context([SHOCK, REMOVAL, cmd("start_compressions_command", 25, "pre")]).anchor("start_compressions")

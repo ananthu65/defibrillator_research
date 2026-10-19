@@ -126,8 +126,9 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Assumption:** When no shock is confirmed on screen, the shock happened at some unknown time
   **before** the first paddle removal, never after it.
 - **Why:** The paddles are removed after the shock is delivered.
-- **Status:** active. Updated 2026-10-13: the earlier version also assumed that a start command
-  before the removal counts as "before the shock". D-053 rejected that, so commands before the
+- **Status:** **retired** (2026-10-19, D-115): the removal fallback it served is removed. Updated
+  2026-10-13: the earlier version also assumed that a start command before the removal counts as
+  "before the shock". D-053 rejected that, so commands before the
   removal are now timing-ambiguous (`command_before_removal`): they are not counted, and are not
   a mistake.
 - **If wrong:** If paddles could be removed before the shock, the fallback itself (D-023) would
@@ -207,7 +208,9 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   shock**. R3/R4 may then be Pass – Inferred although no successful shock happened.
 - **Why it is acceptable for now:** the overall result can never be Pass in that case. R5 is
   Fail `missing` when the screen was visible, or Unable to Verify when it wasn't.
-- **Status:** active (follows the proposal despite the observed contradiction).
+- **Status:** **retired** (2026-10-19, D-115): R3 and R4 no longer infer from the removal, because
+  a removal doesn't show that a shock was delivered. No inference rule from removal was found in
+  the original documents; it came from the rule engine brief.
 - **If wrong:** remove `paddles_removed_after_shock` from `inference_sources` in
   `configs/rules.yaml` (R3, R4). No code changes.
 - **Detected by:** the supervisor's answer to OQ-060; comparing R3/R4 inferred passes with R5

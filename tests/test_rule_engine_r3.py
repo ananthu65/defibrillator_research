@@ -1,4 +1,4 @@
-"""Increment 15: R3, paddles placed firmly on the chest (P-035; D-057, D-093, D-102, D-106)."""
+"""Increment 15: R3, paddles placed firmly on the chest (P-035; D-057, D-093, D-106, D-115)."""
 import copy
 from dataclasses import replace
 import unittest
@@ -18,10 +18,10 @@ from schemas.event import Event
 CATALOGUE = yaml.safe_load((ROOT / "configs/rules.yaml").read_text(encoding="utf-8"))
 EXPORT = load_export_config()
 FPS = 25.0
-PROPOSAL = ["shock_delivered_on_screen", "paddles_removed_after_shock"]
+SHOCK_ONLY = ["shock_delivered_on_screen"]   # D-115: the removal is never an inference source
 
 
-def config(sources=PROPOSAL):
+def config(sources=SHOCK_ONLY):
     rules = [{"id": "R3", "status": "approved", "parameters": {"inference_sources": sources}}]
     return RuleEngineConfig.from_dict({**copy.deepcopy(CATALOGUE), "rules": rules})
 
@@ -101,45 +101,35 @@ class DirectEvidence(unittest.TestCase):
 
 
 class Inference(unittest.TestCase):
-    """D-057, D-102: when direct evidence is missing, an event in inference_sources gives Pass - Inferred."""
+    """D-057, D-115: when direct evidence is missing, the shock on screen gives Pass - Inferred. A paddle
+    removal never does: it doesn't show that a shock was delivered."""
 
     def test_inferred_from_the_shock_on_screen(self):
         outcome = r3([TAKEN, SHOCK, ev("paddles_removed_after_shock", 20)])
-        self.assertEqual((outcome.kind, outcome.evidence), ("pass_inferred", ("shock",)))
+        self.assertEqual((outcome.kind, outcome.evidence, outcome.flags), ("pass_inferred", ("shock",), ()))
         self.assertIn("inferred from shock_delivered_on_screen", outcome.reason)
 
-    def test_inferred_from_the_removal_without_a_shock_on_screen(self):
-        """D-093: removal confirms placement, though it gives no shock time (and no successful shock, A-021)."""
+    def test_a_removal_without_a_shock_on_screen_infers_nothing(self):
         outcome = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")])
-        self.assertEqual((outcome.kind, outcome.evidence, outcome.flags),
-                         ("pass_inferred", ("removed",), ("inferred_from_removal",)))
-        self.assertIn("A-021", outcome.reason)
+        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
 
-    def test_each_source_on_its_own(self):
-        """D-107: one confirmed source is enough."""
-        shock_only = r3([TAKEN, SHOCK], cfg=config(["shock_delivered_on_screen"]))
-        self.assertEqual((shock_only.kind, shock_only.evidence, shock_only.flags), ("pass_inferred", ("shock",), ()))
-        removal_only = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")],
-                          cfg=config(["paddles_removed_after_shock"]))
-        self.assertEqual((removal_only.kind, removal_only.evidence), ("pass_inferred", ("removed",)))
-        self.assertIn("inferred_from_removal", removal_only.flags)
+    def test_the_removal_is_refused_as_an_inference_source(self):
+        for sources in (["paddles_removed_after_shock"], ["shock_delivered_on_screen", "paddles_removed_after_shock"]):
+            with self.subTest(sources=sources):
+                outcome = r3([TAKEN, SHOCK], cfg=config(sources))
+                self.assertEqual(outcome.kind, "engine_error")
+                self.assertIn("doesn't show that a shock was delivered", outcome.reason)
 
-    def test_with_both_sources_confirmed_the_first_listed_is_cited(self):
-        """D-107: the shock on screen is listed first, so a removal tagged before it is not cited."""
-        outcome = r3([TAKEN, ev("paddles_removed_after_shock", 14.0, "removed"), SHOCK])
-        self.assertEqual((outcome.evidence, outcome.flags), (("shock",), ()))
+    def test_the_catalogue_lists_only_the_shock(self):
+        self.assertEqual(RuleEngineConfig.from_dict(CATALOGUE).rule("R3").parameters["inference_sources"],
+                         ["shock_delivered_on_screen"])
 
     def test_a_tag_without_a_shock_time_cannot_be_checked_directly(self):
-        """D-093: R3's direct check needs the shock time; the inference may still apply."""
+        """D-093: R3's direct check needs the shock time; a removal doesn't supply one."""
         removed = r3([ev("paddles_firmly_on_chest", 12), ev("paddles_removed_after_shock", 20, "removed")])
-        self.assertEqual((removed.kind, removed.evidence), ("pass_inferred", ("removed",)))
+        self.assertEqual((removed.kind, removed.blocked_by), ("not_evaluable", "R5"))
         alone = r3([ev("paddles_firmly_on_chest", 12)])
         self.assertEqual((alone.kind, alone.blocked_by), ("not_evaluable", "R5"))
-
-    def test_sources_are_a_setting(self):
-        only_shock = config(["shock_delivered_on_screen"])
-        outcome = r3([TAKEN, ev("paddles_removed_after_shock", 20)], cfg=only_shock)
-        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
 
     def test_no_evidence_and_no_shock_time_is_not_evaluable_because_of_r5(self):
         outcome = r3([TAKEN])
@@ -176,7 +166,7 @@ class Coverage(unittest.TestCase):
         outcome = r3([TAKEN, weak, SHOCK], cfg=NO_INFERENCE)
         self.assertEqual((outcome.kind, outcome.evidence), ("unable_to_verify", ("weak",)))
 
-    def test_with_the_proposal_sources_a_shock_on_screen_always_infers(self):
+    def test_with_the_shock_as_a_source_a_shock_on_screen_always_infers(self):
         """With a shock time, the shock on screen is itself an inference source, so coverage is not reached."""
         self.assertEqual(r3([TAKEN, SHOCK], header(sternal=None)).kind, "pass_inferred")
 

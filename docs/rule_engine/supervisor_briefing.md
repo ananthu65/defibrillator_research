@@ -30,6 +30,9 @@ shown on the screen", "stand clear" said) and checks each rule of the procedure 
   - an order requirement isn't set;
   - the data itself needs review.
   (D-055, D-062, D-065, D-100.)
+- **The shock time comes only from the screen.** A paddle removal is never taken as evidence of
+  a shock or of its time, because paddles are sometimes removed without a successful shock. Without
+  the screen in view, the rules that need the shock time are not evaluable (D-093, D-115).
 - **Each camera angle is assessed on its own.** Results are never compared across angles (D-096).
 - **Clinical values are never invented.** Every time limit records who gave it and who approved
   it. Until then it is empty, and the rule checks presence and order only. "No limit" can be
@@ -83,16 +86,18 @@ The order must be: first paddle taken → first paddle placed firmly → second 
 - **Pass:** both paddles seen firmly on the chest before the shock shown on the screen.
 - **Fail:** placed firmly only after the shock ("placed after shock").
 - **Inferred:** if the firm placement wasn't seen, R3 passes by inference when the shock on the
-  screen or the paddle removal is confirmed, as in the proposal.
+  screen is confirmed. A paddle removal never infers it.
+- **No shock on the screen:** R3 is not evaluable.
 - **Not checked yet:** where the paddles were placed ("not in zone"), because the chest regions
   are not approved yet. Until then R3 checks timing and presence only.
 
 **R4 Both discharge buttons pressed** ([diagram](diagrams.md#m-r4-both-discharge-buttons-pressed-p-036-built-in-increment-16-pending-until-approved)).
 - **Pass:** both buttons pressed after the paddles were placed and at or before the shock.
 - **Fail:** pressed before the paddles were placed ("before placement").
-- **Inferred:** if no press was seen, R4 passes by inference as R3 does. "Not pressed" would fail
-  only if both paddles were in view throughout. With the proposal's inference, that case can't
-  happen yet (see OQ-061).
+- **Inferred:** if no press was seen, R4 passes by inference from the shock on the screen, as R3
+  does; never from the paddle removal. "Not pressed" would fail only if both paddles were in view
+  throughout. While the shock infers, that case can't happen yet (see OQ-061).
+- **No shock on the screen:** R4 is not evaluable.
 
 **R5 Shock confirmed on screen** ([pathway table](pathways.md#p-033-r5-shock-confirmed-on-screen-built-increment-13-pending-until-approved)).
 - **One shock seen:** R5 passes, but the order against the preceding steps isn't checked until
@@ -119,16 +124,14 @@ The order must be: first paddle taken → first paddle placed firmly → second 
 | **R2 redefined:** the second paddle may be taken only after the first is **placed** (D-051) | This is the procedure taught |
 | **New rule R8: apical paddle before sternal** (D-052), including an inferred result when only one zone is visible (D-013) | It is a taught step. Some camera angles show only one zone |
 | **New rule A8: pre-shock pause** from "stop CPR" to "start CPR" at most **5 s**, approved by you (D-016) | A taught limit on the pause in compressions |
-| **The shock time comes only from the screen.** It is never estimated from the paddle removal (D-093). This replaces the proposal's A6 clause (removal as a fallback). In a view without the screen, the shock-dependent rules are not evaluable (OQ-057) | Paddles are sometimes removed without a successful shock, so a removal doesn't show when, or whether, a shock happened |
 | **R7 and A6 are one check**, reported under both IDs and counted as one mistake (D-044) | They describe the same step |
 | **A7 checks the command order only.** A missing command is reported by its own rule, not again by A7. "Stop" before "continue" is A4's mistake only (D-027) | One mistake is reported once |
 | **R3 does not yet judge "paddle outside its zone"** (D-106) | The chest regions are not approved yet (OQ-012) |
 | **A parallel placement fails both R2 and R8,** marked as one cause (D-098) | They are separate checklist items, but the feedback should say one action caused both (OQ-059) |
 
-Followed as written, though the data raises a doubt: R3 and R4 may pass by inference from the
-paddle removal (D-102), although paddles are sometimes removed without a successful shock.
-Such a result can't lead to an overall Pass, because R5 then fails or is Unable to Verify
-(OQ-060, OQ-061).
+Not a departure: the shock time comes only from the screen, and a paddle removal is never taken
+as evidence of a shock (D-093, D-115). The original documents have no rule inferring a shock from
+the removal.
 
 ## 4. Your open questions, by rule
 
@@ -174,19 +177,16 @@ Each question shows what the system does until it is answered.
 ### R3 Paddles firmly on the chest
 - **OQ-012: chest regions.** Please approve the regions and what counts as a correct placement.
   - *Until then:* R3 checks timing and presence only, never "not in zone".
-- **OQ-060: removal as evidence.** Should the paddle removal still support a Pass – Inferred for
-  R3 and R4, given that paddles are sometimes removed without a successful shock?
-  - *Until then:* yes, as in the proposal. Such results are marked as inferred from the removal.
 - **OQ-061: inference when the step was visible but not seen.** Can the training defibrillator
-  deliver a shock without firm contact? Should either inference still apply when the zones (R3) or
-  paddles (R4) were in view and the step wasn't seen?
+  deliver a shock without firm contact? Should the shock on the screen still infer R3 and R4 when
+  the zones (R3) or paddles (R4) were in view and the step wasn't seen?
   - *Until then:* the inference applies, so R3's "missing" and R4's "not pressed" can't be
     produced.
 
 ### R4 Both buttons pressed
 - **OQ-023: buttons pressed more than once.** Acceptable or a mistake? Which press counts?
   - *Until then:* any valid press counts.
-- OQ-060 and OQ-061 above also apply.
+- OQ-061 above also applies.
 
 ### R5 Shock on screen
 - **OQ-013: preceding steps.** Which steps must come before the shock: paddle placement only, or

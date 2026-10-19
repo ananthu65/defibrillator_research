@@ -93,8 +93,8 @@ agree; it can be a small wrapper around the event list, so the `Event` schema do
 | `paddles_firmly_on_chest` | Both paddles stable in the approved zones | R3 | Required |
 | `both_paddle_buttons_pressed` | Both discharge buttons pressed | R4 | Required |
 | `apical_gel_applied`, `sternal_gel_applied` | Gel applied to that placement zone, one event per application (D-111) | R1 | Required for a per-zone R1 (otherwise R1 falls back to counting `gel_applied`) |
-| `shock_delivered_on_screen` | New shock indication on the approved screen (exactly one per recording expected) | R5, R3/R4 inference, shock time | Required |
-| `paddles_removed_after_shock` | Paddles removed from the chest | R6, R3/R4 inference, shock-time fallback | Required |
+| `shock_delivered_on_screen` | New shock indication on the approved screen (exactly one per recording expected) | R5, R3/R4 inference, shock time (the only source of the shock time, D-115) | Required |
+| `paddles_removed_after_shock` | Paddles removed from the chest | R6 (never used as evidence of a shock, D-115) | Required |
 | `apical_paddle_taken`, `sternal_paddle_taken` *(proposed names)* | **Per-paddle taken**: which paddle was taken | Future checks on R2/R8 | If feasible |
 
 ### Zone visibility

@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 10
+**Report version:** 11
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -36,6 +36,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 8 | 2026-10-17 | **Rule flag added** (R3/R4): `inferred_from_removal`. A Pass – Inferred from the paddle removal, which can happen without a successful shock (A-021, D-107). **New regions:** `apical_paddle` and `sternal_paddle` (each paddle's visibility, R4's coverage, D-108) appear in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. R3 and R4 are implemented (Increments 15-16), so `placed_after_shock`, `missing` (R3), `before_placement` and `not_pressed` are built. `contradictory` and `order_not_checked` can also come from R4. R3 and R4 still report `pending` until they are approved |
 | 9 | 2026-10-17 | **Failure code added** (R1): `after_placement`, gel applied only after the first paddle placement (D-109). **Rule flag added:** `derived_gel_application`, a result resting on a gel application derived from the boxes (D-111). **New regions:** `apical_gel` and `sternal_gel` (whether gel on that zone could have been seen; set only past the 9d gate, D-112) appear in `context.zone_visibility` and `context.header.coverage`. **Meaning changed:** R1's `applied_once` and `missing` are now per zone (one gel application on each placement zone, D-110). R1 is implemented (Increment 17), so `applied_once`, `outside_time_period` and `missing` (R1) are built. R1 still reports `pending` until it is approved |
 | 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
+| 11 | 2026-10-19 | **Three flags removed** (D-115): `shock_time_from_removal` and `command_before_removal` (the shock time is never taken from the paddle removal; the `shock_time_fallback` setting is gone) and `inferred_from_removal` (R3 and R4 no longer infer from the removal: it doesn't show that a shock was delivered). R3 and R4 infer only from the shock on the screen; without a shock time they are Not evaluable because of R5 |
 
 ## How to get the report
 
@@ -97,7 +98,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 10,
+  "report_version": 11,
   "kind": "rule_engine_report",
   "development_data": false,
   "demo_notice": null,
@@ -168,7 +169,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | Kind | Shared status | Status | Meaning |
 |---|---|---|---|
 | `pass_direct` | `pass_direct` | decided | The step was observed and is correct |
-| `pass_inferred` | `pass_inferred` | decided | Accepted through an approved inference (for example R3 from the shock or removal); `evidence` names the supporting event |
+| `pass_inferred` | `pass_inferred` | decided | Accepted through an approved inference (for example R3 from the shock on the screen); `evidence` names the supporting event |
 | `fail` | `fail` | decided | The evidence clearly shows the mistake; `failure_code` names it |
 | `unable_to_verify` | `unable_to_assess` | decided | The evidence is missing, unclear or low-confidence; not the learner's fault (D-004) |
 | `not_evaluable` | `unable_to_assess` | decided | Could not be judged because of another step; `blocked_by` names it (one mistake reported once, D-003) |
@@ -193,19 +194,16 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `timing_not_checked` | built | No approved time limit, so only presence and order were checked. The overall result cannot be Pass (D-062). Never raised for an approved "no limit" (D-103) |
 | `limit_not_approved` | built | A time limit exists but is not approved, so it was not used (D-061) |
 | `order_not_checked` | built (v6) | Only presence was checked, not the order. For R5: the shock was seen, but the steps that must come before it are not set yet (OQ-013), or one of them was not observed. For R4: no placement was observed, so the press couldn't be checked against it. The overall result cannot be Pass (D-100) |
-| `shock_time_from_removal` | built (only with `shock_time_fallback: removal`, not the decided setting) | No shock on screen; the shock time comes from paddle removal, so delays look shorter than they were (D-023) |
 | `no_shock` | built (meaning changed in v4) | No shock was seen on the screen, so there is no shock time; it is never inferred (D-093). Shock-dependent rules are Not evaluable because of R5 |
 | `multiple_shocks` | built | Two or more shocks; no shock time was chosen (also a timeline anomaly) |
 | `multiple_candidates` | built | Several events could give a key time; the earliest was used |
 | `command_near_shock` | built | A "resume compressions" command was too close to the shock to tell continue from restart |
-| `command_before_removal` | built (only with `shock_time_fallback: removal`) | Under the removal fallback, a command before the removal may have been the restart (D-053, D-059) |
 | `no_shock_time` | built | No shock time, so a command or the restart could not be placed |
 | `unresolved_commands` | built | An ambiguous command could not be classified, so the continue or restart time may be incomplete |
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
 | `placement_missing` | built (R8) | R8: a paddle's zone was in view during the placement phase but its placement was not observed, so the order cannot be judged; R3 reports the missing placement (D-058) |
 | `contradictory` | built (R8, R4) | The evidence contradicts itself, so Unable to Verify. R8: the only visible paddle was placed clearly before the first placement. R4: the buttons were pressed only after the shock on the screen |
 | `derived_gel_application` | built (v9) | R1: the result rests on a per-zone gel application derived from the annotated hand and zone boxes (only past the 9d gate, D-112), not on a tag |
-| `inferred_from_removal` | built (v8) | R3/R4 passed by inference from the paddle removal. Paddles are sometimes removed **without a successful shock** (A-021), so the step may not have been done properly; R5 then fails or is Unable to Verify, so the overall result is not Pass (D-102, D-107) |
 | `inferred_fail_policy_undecided` | undecided (OQ-005) | R8: the one-zone inference shows the sternal paddle first, an inferred mistake; reported as Unable to Verify until it is decided whether an inferred mistake is a Fail |
 | `possible_parallel_placement` | built (v5) | **Shared cause flag.** Both paddles were placed at the same time, a learner mistake seen in the derived placements (only once the gate is approved). It appears on **both R2 and R8**, each failed with `simultaneous`. They are separate checklist criteria, but **one action caused both failures**, so the feedback can say so (D-098). Whether this counts as one mistake or two is OQ-059 |
 | `derived_placement` | built (v5) | The result rests on a paddle placement derived from the annotated boxes by the exporter (direct evidence, method recorded), not on a tag (D-081, D-088) |
