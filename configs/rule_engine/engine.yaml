@@ -1,0 +1,86 @@
+schema_version: 1
+# Rule engine engineering settings (owner: Arnikan). These are NOT clinical values.
+# Each setting is a scalar or {value, placeholder, undecided, note}:
+#   placeholder: true  -> engineering value not yet selected in pilot validation
+#   undecided: true    -> team policy not yet decided; the value is the interim behaviour
+# Every key below is required, so a missing setting is an error rather than a silent default.
+
+confidence_thresholds:   # events below the threshold are not used as evidence (logged)
+  annotation: {value: 1.0, placeholder: true, note: human annotation}
+  video:      {value: 0.5, placeholder: true}
+  audio:      {value: 0.5, placeholder: true}
+
+simultaneous_window_seconds:    {value: 0.5, placeholder: true}  # two events this close count as simultaneous
+gel_minimum_gap_seconds:        {value: 0.4, placeholder: true}  # R1: two gel events closer than this are one application (0.4 since 2026-10-17, OQ-018)
+assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
+duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
+# R6: the screen may show the shock slightly after the discharge, so a correct learner can remove
+# the paddles before the screen updates. A removal (tag or derived placement end) up to this long
+# before the shock on screen counts as at the shock (D-105). Separate from simultaneous_window_seconds.
+removal_before_screen_tolerance_seconds: {value: 0.5, placeholder: true, note: "interim export: 0 of 20 LS/T removals before the screen (D-105)"}
+# The shock time comes only from the shock seen on the screen; it is never inferred, from the paddle
+# removal or anything else (D-093, D-115). There is no fallback setting.
+
+# What a missing required event means, by coverage status (rules/coverage.py).
+# Coverage status of an event comes from the timeline header (explicit coverage, analyses_run);
+# no header -> unknown. Outcomes: fail | unable_to_verify.
+# The most specific setting wins: by_region > by_source > by_modality > outcomes (defaults).
+# An override needs only the statuses it changes, e.g. by_modality: {audio: {unknown: fail}}.
+# Low confidence is not absence: if an excluded low-confidence event of the same name exists,
+# the outcome is always unable_to_verify (low_confidence_evidence); this is not configurable.
+coverage_policy:
+  outcomes:
+    covered:     fail                # approved 2026-10-10
+    not_covered: unable_to_verify    # approved 2026-10-10
+    unknown:     {value: unable_to_verify, undecided: true, note: flagged coverage_policy_undecided}
+  by_modality: {}    # video | audio
+  by_source:   {}    # annotation | video | audio
+  by_region:   {}    # a region defined below
+  regions:           # camera regions and the canonical events whose visibility they govern
+    apical_zone:  [apical_paddle_placed]
+    sternal_zone: [sternal_paddle_placed]
+    screen:       [shock_delivered_on_screen]   # the defibrillator screen (R5; D-094)
+    # Visibility-only regions (no single event): both paddles govern the button press, so R4 asks
+    # each paddle region by name (D-108).
+    apical_paddle:  []
+    sternal_paddle: []
+    # Visibility-only regions for R1: whether a gel application at that zone could have been seen
+    # during the bottle period (Step 9d; the adapter sets them only past the 9d gate, D-111, D-112).
+    apical_gel:     []
+    sternal_gel:    []
+
+unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}
+
+# Timeline-level anomalies that prevent an overall Pass (P-017). With one of these, a Fail stays
+# Fail but is flagged timeline_needs_review; any other result is Incomplete, checked before the
+# Unable-to-Verify setting (D-069).
+review_anomalies:
+  value: [unknown_labels_present, multiple_shocks, mixed_evidence_sources, count_violation, paddle_identity_conflict]
+  note: decided 2026-10-14 (D-069; count_violation and paddle_identity_conflict D-072)
+
+# Expected number of CONFIDENT events per canonical event (P-005). Every canonical event in the
+# vocabulary must be listed. value: {exactly: n} | {at_least: n} | {at_most: n} | unlimited, or
+# null while undecided (not checked). A count outside the range raises count_violation; for events
+# limited to one, extra events within simultaneous_window_seconds are marked "possibly the same
+# incident detected twice". No events at all is never a count violation: a missing event is
+# decided by the coverage step and the rules (A-018). A violation is never a Fail by itself (D-071).
+# Every value is a placeholder until the supervisor answers the repeated-actions questions.
+expected_counts:
+  gel_applied:                   {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  apical_gel_applied:            {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  sternal_gel_applied:           {value: null, undecided: true, placeholder: true, note: repeated gel (OQ-021)}
+  first_paddle_taken:            {value: {exactly: 1}, placeholder: true}
+  first_paddle_placed:           {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  second_paddle_taken:           {value: {exactly: 1}, placeholder: true}
+  apical_paddle_placed:          {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  sternal_paddle_placed:         {value: {exactly: 1}, placeholder: true, note: paddles placed again (OQ-022)}
+  paddles_firmly_on_chest:       {value: null, undecided: true, placeholder: true, note: paddles placed again (OQ-022)}
+  both_paddle_buttons_pressed:   {value: null, undecided: true, placeholder: true, note: buttons pressed again (OQ-023)}
+  shock_delivered_on_screen:     {value: {exactly: 1}, placeholder: true, note: two or more also raise multiple_shocks}
+  paddles_removed_after_shock:   {value: {exactly: 1}, placeholder: true}
+  oxygen_away_command:           {value: unlimited, placeholder: true}
+  continue_compressions_command: {value: unlimited, placeholder: true}
+  stand_clear_command:           {value: unlimited, placeholder: true}
+  stop_compressions_command:     {value: unlimited, placeholder: true}
+  shock_command:                 {value: unlimited, placeholder: true}
+  start_compressions_command:    {value: unlimited, placeholder: true}

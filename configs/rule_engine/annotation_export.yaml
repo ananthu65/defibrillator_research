@@ -1,0 +1,77 @@
+schema_version: 1
+# Rule-engine annotation export and audit (owner: Arnikan; D-074). Read only by
+# annotation/export_rule_engine_records.py and annotation/audit_rule_engine_checks.py. The
+# training pipeline never reads it. CVAT names are used exactly as they are (D-073).
+
+zone_labels: [apical_placement_zone, sternal_placement_zone]   # CVAT zone track labels
+paddle_labels: [paddle_apical, paddle_sternal]                 # CVAT paddle track labels
+# The defibrillator screen: its visibility is exported exactly like the zones' (D-094), and the
+# adapter maps it to the engine region that governs `event` (engine.yaml regions: screen).
+screen: {label: defibrillator_screen, event: shock_delivered_on_screen}
+# The paddles: their visibility is exported exactly like the zones (D-108). The adapter maps each
+# paddle label to a visibility-only engine region (engine.yaml regions), used by R4's coverage.
+paddle_regions: {paddle_apical: apical_paddle, paddle_sternal: sternal_paddle}
+
+# Zone tracks normally present in each camera view (D-077). Used ONLY by the audit's review list:
+# the rule engine never uses it, and it never affects a result (D-082). The audit report prints
+# the actual distribution per view beside it.
+usual_zone_pattern:
+  LL: [apical_placement_zone]
+  LS: [apical_placement_zone, sternal_placement_zone]
+  T:  [apical_placement_zone, sternal_placement_zone]
+
+# Videos where an annotator confirmed that a zone was genuinely not visible (D-082). They leave the
+# audit's review list, and the annotation adapter (Increment 10) treats that zone as not covered
+# instead of unknown. One entry per video and zone:
+#   - {task: P07_T, zone: apical_placement_zone, confirmed_by: <annotator>, confirmed_on: "YYYY-MM-DD", note: ...}
+reviewed_zone_exceptions: []
+
+audit:
+  zone_motion_fraction_of_diagonal: {value: 0.05, placeholder: true}   # accepted 2026-10-14 (D-074)
+  repeated_tag_window_frames:       {value: 15, placeholder: true}     # accepted 2026-10-14 (D-074)
+
+# Step 9c: per-paddle placements derived from the annotated paddle and zone boxes (D-081, D-086 to
+# D-089). Derived per paddle LABEL across all its tracks, never per track (D-087). The window for
+# a possible parallel placement is engine.yaml simultaneous_window_seconds (read from there).
+derived_placements:
+  paddles:   # CVAT paddle label -> its CVAT zone label and the canonical event (mapping only, D-073)
+    paddle_apical:  {zone: apical_placement_zone,  event: apical_paddle_placed}
+    paddle_sternal: {zone: sternal_placement_zone, event: sternal_paddle_placed}
+  min_overlap_of_paddle:         {value: 0.5,  placeholder: true}   # share of the paddle box inside its zone
+  steady_frames:                 {value: 5,    placeholder: true}   # frames the paddle must stay in and steady
+  max_centre_motion_of_diagonal: {value: 0.02, placeholder: true}   # allowed centre motion over those frames
+  exit_frames:                   {value: 5,    placeholder: true}   # frames out of the zone before a re-placement counts
+  tag_agreement_window_frames:   {value: 15,   placeholder: true}
+  first_placement_tag: first_paddle_firmly_on_the_chest   # T1 (CVAT tag)
+  first_placement_tag_paddle: paddle_apical               # the paddle T1 marks (A-027); a cross-check only (D-118)
+  both_placed_tag: paddles_firmly_on_chest                # T2 (CVAT tag), used only when present
+  # The gate (D-088): R8 may use derived placements only for the export and settings reviewed here.
+  # Fill all four after reviewing placement_validation.md of that export: export_id and
+  # placement_settings_sha256 are copied from its export_manifest.json.
+  reviewed_for_r8: {reviewed_by: null, reviewed_on: null, export_id: null, placement_settings_sha256: null}
+
+# Step 9d: per-zone gel applications derived from the learner_hand and zone boxes (D-111, D-112).
+# learner_hand covers only the hand holding the gel bottle and is tracked during gel application
+# (A-024). Gel is applied on or near a zone, not strictly inside it (A-023, A-025), so proximity is
+# used, not overlap. The gel phase ends at the earliest firm placement of either paddle, else the
+# earliest take of either paddle (D-118). The export never uses 9c placements, so it ends at
+# derived_placements.first_placement_tag (the apical placement, A-027) and flags the phase
+# placement_time_unknown when the sternal placement could have been earlier; past the 9c gate the
+# adapter ends it at the earliest 9c placement instead (9d's settings hash includes 9c's for that).
+derived_gel:
+  hand_label: learner_hand
+  zones:   # CVAT zone label -> its canonical gel event and the engine region carrying its gel status (R1)
+    apical_placement_zone:  {event: apical_gel_applied,  region: apical_gel}
+    sternal_placement_zone: {event: sternal_gel_applied, region: sternal_gel}
+  gel_tag: Gel applied                     # CVAT tag, used to cross-check (gel_validation.csv)
+  first_paddle_taken_tag: first_paddle_taken
+  second_paddle_taken_tag: second_paddle_taken   # the gel phase ends at the earliest take of either paddle (D-118)
+  gel_hand_zone_max_gap:    {value: 0.05, placeholder: true}   # gap between hand and zone boxes / frame diagonal
+  gel_dwell_frames:         {value: 10,   placeholder: true}   # frames near the zone for one application
+  gel_zone_nearer_ratio:    {value: 2.0,  placeholder: true}   # the other zone must be this many times further
+  gel_exit_frames:          {value: 5,    placeholder: true}   # a dip out of range this short stays in the visit
+  gel_tag_agreement_frames: {value: 30,   placeholder: true}   # a Gel applied tag this close agrees
+  # The 9d gate (D-112): R1 may use derived gel applications only for the export and settings reviewed
+  # here. Fill all four after reviewing gel_validation.md: copy export_id and gel_settings_sha256 from
+  # that export's export_manifest.json.
+  reviewed_for_r1: {reviewed_by: null, reviewed_on: null, export_id: null, gel_settings_sha256: null}

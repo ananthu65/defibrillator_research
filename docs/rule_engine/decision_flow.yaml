@@ -1,0 +1,1144 @@
+schema_version: 1
+# Machine-readable description of every decision point (P-xxx) in the rule engine, so diagrams
+# and reports can be generated from it. Readable version: pathways.md. Diagrams: diagrams.md.
+#
+# Each decision point:
+#   id, name, stage, status (built | planned), decides, inputs,
+#   branches: [{condition, outcome, next (optional P-ID), flags, anomalies, rejections, failure_codes}],
+#   config (settings that control it), code (where it lives),
+#   decisions (D-), assumptions (A-), open_questions (OQ-).
+# Every flag, anomaly, rejection and failure code listed here must exist in docs/rule_engine/anomalies.md,
+# and (for built points) in the code; tests/test_rule_engine_docs.py checks this.
+stages: [annotation_export, adapter, preparation, coverage, context, rule, overall_policy, renderer]
+
+decision_points:
+
+  # ---- Annotation export (Step 9b): CVAT backups -> rule-engine records; the training pipeline is untouched ----
+
+  - id: P-028
+    name: Annotation export
+    stage: annotation_export
+    status: built
+    decides: What the rule engine knows about one annotated video, read directly from its CVAT backup (D-074)
+    inputs: [CVAT backup ZIPs, annotation/reports/phase4/video_conversion.csv (fps, frame size), configs/rule_engine/annotation_export.yaml]
+    branches:
+      - condition: Task found and its video is in the conversion report
+        outcome: One record in records.jsonl with every tag under its CVAT name (frame and seconds), frame range, duration, zone tracks and zone visibility intervals
+        next: P-001
+      - condition: Video missing from the conversion report
+        outcome: No record; export issue fps_missing (D-076)
+      - condition: Frame count differs from the conversion report
+        outcome: Record written; export issue frame_count_mismatch (warning)
+      - condition: Zone track present
+        outcome: Visible on exactly the frames where the training dataset has a box for it (track_box_at then clip_box, by import, D-079); runs merged across tracks and jobs
+      - condition: Zone drawn as a single-frame shape, not a track
+        outcome: Not converted; export issue zone_shape_without_track
+      - condition: The same task in two archives, an unrecognised task name, or unreadable CVAT files
+        outcome: The first copy is kept; export issue duplicate_task, unrecognized_task_name or invalid_cvat_json
+      - condition: Output folder inside data/video or not empty
+        outcome: Refused; nothing is written (the training pipeline is never touched)
+    config: [configs/rule_engine/annotation_export.yaml zone_labels]
+    code: annotation/export_rule_engine_records.py (run by Ananth on the final backups, D-083; reads only task.json and annotations.json, D-085)
+    decisions: [D-073, D-074, D-076, D-078, D-079, D-083, D-084, D-085]
+    assumptions: []
+    open_questions: [OQ-053, OQ-054, OQ-055]
+
+  - id: P-029
+    name: Annotation audit (review list)
+    stage: annotation_export
+    status: built
+    decides: Which annotation problems go on the review list, and what is information only (D-074, D-082)
+    inputs: [CVAT backup ZIPs, conversion report, usual_zone_pattern, reviewed_zone_exceptions, audit thresholds]
+    branches:
+      - condition: Two or more boxes of one paddle label on the same frame
+        outcome: Review duplicate_paddle_box (frame range)
+      - condition: A zone track's centre moves more than 5% of the frame diagonal
+        outcome: Review zone_moves_like_paddle, naming any paddle box it overlaps
+      - condition: The same tag twice within 15 frames
+        outcome: Review repeated_incident_tag (possibly the same incident tagged twice)
+      - condition: Zone tracks differ from the view's usual pattern (missing, unless a reviewed exception, or unexpected), including no zone
+        outcome: Review zone_pattern_off; the pattern is used only here and never affects a result (D-082)
+      - condition: A reviewed exception for a zone that is visible
+        outcome: Review zone_exception_contradicted
+      - condition: Learner procedure order, the same tag further apart than 15 frames, no first-placement tag, a never-visible zone track, a confirmed exception
+        outcome: Information only (info.csv), never an annotation issue
+    config: [annotation_export.yaml usual_zone_pattern, reviewed_zone_exceptions, audit.zone_motion_fraction_of_diagonal, audit.repeated_tag_window_frames]
+    code: annotation/audit_rule_engine_checks.py (run by Ananth on the final backups, D-083)
+    decisions: [D-074, D-077, D-078, D-080, D-082, D-083, D-085]
+    assumptions: []
+    open_questions: [OQ-054]
+
+  - id: P-030
+    name: Zone coverage for an annotated recording
+    stage: adapter
+    status: built
+    decides: The header coverage and visible intervals of each placement zone, the defibrillator screen and each paddle (regions apical_zone, sternal_zone, screen, apical_paddle, sternal_paddle) for one annotated recording (Increment 10; screen D-094; paddles D-108)
+    inputs: [exporter record (zone_tracks, zone_visibility, screen_tracks, screen_visibility, paddle_tracks, paddle_visibility, frame range), reviewed_zone_exceptions, annotation_export.yaml paddle_regions]
+    branches:
+      - condition: The screen (region screen, governing shock_delivered_on_screen for R5)
+        outcome: Exactly the zone rules below (no reviewed exceptions for the screen); an export made before the screen fields gives unknown (D-094)
+      - condition: A paddle (paddle_apical -> apical_paddle, paddle_sternal -> sternal_paddle; visibility-only regions for R4)
+        outcome: Exactly the zone rules below (no reviewed exceptions); an export made before the paddle fields (exporter version 1) gives unknown (D-108)
+      - condition: A zone's gel status, past the 9d gate (regions apical_gel and sternal_gel, visibility-only, for R1)
+        outcome: gelled or not gelled -> covered; unknown -> unknown; no intervals. Before the gate, not set (D-112)
+      - condition: The zone is confirmed not visible by an annotator (reviewed exception)
+        outcome: not covered (D-082); no intervals, so every window is not covered too
+        next: P-007
+      - condition: Zone track present and visible on every frame of the recording
+        outcome: covered; its interval goes into header.visibility
+        next: P-007
+      - condition: Zone track present and visible on only part of the recording
+        outcome: unknown for the recording; its intervals go into header.visibility, so a time window gets its own status (D-092)
+        next: P-007
+      - condition: Zone track present but outside on every frame
+        outcome: not covered (D-080); empty intervals
+        next: P-007
+      - condition: No zone track
+        outcome: unknown (D-074); no intervals
+        next: P-007
+    config: [annotation_export.yaml reviewed_zone_exceptions, annotation_export.yaml paddle_regions]
+    code: rules/adapters/annotation.py (zone_coverage, adapt_record); annotation/export_rule_engine_records.py (screen_visibility, paddle_visibility)
+    decisions: [D-074, D-080, D-082, D-092, D-094, D-108]
+    assumptions: []
+    open_questions: []
+
+  - id: P-031
+    name: Derived per-paddle placement
+    stage: annotation_export
+    status: built
+    decides: Whether the exporter derives apical_paddle_placed / sternal_paddle_placed from the paddle and zone boxes, per paddle label across all its tracks (Step 9c; D-081, D-086, D-087)
+    inputs: [paddle_apical and paddle_sternal boxes (all tracks of each label), zone boxes, tags first_paddle_firmly_on_the_chest (T1) and paddles_firmly_on_chest (T2), engine.yaml simultaneous_window_seconds]
+    branches:
+      - condition: The paddle box has at least 0.5 of its area inside its zone, steady for 5 frames with the centre moving under 2% of the diagonal
+        outcome: A placement starts on that frame; it lasts until the paddle has been out of its zone on exit_frames (5) frames with no in frame between them, after which a re-placement can start. Each event records end_frame, end_seconds (its last frame in the zone) and ended_by_exit (a real exit, not the end of the video), used by R6 (D-104)
+      - condition: One box of the paddle, but its zone not visible on the frame (occlusion)
+        outcome: Unknown, neither in nor out; it doesn't start or end a placement, and in on both sides of the gap is the same placement (A-020, D-090); counted per paddle in the validation report
+      - condition: A track of the paddle ends and another track of the same label continues it
+        outcome: The same placement continues (per label, never per track, D-087)
+      - condition: Two boxes of the same paddle on a frame, from exit_frames before a placement to its end
+        outcome: No event for that paddle; review issue placement_duplicate_paddle_box (Ananth fixes the tracks)
+      - condition: Zone of the paddle has no visible track, or the paddle never settles in its zone
+        outcome: No event (reason in placement_validation.csv)
+      - condition: T1 present; T1 marks the apical paddle (A-027), so it cross-checks only the apical placement and never the order (D-118)
+        outcome: Each paddle derived from its own box in its own zone, whatever the order; events direct, flagged derived_placement, method paddle_in_zone_v2 in metadata
+      - condition: T1 present, the apical placement more than 15 frames from T1
+        outcome: No event for the apical paddle; the sternal paddle is unaffected; review issue placement_disagrees_with_tag
+      - condition: T1 missing, both placements within simultaneous_window_seconds of each other
+        outcome: Both events kept, flagged possible_parallel_placement (A-019); enough for R2 and R8 to fail with simultaneous once the gate is approved (D-091)
+      - condition: T1 missing otherwise
+        outcome: No events
+      - condition: T2 present and a paddle's first placement later than T2 plus 15 frames
+        outcome: No event for that paddle (both, for a parallel placement); placement_disagrees_with_tag
+      - condition: Gate review record missing, or for another export_id or other placement settings
+        outcome: The Increment 10 adapter does not pass derived placements to the engine; R8 cannot use them (D-088)
+    config: [annotation_export.yaml derived_placements (min_overlap_of_paddle, steady_frames, max_centre_motion_of_diagonal, exit_frames, tag_agreement_window_frames, first_placement_tag_paddle, reviewed_for_r8), engine.yaml simultaneous_window_seconds]
+    code: annotation/derive_paddle_placements.py (derive_placements, derived_placements_approved), called by annotation/export_rule_engine_records.py
+    decisions: [D-073, D-081, D-085, D-086, D-087, D-088, D-089, D-090, D-091, D-104, D-118]
+    assumptions: [A-019, A-020, A-027]
+    open_questions: [OQ-004]
+
+  - id: P-037
+    name: Derived per-zone gel application
+    stage: annotation_export
+    status: built
+    decides: Whether the exporter derives apical_gel_applied / sternal_gel_applied from the learner_hand and zone boxes, and each zone's gel status (gelled, not gelled, unknown) (Step 9d; D-111)
+    inputs: [learner_hand boxes, zone boxes, tags first_paddle_firmly_on_the_chest, first_paddle_taken, second_paddle_taken and Gel applied; the 9c placements only in the adapter, past the 9c gate (D-118)]
+    branches:
+      - condition: Gel phase
+        outcome: In the export, from the start of the recording to first_paddle_firmly_on_the_chest (the apical placement, A-027), else the earliest take of either paddle, else the end of the recording (paddle_timing, D-118); the export never uses 9c placements, so the phase is flagged when the sternal placement could have been earlier; 9d's settings hash includes 9c's
+        flags: [placement_time_unknown]
+      - condition: A frame where the hand box is within gel_hand_zone_max_gap of a zone box (gap between the boxes over the frame diagonal; proximity, not overlap) and the other visible zone is at least gel_zone_nearer_ratio times further
+        outcome: The frame belongs to the nearer zone; about as near to both -> ambiguous, belongs to neither
+      - condition: A visit (that zone's frames, dips of up to gel_exit_frames allowed) with at least gel_dwell_frames frames
+        outcome: An application; separate visits count separately (OQ-021); an event direct, flagged derived_gel_application, with the zone, method and settings in metadata
+      - condition: Zone with an application
+        outcome: gelled
+      - condition: No application; the zone visible on every frame of the bottle period (the hand box's first to last frame in the gel phase) and the hand never hidden there
+        outcome: not gelled
+      - condition: No application; the zone not visible throughout the bottle period, or the hand hidden in it
+        outcome: unknown
+      - condition: No learner_hand box in the gel phase
+        outcome: Every zone unknown; review issue gel_hand_not_tracked (export issues and the audit)
+      - condition: An application without a Gel applied tag within gel_tag_agreement_frames, or a tag without an application
+        outcome: Reported in gel_validation.csv/.md; the event is kept
+      - condition: 9d gate record missing, or for another export_id or other gel settings
+        outcome: The Increment 10 adapter passes on neither the events nor the zone statuses; R1 uses the tag-count proxy (D-112)
+      - condition: Past the 9d gate, and the 9c gate approved too
+        outcome: The adapter ends the gel phase at the earliest firm placement of either paddle (gel_phase with the 9c placements); a zone can only become more cautious - gelled with no application by then, or the bottle hand only after it -> unknown; not gelled stays (zones_within_phase, D-118)
+    config: [annotation_export.yaml derived_gel (hand_label, zones, gel_tag, gel_hand_zone_max_gap, gel_dwell_frames, gel_zone_nearer_ratio, gel_exit_frames, gel_tag_agreement_frames, reviewed_for_r1)]
+    code: annotation/derive_gel_applications.py (derive_gel, gel_phase_timing, zones_within_phase, derived_gel_approved), called by annotation/export_rule_engine_records.py and rules/adapters/annotation.py; rules/paddle_timing.py (paddle_timing); annotation/audit_rule_engine_checks.py (gel_hand_not_tracked)
+    decisions: [D-073, D-085, D-111, D-112, D-118]
+    assumptions: [A-023, A-024, A-025]
+    open_questions: [OQ-018, OQ-021]
+
+  - id: P-033
+    name: R5 shock confirmed on screen
+    stage: rule
+    status: built
+    decides: R5's result (Increment 13); runs only when R5 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [shock_delivered_on_screen events, multiple_shocks, R5 preceding_steps (rules.yaml), screen coverage over paddles firmly on chest .. paddles removed]
+    branches:
+      - condition: Two or more shock indications (preparation anomaly multiple_shocks)
+        outcome: Unable to Verify; a single shock cannot be confirmed
+        flags: [multiple_shocks]
+      - condition: A shock on screen, preceding_steps unset (OQ-013)
+        outcome: Pass – Direct, presence only; flagged so the overall result cannot be Pass (D-100, like D-062)
+        flags: [order_not_checked]
+      - condition: A shock on screen, preceding_steps set, an observed step starts after the shock
+        outcome: Fail wrong_order
+        failure_codes: [wrong_order]
+      - condition: A shock on screen, preceding_steps set, a step not observed
+        outcome: Pass – Direct for the observed steps; that step's order not checked
+        flags: [order_not_checked]
+      - condition: A shock on screen after every preceding step
+        outcome: Pass – Direct
+      - condition: preceding_steps is not a list of canonical events
+        outcome: engine_error (a configuration error, never a result about the learner, D-063)
+      - condition: No shock on screen, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No shock on screen; the screen visible throughout paddles firmly on chest .. paddles removed (the whole recording when either tag is missing, D-101)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No shock on screen; the screen not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify, never Fail (D-094)
+    config: [configs/rules.yaml R5 parameters.preceding_steps, engine.yaml coverage_policy]
+    code: rules/video_rules.py (shock_confirmed_on_screen)
+    decisions: [D-039, D-093, D-094, D-100, D-101]
+    assumptions: []
+    open_questions: [OQ-013]
+
+  - id: P-034
+    name: R6 paddles removed after the shock
+    stage: rule
+    status: built
+    decides: R6's result (Increment 14); runs only when R6 is approved in rules.yaml, pending until the supervisor confirms its definition. paddles_removed_after_shock means the paddles were removed; it doesn't prove a shock (D-104)
+    inputs: [shock anchor (screen only, D-093), paddles_removed_after_shock events, derived placements with end_seconds and ended_by_exit (past the gate), placement zone coverage from the shock to the end of the recording, rules.yaml shock_to_removal_seconds]
+    branches:
+      - condition: No shock time (no shock on the screen, or several)
+        outcome: Not evaluable because of R5, even if a removal is tagged - a removal doesn't show a shock (D-115)
+        next: P-020
+      - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
+        outcome: Fail removed_before_shock
+        failure_codes: [removed_before_shock]
+      - condition: Past the gate, a derived placement episode ended by a real exit clearly before the shock, with no placement of that paddle on at the shock
+        outcome: Fail removed_before_shock
+        flags: [derived_placement]
+        failure_codes: [removed_before_shock]
+      - condition: A removal after the shock, or before it but within removal_before_screen_tolerance_seconds (the screen may show the shock after the discharge; treated as at the shock)
+        outcome: Pass – Direct; the time limit is checked (P-024); unset, so flagged timing_not_checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: A removal later than an approved shock_to_removal_seconds
+        outcome: Fail too_late
+        failure_codes: [too_late]
+      - condition: No removal, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No removal; both placement zones visible throughout from the shock to the end of the recording (A-022)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No removal; a placement zone not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify, never Fail
+    config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml removal_before_screen_tolerance_seconds, engine.yaml coverage_policy]
+    code: rules/video_rules.py (paddles_removed_after_shock)
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105]
+    assumptions: [A-022]
+    open_questions: [OQ-016, OQ-057]
+
+  - id: P-032
+    name: R2 the paddle taken first is placed before the other is taken (order-neutral, D-118)
+    stage: rule
+    status: built
+    decides: R2's result (Increment 11; D-051, D-091, D-095, D-118); it runs only when R2 is approved in rules.yaml, pending until then. Which paddle went first comes from event times (ctx.paddle_order), never from the tag names (A-027)
+    inputs: [paddle_order (each paddle's take and firm placement; the apical tag first_paddle_placed wins over its per-paddle placement), derived placements (only past the gate), placement-zone coverage over a window]
+    branches:
+      - condition: Derived placements flagged possible_parallel_placement (present only once the gate is approved, D-088)
+        outcome: Fail simultaneous (D-091), with the shared cause flag; R8 fails too, separately (D-098)
+        failure_codes: [simultaneous]
+        flags: [possible_parallel_placement, derived_placement]
+      - condition: Both paddles taken within simultaneous_window_seconds of each other, whichever is named first (the apical tie-break never decides this)
+        outcome: Fail simultaneous; neither was placed before the other was taken
+        failure_codes: [simultaneous]
+      - condition: Which paddle was taken first can't be established (a take missing, and that paddle not placed before the other was taken)
+        outcome: Unable to Verify; the order cannot be checked
+      - condition: A take missing, but that paddle was placed before the other was taken
+        outcome: It was taken first; R2 is judged as below, and the result carries the flag (D-118)
+        flags: [take_order_from_placement]
+      - condition: The paddle taken first (by time; an exact tie counts as apical) placed before the other paddle is taken (outside the simultaneous window)
+        outcome: Pass – Direct, whichever paddle it is; a sternal-first learner handling one paddle at a time passes, and R8 reports the order
+      - condition: Its placement and the other paddle taken within simultaneous_window_seconds
+        outcome: Fail simultaneous
+        failure_codes: [simultaneous]
+      - condition: The other paddle taken before the first-taken paddle was placed
+        outcome: Fail taken_before_first_placed
+        failure_codes: [taken_before_first_placed]
+      - condition: The sternal paddle taken first and its placement unknown (no tag marks the sternal placement; derived ones only past the gate)
+        outcome: Unable to Verify, never Fail (D-118)
+        flags: [placement_time_unknown]
+      - condition: The apical paddle taken first, its placement not seen, a low-confidence one exists
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: The apical paddle taken first, its placement not seen; both placement zones visible throughout the window between the two takes
+        outcome: Fail first_placement_not_observed - either the paddles were placed in parallel, or the second paddle was taken before the first was placed (A-019; D-095, D-097); past the gate, derived parallel placements refine it to simultaneous (D-091)
+        failure_codes: [first_placement_not_observed]
+      - condition: First placement not seen; a zone not visible throughout that window (partly, never, or unknown)
+        outcome: Unable to Verify
+    config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
+    code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order), rules/paddle_timing.py (paddle_timing)
+    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118]
+    assumptions: [A-019, A-027]
+    open_questions: [OQ-059]
+
+  - id: P-001
+    name: Annotation timeline adapter
+    stage: adapter
+    status: built
+    decides: How an exporter record becomes a timeline, a header and coverage (Increment 10; reads records.jsonl, not events.jsonl, D-074)
+    inputs: [exporter record (P-028), its export_manifest.json, reviewed_zone_exceptions, derived_placements.reviewed_for_r8, derived_gel.reviewed_for_r1]
+    branches:
+      - condition: Record converted
+        outcome: Events from every tag under its CVAT name (the vocabulary maps them); header with recording_id, camera_angle and duration_seconds from the record, analyses_run {video true, audio false}; the header is flagged and the engine carries the flag onto every result, so the report is development data (D-066)
+        next: P-002
+        flags: [annotation_coverage_assumed]
+      - condition: Zone coverage per region
+        outcome: Decided by P-030
+        next: P-030
+      - condition: Derived placements, and derived_placements_approved() passes for the export's ID and settings hash, with every event made with those settings
+        outcome: They become annotation events (direct, derived_placement in metadata) and reach the engine (D-088)
+      - condition: Derived placements, gate not passed (no review, another export or other settings, no manifest)
+        outcome: Withheld and counted; the engine never sees them
+      - condition: Derived gel applications, and derived_gel_approved() passes for the export's ID and gel settings hash, with every gel event made with those settings
+        outcome: They become annotation events (direct, derived_gel_application in metadata), and each zone's gel status becomes the coverage of regions apical_gel and sternal_gel - gelled or not gelled covered, unknown unknown (D-112)
+      - condition: Derived gel applications, 9d gate not passed, or an export before exporter version 3
+        outcome: Withheld and counted; no gel region coverage, so R1 uses the tag-count proxy (D-113)
+      - condition: Not a rule-engine annotation record, or the output folder is inside data/video or not empty
+        outcome: Refused; no timelines written
+    config: [annotation_export.yaml reviewed_zone_exceptions, derived_placements.reviewed_for_r8, derived_gel.reviewed_for_r1]
+    code: rules/adapters/annotation.py (adapt_record, gate_status, gel_gate_status), rules/engine.py (header flags onto results)
+    decisions: [D-035, D-066, D-074, D-084, D-088, D-112]
+    assumptions: [A-001, A-015]
+    open_questions: [OQ-037, OQ-053]
+
+  - id: P-002
+    name: Timeline validation
+    stage: preparation
+    status: built
+    decides: Whether the timeline can be assessed at all
+    inputs: [list of shared Event records]
+    branches:
+      - condition: Not a list (number, string, dict)
+        outcome: Rejected, no assessment
+        rejections: [not_a_list]
+      - condition: An item is not a shared Event
+        outcome: Rejected, no assessment
+        rejections: [not_an_event]
+      - condition: An event has no event ID
+        outcome: Rejected, no assessment
+        rejections: [missing_event_id]
+      - condition: Two events share an event ID
+        outcome: Rejected, no assessment
+        rejections: [duplicate_event_id]
+      - condition: More than one non-empty camera angle (events without an angle are ignored)
+        outcome: Rejected, no assessment
+        rejections: [multiple_camera_angles]
+      - condition: More than one recording (task ID)
+        outcome: Rejected, no assessment
+        rejections: [multiple_recordings]
+      - condition: Otherwise (an empty timeline is valid)
+        outcome: Timeline accepted
+        next: P-003
+    config: []
+    code: rules/prepare.py (_validated)
+    decisions: [D-032, D-050]
+    assumptions: [A-012, A-013]
+    open_questions: [OQ-038]
+
+  - id: P-003
+    name: Vocabulary mapping
+    stage: preparation
+    status: built
+    decides: Which canonical event each source label means
+    inputs: [event source, event label, vocabulary.yaml]
+    branches:
+      - condition: Label is mapped for its source
+        outcome: Renamed to the canonical name; original label kept
+        next: P-004
+      - condition: Label is ambiguous (resolve_by_shock), e.g. resume_compressions_command
+        outcome: Kept with its label, listed as unresolved; resolved later
+        next: P-011
+      - condition: Label is known but unused (e.g. object_visible:*)
+        outcome: Kept, not used by any rule, not flagged
+      - condition: Label is not in the vocabulary
+        outcome: Kept, cannot count as evidence, warning raised
+        anomalies: [unknown_labels_present]
+    config: [configs/rule_engine/vocabulary.yaml]
+    code: rules/vocabulary.py (Vocabulary.map_events)
+    decisions: [D-012, D-017, D-020, D-029, D-047]
+    assumptions: [A-003, A-004, A-005]
+    open_questions: [OQ-004, OQ-008, OQ-009, OQ-010]
+
+  - id: P-004
+    name: Confidence exclusion
+    stage: preparation
+    status: built
+    decides: Whether an event is used as evidence
+    inputs: [event confidence, event source, per-source threshold]
+    branches:
+      - condition: The event's source has no threshold
+        outcome: Rejected, no assessment
+        rejections: [no_confidence_threshold]
+      - condition: Confidence at or above the threshold (a threshold of 0 keeps everything)
+        outcome: Used as evidence
+        next: P-005
+      - condition: Confidence below the threshold
+        outcome: Excluded; recorded with its confidence and threshold; never used as evidence, but never absence either
+        next: P-008
+    config: [engine.yaml confidence_thresholds]
+    code: rules/prepare.py (prepare_timeline)
+    decisions: [D-010, D-021]
+    assumptions: [A-002, A-011]
+    open_questions: [OQ-018, OQ-019]
+
+  - id: P-005
+    name: Anomaly detection
+    stage: preparation
+    status: built
+    decides: Which data problems the report and rules must take into account, including event counts and paddle identity
+    inputs: [confident events, unknown labels, simultaneous_window_seconds, expected_counts]
+    branches:
+      - condition: More than one confident shock indication
+        outcome: Anomaly; within the simultaneous window it is marked possibly the same shock detected twice; not merged
+        next: P-009
+        anomalies: [multiple_shocks]
+      - condition: The same canonical event comes from human annotation and a model
+        outcome: Anomaly (flag only)
+        anomalies: [mixed_evidence_sources]
+      - condition: Any unknown label
+        outcome: Anomaly listing the labels
+        anomalies: [unknown_labels_present]
+      - condition: At least one confident event, and the count is outside its expected_counts range (exactly, at least, at most)
+        outcome: Anomaly per event, naming the event, the expected and found counts and the event IDs; never a Fail by itself; nothing merged (D-071)
+        anomalies: [count_violation]
+      - condition: Same, for an event limited to one, with an extra event within the simultaneous window of another
+        outcome: The pair is marked possibly the same incident detected twice
+        anomalies: [count_violation]
+      - condition: No confident event of that name
+        outcome: No count anomaly; a missing event is decided by coverage and the rules (A-018)
+        next: P-008
+      - condition: Expected count unlimited, or undecided (gel, buttons pressed, paddles firmly on chest)
+        outcome: Not checked
+      - condition: Two or more apical placements and no sternal placement, or the reverse
+        outcome: Anomaly; the paddle identity may have been swapped or lost
+        anomalies: [paddle_identity_conflict]
+      - condition: None of the above
+        outcome: No anomaly
+    config: [engine.yaml simultaneous_window_seconds, engine.yaml expected_counts]
+    code: rules/prepare.py (_anomalies, _count_anomalies)
+    decisions: [D-029, D-030, D-031, D-071, D-072]
+    assumptions: [A-006, A-018]
+    open_questions: [OQ-019, OQ-021, OQ-022, OQ-023]
+
+  - id: P-006
+    name: Header validation
+    stage: coverage
+    status: built
+    decides: Whether the timeline header can be trusted
+    inputs: [timeline header, prepared events, duration_tolerance_seconds]
+    branches:
+      - condition: No header
+        outcome: Accepted; all coverage unknown
+        next: P-007
+      - condition: Header malformed (unknown keys, bad duration, bad analyses_run, unknown scope or status)
+        outcome: Rejected, no assessment
+        rejections: [invalid_header]
+      - condition: Header contradicts the events (camera, recording, an event ending after duration + tolerance, analysis said not to run but its events exist)
+        outcome: Rejected, no assessment
+        rejections: [header_mismatch]
+      - condition: Header valid and consistent
+        outcome: Accepted
+        next: P-007
+    config: [engine.yaml duration_tolerance_seconds, engine.yaml coverage_policy.regions]
+    code: rules/coverage.py (TimelineHeader.from_dict, _check_header)
+    decisions: [D-009, D-034]
+    assumptions: [A-002]
+    open_questions: [OQ-020]
+
+  - id: P-007
+    name: Coverage status lookup
+    stage: coverage
+    status: built
+    decides: Whether the evidence for an event could have been observed (covered, not covered, unknown)
+    inputs: [event name, header, camera region of the event, source of its modality, optional time window]
+    branches:
+      - condition: No header
+        outcome: unknown
+        next: P-008
+      - condition: The rule asks about a time window and the header has visibility intervals for the event's region (D-092)
+        outcome: covered if the zone is visible throughout the window, unknown if visible for only part of it, not covered if never visible in it
+        next: P-008
+      - condition: Header states coverage for the event's region (most specific; the whole recording)
+        outcome: That status
+        next: P-008
+      - condition: Header states coverage for the single source of the event's modality
+        outcome: That status
+        next: P-008
+      - condition: Header states coverage for the modality, or analyses_run says whether it ran
+        outcome: covered if it ran, not covered if not, or the stated status
+        next: P-008
+      - condition: Nothing stated for this event
+        outcome: unknown
+        next: P-008
+      - condition: A visibility-only region asked by name (a paddle, for R4)
+        outcome: Only that region's visibility in the window, or its whole-recording coverage; nothing stated -> unknown (no source or modality fallback, D-108)
+        next: P-008
+    config: [engine.yaml coverage_policy.regions]
+    code: rules/coverage.py (Coverage.status, Coverage.region_status, _windowed)
+    decisions: [D-009, D-036, D-092, D-108]
+    assumptions: [A-007, A-008, A-009]
+    open_questions: [OQ-020]
+
+  - id: P-008
+    name: Missing-event outcome
+    stage: coverage
+    status: built
+    decides: What it means that a required event is absent from the usable evidence
+    inputs: [event name, coverage status, excluded low-confidence events, coverage policy]
+    branches:
+      - condition: A low-confidence event of the same name was excluded (or a low-confidence ambiguous command that could have been it, P-013)
+        outcome: Unable to Verify, never Fail (not configurable)
+        flags: [low_confidence_evidence]
+      - condition: Coverage covered
+        outcome: Fail (default; overridable per region, source or modality)
+      - condition: Coverage not covered
+        outcome: Unable to Verify (default; overridable)
+      - condition: Coverage unknown
+        outcome: Unable to Verify (interim, undecided)
+        flags: [coverage_policy_undecided]
+    config: [engine.yaml coverage_policy.outcomes, engine.yaml coverage_policy.by_region, engine.yaml coverage_policy.by_source, engine.yaml coverage_policy.by_modality]
+    code: rules/coverage.py (Coverage.missing)
+    decisions: [D-004, D-007, D-008, D-010]
+    assumptions: []
+    open_questions: [OQ-001]
+
+  - id: P-009
+    name: Shock time
+    stage: context
+    status: built
+    decides: When the shock happened, if that can be established; only from the shock on screen, never inferred (D-093, D-115)
+    inputs: [multiple_shocks anomaly, confident shock indications]
+    branches:
+      - condition: multiple_shocks anomaly present
+        outcome: No shock time (not guessed, even if a removal exists); both shocks listed as candidates
+        flags: [multiple_shocks]
+      - condition: One confident shock on screen
+        outcome: Shock time is its start
+        next: P-010
+      - condition: No shock on screen (whether or not the paddles were removed)
+        outcome: No shock time, never inferred - a paddle removal doesn't show that a shock was delivered (D-115); shock-dependent rules are not evaluable because of R5, and resume commands stay unresolved
+        flags: [no_shock]
+    config: []
+    code: rules/context.py (_shock_anchor)
+    decisions: [D-030, D-039, D-040, D-093, D-115]
+    assumptions: [A-006]
+    open_questions: [OQ-057]
+
+  - id: P-010
+    name: Phase of a time
+    stage: context
+    status: built
+    decides: Whether a moment is before, at or after the shock
+    inputs: [time, shock time]
+    branches:
+      - condition: No shock time
+        outcome: No phase
+      - condition: Before the shock time
+        outcome: before_shock
+      - condition: Equal to the shock time
+        outcome: at_shock
+      - condition: After the shock time
+        outcome: after_shock
+    config: []
+    code: rules/context.py (ProcedureContext.phase_of)
+    decisions: [D-011]
+    assumptions: []
+    open_questions: []
+
+  - id: P-011
+    name: Command resolution
+    stage: context
+    status: built
+    decides: Whether an ambiguous command (resume compressions) means continue or start
+    inputs: [command start time, shock time and how it was established, simultaneous_window_seconds]
+    branches:
+      - condition: No shock time (no shock, or multiple shocks)
+        outcome: Unresolved
+        flags: [no_shock_time]
+      - condition: Within simultaneous_window_seconds of the shock time
+        outcome: Unresolved
+        flags: [command_near_shock]
+      - condition: Before the shock
+        outcome: continue_compressions_command
+        next: P-012
+      - condition: After the shock
+        outcome: start_compressions_command
+        next: P-012
+    config: [vocabulary.yaml resolve_by_shock, engine.yaml simultaneous_window_seconds]
+    code: rules/context.py (_resolve)
+    decisions: [D-041, D-017, D-115]
+    assumptions: [A-010]
+    open_questions: [OQ-009]
+
+  - id: P-012
+    name: Anchor selection
+    stage: context
+    status: built
+    decides: Which event provides each key time (first placement, apical and sternal placement, continue, stop, start)
+    inputs: [confident events after command resolution, shock time, excluded events]
+    branches:
+      - condition: One candidate
+        outcome: That event's start time
+      - condition: Several candidates
+        outcome: The earliest; all candidates recorded
+        flags: [multiple_candidates]
+      - condition: No confident candidate, but a low-confidence one was excluded
+        outcome: Absent, because the evidence was weak
+        flags: [low_confidence_evidence]
+      - condition: No candidate at all
+        outcome: Absent, with a reason
+      - condition: A start command at or before a confirmed on-screen shock (start anchor only; each start command is checked on its own, so a later one can still be the restart)
+        outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
+        flags: [start_command_before_shock]
+      - condition: No shock time (start anchor only)
+        outcome: Start anchor absent; every start command listed as ambiguous, not a mistake (D-054). Every rule needing the restart is already not evaluable because of R5 (D-093)
+        flags: [no_shock_time]
+      - condition: An ambiguous command is unresolved (continue and start anchors)
+        outcome: Anchor may be incomplete
+        flags: [unresolved_commands]
+    config: []
+    code: rules/context.py (_earliest, _start_anchor)
+    decisions: [D-025, D-054, D-040, D-012, D-115]
+    assumptions: []
+    open_questions: [OQ-022]
+
+  - id: P-013
+    name: Low-confidence ambiguous command as evidence
+    stage: context
+    status: built
+    decides: Whether an excluded ambiguous command could have been the missing event
+    inputs: [excluded ambiguous commands, their resolution]
+    branches:
+      - condition: It would resolve to the missing event, or cannot be resolved
+        outcome: Missing event is Unable to Verify, never Fail
+        flags: [low_confidence_evidence]
+      - condition: It would resolve to the other meaning
+        outcome: Not evidence for this event
+        next: P-008
+    config: []
+    code: rules/context.py (ProcedureContext.missing)
+    decisions: [D-010]
+    assumptions: []
+    open_questions: []
+
+  - id: P-014
+    name: Rule decision ladder
+    stage: rule
+    status: planned
+    decides: The result of one rule (Increments 6, 7 and 11 to 23)
+    inputs: [rule definition and status, results of rules it depends on, context]
+    branches:
+      - condition: Rule not approved (pending)
+        outcome: Reported as pending; the overall result cannot be Pass (P-017)
+      - condition: A rule-result dependency failed or could not be evaluated
+        outcome: Not evaluable because of that rule; a mistake in one step is never evidence of a mistake in another (D-119); every part that can still be judged is checked
+      - condition: Required facts absent (e.g. no shock time)
+        outcome: Not evaluable because of the step that provides them, with its flags
+      - condition: Restart needed (R7/A6, A8) but timing-ambiguous commands exist (Anchor.ambiguous - no shock time, D-054)
+        outcome: Unable to Verify, never Fail; A7 does not report ambiguous commands as sequence errors
+      - condition: Direct evidence present, in order and in time
+        outcome: Pass – Direct
+      - condition: Direct evidence shows the mistake clearly
+        outcome: Fail with the rule's failure code
+      - condition: Direct evidence weak or missing, and the rule has an approved inference (checked before coverage)
+        outcome: Inference
+        next: P-016
+      - condition: R8 order not directly observable
+        outcome: R8 inference
+        next: P-015
+      - condition: Required event missing, no approved inference (or the inference does not apply)
+        outcome: Missing-event outcome
+        next: P-008
+    config: [configs/rules.yaml rules, configs/rules.yaml timing_limits]
+    code: rules/checks.py, rules/registry.py, rules/engine.py (Increments 6 and 7)
+    decisions: [D-001, D-002, D-003, D-043, D-045, D-054, D-057]
+    assumptions: [A-016]
+    open_questions: []
+
+  - id: P-015
+    name: R8 apical before sternal (direct comparison only)
+    stage: rule
+    status: built
+    decides: Which paddle was placed first (Increment 12); runs only when R8 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [apical and sternal placement anchors (derived placements only past the gate), zone coverage over the placement phase (D-099; from the earliest take of either paddle, by time, D-118), paddle_order]
+    branches:
+      - condition: Derived placements flagged possible_parallel_placement (past the gate)
+        outcome: Fail simultaneous, with the shared cause flag; R2 fails too, separately, not as a dependency (D-091, D-098)
+        failure_codes: [simultaneous]
+        flags: [possible_parallel_placement, derived_placement]
+      - condition: Both placements observed
+        outcome: Compare the placement times; apical first → Pass – Direct; within the simultaneous window → Fail simultaneous; sternal first → Fail wrong_order; derived placements carry derived_placement
+        failure_codes: [wrong_order, simultaneous]
+        flags: [derived_placement]
+      - condition: A paddle's zone was visible throughout the placement phase but its placement is missing (both zones visible with one or both missing, or the one visible zone without its placement) (D-058)
+        outcome: Unable to Verify, not wrong_order; R3 reports the missing placement
+        flags: [placement_missing]
+      - condition: One placement observed, the other paddle's zone not visible during the placement phase
+        outcome: Unable to Verify; no inference - the first-placement tag is the apical placement under the team's working definition (A-027), so comparing with it would be circular (D-116)
+        flags: [one_zone_in_view]
+      - condition: Not determinable (no placement observed and no zone visible), fallback off (default)
+        outcome: Unable to Verify
+      - condition: Not determinable, fallback on (assume_first_taken_is_apical), the apical paddle taken first (by time)
+        outcome: Result assumed (apical first), to be checked by the evaluator; the overall result cannot be Pass (D-014, D-060, D-118)
+      - condition: Not determinable, fallback on, the sternal paddle taken first or the order of the takes unknown
+        outcome: Unable to Verify; the fallback doesn't apply (D-118)
+    config: [engine.yaml simultaneous_window_seconds, engine.yaml assume_first_taken_is_apical]
+    code: rules/video_rules.py (apical_before_sternal)
+    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118]
+    assumptions: [A-009, A-027]
+    open_questions: [OQ-004, OQ-006, OQ-059]
+
+  - id: P-016
+    name: R3/R4 inferred pass from the shock on screen
+    stage: rule
+    status: built
+    decides: Whether placement (R3) or button pressing (R4) passes by inference when the direct evidence is missing (Increments 15 and 16). Direct evidence and coverage are P-035 (R3) and P-036 (R4)
+    inputs: [R3/R4 inference_sources (rules.yaml; the shock on screen only), confident shock on screen]
+    branches:
+      - condition: Direct evidence weak or missing; the first source listed in inference_sources that is confirmed is the shock on screen
+        outcome: Pass – Inferred, naming the shock (D-057)
+      - condition: Only a paddle removal confirmed
+        outcome: No inference - a removal doesn't show that a shock was delivered (D-115); the rules refuse it as a source (a configuration error)
+      - condition: No listed source confirmed
+        outcome: Back to the rule (P-035, P-036) - no shock time, Not evaluable because of R5; otherwise its coverage step
+      - condition: Both sources listed (the proposal)
+        outcome: R3's missing and R4's not_pressed are unreachable - with a shock time there is a shock on screen, which infers; without one the rule is Not evaluable because of R5 (OQ-061)
+    config: [configs/rules.yaml R3/R4 parameters.inference_sources]
+    code: rules/video_rules.py (_inferred, used by paddles_firmly_on_chest and both_buttons_pressed)
+    decisions: [D-004, D-057, D-106, D-108, D-115]
+    assumptions: []
+    open_questions: [OQ-012, OQ-061]
+
+  - id: P-035
+    name: R3 paddles placed firmly on the chest
+    stage: rule
+    status: built
+    decides: R3's result (Increment 15); runs only when R3 is approved in rules.yaml, pending until the supervisor confirms its definition. Placement timing and presence only; not_in_zone is not produced until the chest regions are approved (OQ-012, D-106)
+    inputs: [paddles_firmly_on_chest tags, derived placements (past the gate), shock anchor (screen only, D-093), R3 inference_sources (rules.yaml), placement zone coverage over the earliest take of either paddle (by time, D-118) .. shock]
+    branches:
+      - condition: Shock time; a paddles_firmly_on_chest tag at or before the shock (within simultaneous_window_seconds after it counts as at it)
+        outcome: Pass – Direct
+      - condition: Shock time; past the gate, both derived placements at or before the shock
+        outcome: Pass – Direct
+        flags: [derived_placement]
+      - condition: Shock time; only tags clearly after the shock
+        outcome: Fail placed_after_shock (direct evidence of the mistake comes before the inference)
+        failure_codes: [placed_after_shock]
+      - condition: No direct evidence (or no shock time to judge it against); an event in inference_sources confirmed
+        outcome: Pass – Inferred, naming the shock on screen (D-057, D-115)
+        next: P-016
+      - condition: No inference and no shock time
+        outcome: Not evaluable because of R5
+        next: P-020
+      - condition: No inference; a low-confidence paddles_firmly_on_chest
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No inference; both placement zones visible throughout the earliest take of either paddle (by time, D-118) .. shock (the recording's start when neither take is known)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: No inference; a zone not visible throughout that window (for example only one paddle visible, when the tag is not made, A-019)
+        outcome: Unable to Verify, never Fail
+      - condition: A paddle outside its approved zone
+        outcome: Not checked until the supervisor approves the chest regions (OQ-012)
+      - condition: inference_sources is not a list of canonical events
+        outcome: engine_error (a configuration error, D-063)
+    config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
+    code: rules/video_rules.py (paddles_firmly_on_chest)
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118]
+    assumptions: [A-019]
+    open_questions: [OQ-012, OQ-022, OQ-061]
+
+  - id: P-036
+    name: R4 both discharge buttons pressed
+    stage: rule
+    status: built
+    decides: R4's result (Increment 16); runs only when R4 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [both_paddle_buttons_pressed tags, the placement (paddles_firmly_on_chest, else past the gate the later derived placement), shock anchor (screen only, D-093), R4 inference_sources, paddle visibility (regions apical_paddle, sternal_paddle) over placement .. shock]
+    branches:
+      - condition: Shock time; a press after the placement (within simultaneous_window_seconds before it counts) and at or before the shock (within the window after it counts)
+        outcome: Pass – Direct
+        flags: [derived_placement]
+      - condition: Shock time; a valid press but no placement observed
+        outcome: Pass – Direct, order against the placement not checked; the overall result cannot be Pass (D-100)
+        flags: [order_not_checked]
+      - condition: A press clearly before the placement and none valid (without a shock time, only when no press came after the placement)
+        outcome: Fail before_placement (comes before the inference)
+        failure_codes: [before_placement]
+      - condition: Shock time; presses only clearly after the shock
+        outcome: Unable to Verify; the screen showed the shock before any press
+        flags: [contradictory]
+      - condition: No direct evidence (or no shock time to judge it against); a source in inference_sources confirmed
+        outcome: Pass – Inferred from the shock on screen (D-057, D-115)
+        next: P-016
+      - condition: No inference and no shock time
+        outcome: Not evaluable because of R5
+        next: P-020
+      - condition: No inference; a low-confidence press
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: No inference; both paddles visible throughout placement .. shock (the recording's start when no placement is known)
+        outcome: Fail not_pressed (unreachable while the shock on screen is an inference source, OQ-061)
+        failure_codes: [not_pressed]
+      - condition: No inference; a paddle not visible throughout that window (partly, never, or no track)
+        outcome: Unable to Verify, never Fail
+      - condition: Repeated presses
+        outcome: Any valid press counts (D-012); the count stays undecided (OQ-023)
+      - condition: inference_sources is not a list of canonical events
+        outcome: engine_error (a configuration error, D-063)
+    config: [configs/rules.yaml R4 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_paddle, sternal_paddle)]
+    code: rules/video_rules.py (both_buttons_pressed); rules/coverage.py (region_missing)
+    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115]
+    assumptions: []
+    open_questions: [OQ-023, OQ-061]
+
+  - id: P-038
+    name: R1 gel applied twice, once to each zone, before placement
+    stage: rule
+    status: built
+    decides: R1's result (Increment 17); runs only when R1 is approved in rules.yaml, pending until the supervisor confirms its definition
+    inputs: [gel_applied tags, apical_gel_applied / sternal_gel_applied (past the 9d gate), regions apical_gel and sternal_gel (their gel status), paddle_order (the earliest firm placement of either paddle and whether it is certain; else the earliest take, D-118), placement zone visibility in the gel phase, rules.yaml gel_application_period_seconds]
+    branches:
+      - condition: Gel only after the first placement (no gel before it, a gel tag or per-zone application after it beyond simultaneous_window_seconds)
+        outcome: Fail after_placement (D-109)
+      - condition: A pass, but the other paddle's placement is unknown and could have been earlier than the known one, and a counted gel event falls after the earliest time that placement could be
+        outcome: Unable to Verify, never Pass (D-118)
+        flags: [placement_time_unknown]
+        failure_codes: [after_placement]
+      - condition: Past the 9d gate; both zones gelled before the placement
+        outcome: Pass – Direct, then the period check
+        flags: [derived_gel_application]
+        next: P-024
+      - condition: Past the 9d gate; one zone gelled, the other not gelled
+        outcome: Fail applied_once
+        failure_codes: [applied_once]
+      - condition: Past the 9d gate; neither zone gelled (both not gelled)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: Past the 9d gate; a zone unknown
+        outcome: Unable to Verify
+      - condition: Before the gate (tag-count proxy, A-026); both zones visible throughout the gel phase; 2 or more separate applications (tags closer than gel_minimum_gap_seconds are one)
+        outcome: Pass – Direct, then the period check
+        next: P-024
+      - condition: Proxy; both zones visible; 1 application
+        outcome: Fail applied_once
+        failure_codes: [applied_once]
+      - condition: Proxy; a zone visible (one or both); 0 applications
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: Proxy; one zone visible and 1 or more applications, or no zone visible or unknown
+        outcome: Unable to Verify (the tags may all be on one zone)
+      - condition: Proxy; a low-confidence gel tag and no pass
+        outcome: Unable to Verify (D-010)
+        flags: [low_confidence_evidence]
+      - condition: A pass, gel_application_period_seconds unset
+        outcome: Pass, timing not checked; the overall result cannot be Pass (D-062)
+        flags: [timing_not_checked]
+      - condition: A pass, an approved period exceeded by the two applications
+        outcome: Fail outside_time_period
+        failure_codes: [outside_time_period]
+      - condition: The order between the zones; more than two applications
+        outcome: Not checked (D-110, OQ-021)
+    config: [configs/rules.yaml timing_limits.gel_application_period_seconds, engine.yaml gel_minimum_gap_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_gel, sternal_gel, apical_zone, sternal_zone)]
+    code: rules/video_rules.py (gel_applied_twice)
+    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118]
+    assumptions: [A-023, A-026]
+    open_questions: [OQ-016, OQ-021]
+
+  - id: P-017
+    name: Overall result policy
+    stage: overall_policy
+    status: built
+    decides: The overall result of the procedure, with the rules and settings that decided it
+    inputs: [every enabled rule's outcome, timeline anomalies, review_anomalies, unable_to_verify_outcome]
+    branches:
+      - condition: Any evaluated rule failed
+        outcome: Fail, listing every Fail and its failure code (R7/A6 once), even if other rules are pending
+      - condition: Any evaluated rule failed, and the timeline has a review anomaly
+        outcome: Fail stays Fail, flagged, with the anomalies listed
+        flags: [timeline_needs_review]
+      - condition: No rule was evaluated (e.g. every rule disabled)
+        outcome: Incomplete, never Pass
+        flags: [no_rules_evaluated]
+      - condition: The config is a demo (demo true, configs/rule_engine/demo/rules_demo.yaml)
+        outcome: Whatever the result, it is flagged as a demo; its rules are not approved by the supervisor (D-114)
+        flags: [demo_only]
+      - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved / order not checked
+        outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved; order not checked, D-100); never Pass
+        flags: [timing_not_checked, limit_not_approved, order_not_checked]
+      - condition: No Fail, and the timeline has a review anomaly (review_anomalies, D-069, D-072; checked before the Unable-to-Verify setting)
+        outcome: Incomplete, the timeline needs review, anomalies listed; never Pass
+        flags: [timeline_needs_review]
+      - condition: No Fail, nothing incomplete, at least one Unable to Verify or Not evaluable, setting decided
+        outcome: The unable_to_verify_outcome setting (fail or faculty_review), naming the setting
+      - condition: Same, setting undecided
+        outcome: unable_to_verify, naming the undecided setting (OQ-002)
+        flags: [overall_policy_undecided]
+      - condition: Every rule evaluated and passed (direct or inferred), timing checked, no review anomaly
+        outcome: Pass
+      - condition: Any result carries annotation_coverage_assumed (annotation timeline)
+        outcome: The overall result is marked as development data, not a real assessment
+        flags: [development_data]
+    config: [engine.yaml unable_to_verify_outcome, engine.yaml review_anomalies]
+    code: rules/policy.py (decide)
+    decisions: [D-001, D-019, D-042, D-043, D-055, D-056, D-060, D-062, D-063, D-065, D-066, D-067, D-068, D-069, D-072]
+    assumptions: [A-001]
+    open_questions: [OQ-002]
+
+  - id: P-018
+    name: Checklist rendering and feedback handover
+    stage: renderer
+    status: planned
+    decides: How results are presented to the evaluator (checklist) and handed to the feedback module (Increment 25); the JSON report is P-027
+    inputs: [rule results, overall result, anomalies, checklist mapping]
+    branches:
+      - condition: Annotation timeline
+        outcome: Checklist and every result carry the development flag
+        flags: [annotation_coverage_assumed]
+      - condition: Model timeline
+        outcome: Checklist without the development flag
+    config: [configs/rule_engine/checklist.yaml (planned)]
+    code: rules/render.py (Increment 25)
+    decisions: [D-035]
+    assumptions: [A-001]
+    open_questions: [OQ-017, OQ-036]
+
+  # ---- Shared checks (Increment 6): the building blocks of the rule ladder P-014 ----------------
+
+  - id: P-019
+    name: Rule-result dependency
+    stage: rule
+    status: built
+    decides: Whether a rule can be evaluated given the results of the rules it depends on
+    inputs: [depends_on from rules.yaml, results of those rules]
+    branches:
+      - condition: Every rule it depends on passed (direct or inferred)
+        outcome: Go on
+        next: P-020
+      - condition: A rule it depends on failed, was unable to verify, not evaluable, pending or assumed
+        outcome: Not evaluable because of that rule; a mistake in one step is never evidence of a mistake in another (D-119); every part that can still be judged is checked
+    config: [configs/rules.yaml depends_on]
+    code: rules/checks.py (depends)
+    decisions: [D-003, D-006]
+    assumptions: [A-016]
+    open_questions: []
+
+  - id: P-020
+    name: Required facts
+    stage: rule
+    status: built
+    decides: Whether the facts a rule needs (e.g. the shock time) exist
+    inputs: [anchor from the procedure context, the step that provides it]
+    branches:
+      - condition: Anchor present
+        outcome: Go on
+        next: P-021
+      - condition: Anchor absent
+        outcome: Not evaluable because of the providing step (e.g. R5), carrying the anchor's flags
+    config: []
+    code: rules/checks.py (requires)
+    decisions: [D-003, D-039]
+    assumptions: []
+    open_questions: []
+
+  - id: P-021
+    name: Restart ambiguity
+    stage: rule
+    status: built
+    decides: Whether a rule needing the restart (R7/A6, A8) can identify it
+    inputs: [start anchor and its ambiguous commands]
+    branches:
+      - condition: A start or resume command is timing-ambiguous (no shock time, D-054)
+        outcome: Unable to Verify, never Fail, citing the ambiguous commands
+        flags: [no_shock_time]
+      - condition: No ambiguous command
+        outcome: Go on
+        next: P-022
+    config: []
+    code: rules/checks.py (restart_ambiguity)
+    decisions: [D-054]
+    assumptions: []
+    open_questions: []
+
+  - id: P-022
+    name: Occurrences of the required event
+    stage: rule
+    status: built
+    decides: Whether the evidence present satisfies the rule
+    inputs: [confident occurrences (after command resolution), the rule's validity test, low-confidence events]
+    branches:
+      - condition: Any occurrence is valid (repeated events, D-012)
+        outcome: Pass – Direct, citing the earliest valid occurrence
+      - condition: Occurrences exist but none is valid, and a low-confidence occurrence exists
+        outcome: Unable to Verify (it may have been the valid one), never Fail
+        flags: [low_confidence_evidence]
+      - condition: Occurrences exist but none is valid
+        outcome: Fail with the rule's failure code (e.g. after_shock)
+      - condition: No occurrence
+        outcome: Weak or missing evidence
+        next: P-023
+    config: []
+    code: rules/checks.py (occurrences, first_valid)
+    decisions: [D-010, D-012]
+    assumptions: []
+    open_questions: []
+
+  - id: P-023
+    name: Weak or missing evidence
+    stage: rule
+    status: built
+    decides: What a rule gives when no confident occurrence exists
+    inputs: [approved inference events for the rule, procedure context]
+    branches:
+      - condition: The rule has an approved inference and a supporting event is confidently confirmed
+        outcome: Pass – Inferred, citing the earliest supporting event (checked before coverage, D-057)
+      - condition: Otherwise
+        outcome: The missing-event outcome from ctx.missing() (Fail, or Unable to Verify with its flags)
+        next: P-013
+    config: []
+    code: rules/checks.py (missing, infer_from)
+    decisions: [D-010, D-057]
+    assumptions: []
+    open_questions: []
+
+  - id: P-024
+    name: Time-limit check
+    stage: rule
+    status: built
+    decides: Whether a measured interval is within the approved clinical limit
+    inputs: [interval in seconds (Elapsed), clinical value record]
+    branches:
+      - condition: No limit (null), not decided yet
+        outcome: Timing not checked; the rule judges presence and order only; the overall result cannot be Pass (D-062)
+        flags: [timing_not_checked]
+      - condition: Approved "no limit" (no_limit true with approved_by)
+        outcome: Timing checked and within; the rule passes fully on presence and order, with no timing_not_checked (D-103)
+      - condition: Unapproved "no limit" (no_limit true without approved_by)
+        outcome: Not used; timing not checked (D-061, D-103)
+        flags: [timing_not_checked, limit_not_approved]
+      - condition: A value that is not approved
+        outcome: Not used; timing not checked (D-061); the overall result cannot be Pass (D-062)
+        flags: [timing_not_checked, limit_not_approved]
+      - condition: The interval cannot be measured
+        outcome: Timing not checked
+        flags: [timing_not_checked]
+      - condition: Within the limit (boundary included)
+        outcome: Pass, carrying the elapsed time's flags
+      - condition: Over the limit
+        outcome: Fail with the rule's failure code (e.g. too_late, pre_shock_pause), carrying the elapsed time's flags
+        failure_codes: []
+    config: [configs/rules.yaml timing_limits]
+    code: rules/checks.py (time_limit, timed)
+    decisions: [D-005, D-016, D-061, D-062, D-103]
+    assumptions: [A-017]
+    open_questions: [OQ-016]
+
+  - id: P-025
+    name: Order of two times
+    stage: rule
+    status: built
+    decides: Whether one time is before, simultaneous with, or after another
+    inputs: [two start times, simultaneous_window_seconds]
+    branches:
+      - condition: Either time absent
+        outcome: No relation
+      - condition: Within the simultaneous window (boundary included)
+        outcome: simultaneous
+      - condition: Earlier
+        outcome: before
+      - condition: Later
+        outcome: after
+    config: [engine.yaml simultaneous_window_seconds]
+    code: rules/checks.py (relation)
+    decisions: [D-011]
+    assumptions: [A-002]
+    open_questions: [OQ-018]
+
+  - id: P-026
+    name: Rule runner
+    stage: rule
+    status: built
+    decides: How the engine evaluates each rule, in evaluation order, before its ladder (P-019 onward) runs
+    inputs: [rule definition from rules.yaml, rule registry, results of rules already evaluated]
+    branches:
+      - condition: (At load) a rule is approved in rules.yaml but has no registered implementation and no implementation path
+        outcome: Rejected, no assessment (not reported as pending)
+        rejections: [approved_rule_not_registered]
+      - condition: (At load) a registered rule ID is not in the full catalogue configs/rules.yaml, whatever config is assessed (probably a typo in the ID)
+        outcome: Rejected, no assessment
+        rejections: [registered_rule_not_in_config]
+      - condition: (At load) two different functions are registered for one rule ID
+        outcome: Rejected, naming both locations (module, function, file and line)
+        rejections: [duplicate_rule_registration]
+      - condition: (At load) a registered rule requires an event that is not in the vocabulary
+        outcome: Rejected, no assessment
+        rejections: [unknown_required_event]
+      - condition: A registered rule that the assessed config leaves out (e.g. a one-rule test config)
+        outcome: Not run, not reported, not an error
+      - condition: Rule disabled in configuration
+        outcome: Not reported
+      - condition: Rule not approved (pending)
+        outcome: Pending, reported with its reason; the overall result cannot be Pass
+      - condition: Rule reuses another rule's check (same_as)
+        outcome: That rule's outcome, reported under this rule's ID
+      - condition: A rule it depends on did not pass
+        outcome: Not evaluable because of that rule
+        next: P-019
+      - condition: The registered rule returns a valid outcome
+        outcome: That outcome
+        next: P-020
+      - condition: The registered rule raises, or returns something invalid
+        outcome: engine_error with the error message; every other rule still runs; dependents not evaluable; overall incomplete
+      - condition: A shared-contract path rule (module:function) reports Fail (the shared RuleResult has no failure code)
+        outcome: Fail with failure code unspecified
+        failure_codes: [unspecified]
+      - condition: A shared-contract path rule (module:function) breaks the contract
+        outcome: The run stops (shared contract, docs/contracts.md)
+    config: [configs/rules.yaml rules]
+    code: rules/engine.py (assess, evaluate), rules/registry.py
+    decisions: [D-002, D-003, D-006, D-043, D-044, D-063, D-064]
+    assumptions: [A-016]
+    open_questions: []
+
+  - id: P-027
+    name: JSON report rendering
+    stage: renderer
+    status: built
+    decides: What the JSON report contains; its structure is the versioned output contract (output_contract.md)
+    inputs: [Assessment (rule outcomes, overall result, prepared timeline, procedure context, config)]
+    branches:
+      - condition: An assessment was produced
+        outcome: Report with report_version, overall result, every enabled rule in display order, timeline, context and configuration
+      - condition: The overall result carries development_data
+        outcome: The report's top-level development_data is true (not a real assessment, D-066)
+      - condition: A demo config
+        outcome: The report's demo_notice is "DEMO ONLY - rules not approved by the supervisor"; null otherwise (D-114)
+      - condition: No assessment (configuration or timeline rejected, or an unreadable file)
+        outcome: No report; rules.run prints the error and exits with code 2
+      - condition: A report field or code is added, removed or renamed, or its meaning changes
+        outcome: report_version and output_contract.md change together, with a changelog line (D-070)
+      - condition: A code listed as planned becomes built
+        outcome: Version unchanged; its status in output_contract.md becomes built
+    config: []
+    code: rules/render.py (report), rules/run.py (command line), rules/demo.py (demo tables)
+    decisions: [D-066, D-070, D-114]
+    assumptions: []
+    open_questions: [OQ-017, OQ-045]

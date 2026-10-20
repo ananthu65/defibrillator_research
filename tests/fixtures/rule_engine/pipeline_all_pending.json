@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "assessment_status": "development_scaffold",
+  "events": [
+    {
+      "event_name": "stand_clear_command",
+      "start": 1.0,
+      "end": 1.8,
+      "source": "audio",
+      "confidence": 0.8,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": null,
+      "event_id": "event_000001",
+      "schema_version": 1
+    },
+    {
+      "event_name": "object_visible:paddle_sternal",
+      "start": 2.0,
+      "end": 3.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": null,
+      "event_id": "event_000002",
+      "schema_version": 1
+    },
+    {
+      "event_name": "charging_sound",
+      "start": 4.0,
+      "end": 5.5,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": null,
+      "event_id": "event_000003",
+      "schema_version": 1
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "R1",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R2",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R8",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R3",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R4",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R5",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R6",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A1",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A2",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A3",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A4",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A5",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "R7",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A6",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A7",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    },
+    {
+      "rule_id": "A8",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
+    }
+  ],
+  "feedback": [
+    "R1: Pending supervisor-approved definition and new rule implementation.",
+    "R2: Pending supervisor-approved definition and new rule implementation.",
+    "R8: Pending supervisor-approved definition and new rule implementation.",
+    "R3: Pending supervisor-approved definition and new rule implementation.",
+    "R4: Pending supervisor-approved definition and new rule implementation.",
+    "R5: Pending supervisor-approved definition and new rule implementation.",
+    "R6: Pending supervisor-approved definition and new rule implementation.",
+    "A1: Pending supervisor-approved definition and new rule implementation.",
+    "A2: Pending supervisor-approved definition and new rule implementation.",
+    "A3: Pending supervisor-approved definition and new rule implementation.",
+    "A4: Pending supervisor-approved definition and new rule implementation.",
+    "A5: Pending supervisor-approved definition and new rule implementation.",
+    "R7: Pending supervisor-approved definition and new rule implementation.",
+    "A6: Pending supervisor-approved definition and new rule implementation.",
+    "A7: Pending supervisor-approved definition and new rule implementation.",
+    "A8: Pending supervisor-approved definition and new rule implementation."
+  ]
+}

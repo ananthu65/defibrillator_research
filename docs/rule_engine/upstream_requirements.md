@@ -1,0 +1,202 @@
+# What the rule engine needs from upstream
+
+For: Ananth (video postprocessing, pipeline) and Sanjeevan (audio command detection).
+Owner: Arnikan (rule engine). Status: draft, 2026-10-10.
+
+The rule engine reads one merged timeline of `schemas.event.Event` records (see
+`docs/contracts.md`). It decides Pass/Fail itself, so upstream should report **only what was
+observed**: no ordering, no gap-filling, no inference, no scores. Inference (for example which
+paddle was placed first when only one zone is visible) happens in the rule engine.
+
+## Names
+
+Emit the **agreed canonical names** directly. The reference list is
+`configs/rule_engine/vocabulary.yaml` (`events:` section). That file also maps a few legacy
+labels as a safety layer, but new outputs should not rely on it. A name that is not in the list
+is kept in the report and flagged as unknown, and no rule uses it. To add or rename a name,
+agree it with Arnikan and add one line to `vocabulary.yaml`.
+
+## General rules for every event
+
+| Field | Requirement |
+|---|---|
+| `event_name` | A canonical name from the lists below |
+| `start`, `end` | Seconds on the recording's common clock. A point event has `start == end`; a state (for example "zone visible") is an interval |
+| `confidence` | 0–1; record what it means in `metadata.confidence_kind` |
+| `source` | `video` or `audio` |
+| `metadata` | Provenance (model, frame, etc.) |
+
+- **Repeated events:** report every occurrence. The rule engine decides which one counts.
+- **One recording:** all events must come from one recording, with one camera angle. Events with
+  no camera angle (for example audio) are fine.
+- **Event time:** the rule engine orders and times events by their **`start`** time.
+
+## Upstream owns detection quality
+
+These belong to video postprocessing and audio command detection, not the rule engine:
+
+- **Merging duplicate detections:** one real action or command should be one event. For
+  example, the same shock detected over several frames, or a command split across two
+  transcript segments, should arrive as one event. The rule engine does **not** merge events. If
+  it sees two shocks, it flags `multiple_shocks` and says whether they fall within
+  `simultaneous_window_seconds` ("possibly the same shock detected twice").
+- **Choosing confidence thresholds:** each model's owner selects and validates its threshold in
+  pilot validation, and emits only events it considers confident.
+- **Rule-engine safety check:** the rule engine keeps its own configurable confidence check
+  (`configs/rule_engine/engine.yaml: confidence_thresholds`). A threshold of `0` disables it.
+  To avoid applying two different thresholds to the same events, we need to agree which side
+  applies them (open item 6).
+
+## Timeline header (requested)
+
+Please send a header with each timeline, alongside the events:
+
+| Field | Meaning |
+|---|---|
+| `recording_id` | The recording / task ID (for example `P03_LL`) |
+| `camera_angle` | The single camera angle the video events come from |
+| `duration_seconds` | Length of the recording |
+| `analyses_run` | Which analyses actually ran, for example `{video: true, audio: true}` |
+
+**Why:** without `analyses_run`, a timeline with no audio events could mean "nobody gave a
+command" (a learner mistake) or "audio analysis did not run" (no evidence). The rule engine
+must not blame the learner for missing data, so today it has to treat both cases as unknown.
+`duration_seconds` lets it tell "the event never happened" from "the recording was cut short".
+The rule engine will use the header for coverage (Increment 4). The format is a proposal to
+agree; it can be a small wrapper around the event list, so the `Event` schema does not change.
+
+**Optional fields (Increment 10):**
+- **`visibility`:** when each placement zone, and the defibrillator screen (`region:screen`,
+  D-094), was in view, as `{"region:apical_zone": [[start, end], ...]}` in seconds, sorted and not
+  overlapping. The shock time comes only from the shock seen on the screen (D-093), so the
+  screen's visibility decides whether R5 and every shock-dependent rule can be judged. Each
+  paddle's visibility (`region:apical_paddle`, `region:sternal_paddle`, D-108) decides whether a
+  missing button press can be judged (R4). A rule
+  asking about a time window then gets that window's coverage: visible throughout → covered;
+  visible for part → unknown; never visible → not covered (D-092).
+- **`flags`:** `["annotation_coverage_assumed"]` marks a timeline built from annotation data. The
+  rule-engine annotation adapter sets both fields. A model pipeline can send `visibility` the same
+  way, once zone visibility comes from the video models (OQ-004).
+
+## From video postprocessing (Ananth)
+
+### Action events
+
+| Canonical name | Meaning | Used by | Priority |
+|---|---|---|---|
+| `gel_applied` | Gel applied (one event per application) | R1 | Required |
+| `first_paddle_taken` | First frame where the first paddle is clearly visible | R2 | Required |
+| `second_paddle_taken` | First frame where the second paddle is clearly visible | R2 | Required |
+| `first_paddle_placed` | **First placement time**: the first time either paddle is placed firmly on the chest | R2, R8 | Required |
+| `apical_paddle_placed` | **Per-paddle placement**: apical paddle placed in its zone | R8, R3 | Required |
+| `sternal_paddle_placed` | **Per-paddle placement**: sternal paddle placed in its zone | R8, R3 | Required |
+| `paddles_firmly_on_chest` | Both paddles stable in the approved zones | R3 | Required |
+| `both_paddle_buttons_pressed` | Both discharge buttons pressed | R4 | Required |
+| `apical_gel_applied`, `sternal_gel_applied` | Gel applied to that placement zone, one event per application (D-111) | R1 | Required for a per-zone R1 (otherwise R1 falls back to counting `gel_applied`) |
+| `shock_delivered_on_screen` | New shock indication on the approved screen (exactly one per recording expected) | R5, R3/R4 inference, shock time (the only source of the shock time, D-115) | Required |
+| `paddles_removed_after_shock` | Paddles removed from the chest | R6 (never used as evidence of a shock, D-115) | Required |
+| `apical_paddle_taken`, `sternal_paddle_taken` *(proposed names)* | **Per-paddle taken**: which paddle was taken | Future checks on R2/R8 | If feasible |
+
+### Zone visibility
+
+**Zone visibility** is required for R8. In some camera angles only one placement zone is
+visible, and R8 is then Unable to Verify (no one-zone inference since D-116). The rule engine must
+know which zones were visible, and when.
+
+| Canonical name *(proposed)* | Meaning |
+|---|---|
+| `apical_zone_visible` | Interval during which the apical placement zone is visible |
+| `sternal_zone_visible` | Interval during which the sternal placement zone is visible |
+
+- **No event for a zone** means the zone was not visible.
+- **No zone information at all** means visibility is unknown, and R8 then reports Unable to
+  Verify.
+
+The format is a proposal to agree; it fits the current `Event` schema without changes.
+
+Raw `object_visible:<class>` events are not used as rule evidence.
+
+### Annotation export (for the final CVAT backups)
+
+Ananth runs the rule engine's exporter and audit on the final backups and sends back only the
+records, the export manifest and the audit outputs, never media (D-083, D-085). Instructions and
+the items to fix in the backups:
+[docs/annotation/rule_engine_export_howto.md](../annotation/rule_engine_export_howto.md).
+
+### Per-zone gel applications (D-111)
+
+Video postprocessing should produce **per-zone gel application events**, `apical_gel_applied` and
+`sternal_gel_applied`, from the `learner_hand` and zone detections, using the same logic as the
+rule engine's exporter (Step 9d, `annotation/derive_gel_applications.py`). This mirrors the
+per-paddle placements.
+- **Proximity:** the hand box near a zone box (gap over the frame diagonal), not overlap.
+- **Nearest zone:** the nearer zone only when the other is clearly further.
+- **Visits and dwell:** a minimum number of frames near the zone; short dips allowed.
+- **Gel phase:** before the first paddle placement.
+
+It should also report, per zone, whether an application **could have been seen** (zone and bottle
+hand in view during the bottle period), as the visibility of regions `apical_gel` and
+`sternal_gel`. Without these, R1 falls back to counting `gel_applied` events against zone
+visibility, a weaker proxy (D-113, A-026). The exporter's settings are placeholders, to be tuned
+from `gel_validation.md` before they are reused.
+
+### Sanity checks needed from video postprocessing
+
+The rule engine cannot see boxes, only events. These checks have to happen where the boxes are,
+before events are produced. Each failure should be reported with the recording, the frames and
+the objects, and not silently corrected.
+
+| Check | Why |
+|---|---|
+| **Placement zones never move while the paddles do.** A zone box that follows a paddle's motion is a mislabelled paddle (or a paddle labelled as a zone) | Zone visibility (R8, R2, R6) and "in zone" (R3) would be judged against a moving target |
+| **At most one apical and one sternal paddle per frame** | Two boxes of one paddle class in one frame means one is the other paddle, so per-paddle placements would be wrong |
+| **Paddle identity kept over time.** The apical paddle stays apical from when it is taken until it is put back, and is not swapped with the sternal one between frames or after occlusion | R8 (apical before sternal) depends entirely on which paddle is which |
+
+The rule engine checks the results of these at the event level (D-071): an event expected once
+that appears more than once raises `count_violation`, marked "possibly the same incident
+detected twice" when the two are within the simultaneous window. Two or more placements of one
+paddle and none of the other raises `paddle_identity_conflict`. These catch problems that slip
+through, but they cannot show which frame went wrong, so the checks above are still needed
+upstream.
+
+## From audio command detection (Sanjeevan)
+
+Command names follow the A1–A6 wording in the supervisor's proposal. **All names and phrases are
+provisional** until the medical-faculty supervisor confirms them.
+
+| Canonical name | Command | Rule |
+|---|---|---|
+| `oxygen_away_command` | Free-flow oxygen away | A1 |
+| `continue_compressions_command` | Continue chest compressions (before the shock) | A2 |
+| `stand_clear_command` | All stand clear | A3 |
+| `stop_compressions_command` | Stop chest compressions / hands off | A4, A8 |
+| `shock_command` | DC shock / discharge | A5 |
+| `start_compressions_command` | Start or resume chest compressions (after the shock) | R7/A6, A8 |
+
+- **Unambiguous commands:** emit the action-specific name, one event per detected command.
+- **Ambiguous phrases:** some phrases (for example "continue CPR") mean continue before the
+  shock and restart after it. Audio detection cannot know the shock time, so these may keep the
+  current label `resume_compressions_command`. The rule engine resolves it by position relative
+  to the shock.
+- **Current state:** `configs/pipeline.yaml` emits only `oxygen_away_command`,
+  `stand_clear_command` and `resume_compressions_command`. Stop and shock are missing.
+- **Audio coverage (nice to have; format to agree):** marking where audio was missing or
+  unclear lets the rule engine say Unable to Verify instead of guessing. Without it, audio
+  coverage is `unknown`.
+
+## Open items to agree
+
+1. **Per-paddle placement:** how video postprocessing will produce `apical_paddle_placed` and
+   `sternal_paddle_placed`. CVAT has no per-paddle placement tags today. Likewise the per-zone gel
+   applications (`apical_gel_applied`, `sternal_gel_applied`) from the `learner_hand` and zone
+   detections (D-111).
+2. **Zone visibility:** the format, and for annotation timelines, where it comes from
+   (`events.jsonl` has no zone tracks).
+3. **Per-paddle taken events:** whether they are feasible, and their final names.
+4. **Command names:** the audio stop/shock commands and the final names after supervisor
+   confirmation.
+5. **Audio coverage:** the signal format.
+6. **Confidence thresholds:** which side applies them (upstream, the rule engine, or both with
+   the same values), so they are not applied twice with different values.
+7. **Timeline header:** whether upstream can provide `recording_id`, `camera_angle`,
+   `duration_seconds` and `analyses_run`, and in what format.
