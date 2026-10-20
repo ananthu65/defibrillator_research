@@ -28,7 +28,8 @@ BEFORE, SIMULTANEOUS, AFTER = "before", "simultaneous", "after"
 # ---- 1-3: can the rule be evaluated at all? -----------------------------------------------------
 
 def depends(rule_id, depends_on, results):
-    """P-019: a rule needing another rule's result is not evaluable unless that rule passed (D-003)."""
+    """P-019: a rule needing another rule's result is not evaluable unless that rule passed (D-119: a
+    mistake in one step is never evidence of a mistake in another; a step fails only on its own evidence)."""
     for dependency in depends_on:
         if dependency not in results:
             raise KeyError(f"{rule_id} depends on {dependency}, which has not been evaluated yet")

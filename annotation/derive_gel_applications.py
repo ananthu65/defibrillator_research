@@ -3,10 +3,15 @@
 Used by ``export_rule_engine_records.py``, like Step 9c. Only the annotation JSON is used (D-085),
 and boxes use the training geometry (``track_box_at`` then ``clip_box``, D-079).
 
-1. **Gel phase:** from the start of the recording to the earliest firm placement of either paddle
-   (``first_paddle_firmly_on_the_chest``, the apical one under A-027, or any placement derived by 9c in
-   the same export), else to the earliest paddle taken (``first_paddle_taken`` or
-   ``second_paddle_taken``), else to the end of the recording (D-118: tag names give identity, not order).
+1. **Gel phase:** from the start of the recording to the earliest firm placement of either paddle, else
+   to the earliest paddle taken (``first_paddle_taken`` or ``second_paddle_taken``), else to the end of the
+   recording. The order comes from the shared ``rules.paddle_timing`` (D-118): under the team's working
+   definition (A-027) the tag names give identity only (``first_paddle_*`` apical, ``second_paddle_*``
+   sternal). The export never uses 9c placements, so it doesn't depend on the 9c gate: the phase ends
+   at ``first_paddle_firmly_on_the_chest`` (the apical placement), and the sternal placement is unknown
+   (the phase is flagged ``placement_time_unknown`` when it could have been earlier). Past the 9c gate
+   the annotation adapter ends the phase at the earliest placement instead (``gel_phase`` with the 9c
+   placements) and makes the zones' status more cautious with ``zones_within_phase``.
 2. **Per frame** of the gel phase, the ``learner_hand`` box (it covers only the hand holding the gel
    bottle, A-024) is compared with each visible zone box. The gap is the distance between the two
    boxes (0 when they touch or overlap) relative to the frame diagonal; proximity, not overlap (A-025).
@@ -38,6 +43,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from annotation.audit_cvat_backups import Issue
+from rules.paddle_timing import APICAL, STERNAL, paddle_timing
 from annotation.build_yolo_video_dataset import clip_box, shape_box, track_box_at
 from annotation.derive_paddle_placements import DATE, HEX64, _count, _distribution, _number
 
@@ -82,12 +88,13 @@ class GelSettings:
     second_paddle_taken_tag: str
     first_placement_tag: str
     first_placement_event: str       # the derived event of the paddle T1 marks (apical, A-027); T1 wins over it
+    other_placement_event: str       # the derived event of the other paddle (sternal); no tag marks it
     max_gap: float            # gel_hand_zone_max_gap, fraction of the frame diagonal
     dwell_frames: int
     nearer_ratio: float
     exit_frames: int
     tag_agreement_frames: int
-    placement_settings_sha256: str   # 9c settings: the gel phase may end at a derived placement
+    placement_settings_sha256: str   # 9c settings: past the 9c gate the adapter may end the gel phase at a 9c placement
     review: GelReview = GelReview()
 
     def digest(self) -> str:
@@ -126,6 +133,7 @@ def load_gel_settings(data: Any, zone_labels, placements, where: str) -> GelSett
         data["hand_label"], tuple(rules), data["gel_tag"], data["first_paddle_taken_tag"],
         data["second_paddle_taken_tag"], placements.first_placement_tag,
         next(r.event for r in placements.paddles if r.paddle == placements.first_placement_tag_paddle),
+        next(r.event for r in placements.paddles if r.paddle != placements.first_placement_tag_paddle),
         _number(data["gel_hand_zone_max_gap"], f"{where}.gel_hand_zone_max_gap", 0, 1),
         _count(data["gel_dwell_frames"], f"{where}.gel_dwell_frames", minimum=1), float(ratio),
         _count(data["gel_exit_frames"], f"{where}.gel_exit_frames", minimum=0),
@@ -197,25 +205,65 @@ def _first_tag(source, label):
     return min(frames) if frames else None
 
 
-def gel_phase(source, settings: GelSettings, placement_events=()) -> tuple[int, str]:
-    """(first frame after the gel phase, what ended it). The phase is start_frame .. end - 1.
+PLACEMENT_TIME_UNKNOWN = "placement_time_unknown"   # the other paddle's placement could have been earlier (D-118)
 
-    D-118: it ends at the earliest firm placement of either paddle, else at the earliest paddle taken;
-    tag names never give the order. T1 marks the apical placement (A-027) and wins over its derived
-    placement; the other paddle's placement comes only from 9c.
+
+def gel_phase_timing(source, settings: GelSettings, placement_events=()) -> dict[str, Any]:
+    """The gel phase: its end (the first frame after it; the phase is start_frame .. end - 1), what ended
+    it, and whether that end is certain (D-118).
+
+    The order comes from the shared paddle_timing: the earliest firm placement of either paddle, else
+    the earliest paddle taken, else the end of the recording. T1 marks the apical placement (A-027) and
+    wins over its 9c placement; the sternal placement comes only from 9c (placement_events, which the
+    export never passes: only the adapter does, past the 9c gate). Not certain when the other paddle's
+    placement is unknown and could have been earlier: from unknown_from_frame on.
     """
     t1 = _first_tag(source, settings.first_placement_tag)
-    placements = [(e["frame"], "derived placement") for e in placement_events
-                  if t1 is None or e["event_name"] != settings.first_placement_event]
-    if t1 is not None:
-        placements.append((t1, settings.first_placement_tag))
-    if placements:
-        return min(placements)
-    takes = [(frame, label) for label in (settings.first_paddle_taken_tag, settings.second_paddle_taken_tag)
-             if (frame := _first_tag(source, label)) is not None]
-    if takes:
-        return min(takes)
-    return source.stop_frame + 1, "end of recording"
+    derived = {}
+    for event in placement_events:
+        derived[event["event_name"]] = min(derived.get(event["event_name"], event["frame"]), event["frame"])
+    placed = {APICAL: t1 if t1 is not None else derived.get(settings.first_placement_event),
+              STERNAL: derived.get(settings.other_placement_event)}
+    labels = {APICAL: settings.first_paddle_taken_tag, STERNAL: settings.second_paddle_taken_tag}
+    taken = {paddle: _first_tag(source, label) for paddle, label in labels.items()}
+    timing = paddle_timing(taken, placed, 0)
+    if timing.earliest_placed is not None:
+        paddle = timing.earliest_placed
+        end = placed[paddle]
+        ended_by = settings.first_placement_tag if paddle == APICAL and t1 is not None else "derived placement"
+    elif timing.earliest_taken is not None:
+        end, ended_by = taken[timing.earliest_taken], labels[timing.earliest_taken]
+    else:
+        end, ended_by = source.stop_frame + 1, "end of recording"
+    return {"end_frame": end, "ended_by": ended_by, "certain": timing.earliest_certain,
+            "unknown_from_frame": timing.unknown_from}
+
+
+def gel_phase(source, settings: GelSettings, placement_events=()) -> tuple[int, str]:
+    """(first frame after the gel phase, what ended it); see gel_phase_timing."""
+    timing = gel_phase_timing(source, settings, placement_events)
+    return timing["end_frame"], timing["ended_by"]
+
+
+def zones_within_phase(gel: dict[str, Any], gel_events, end: int) -> list[dict[str, Any]]:
+    """D-118: the zones' gel status when the gel phase ends earlier than in the export, at `end` (a 9c
+    placement, used by the adapter only past the 9c gate). Only ever more cautious, never a new result:
+    the bottle period starting at or after `end` -> every zone unknown; gelled with no application
+    starting by `end` -> unknown; not gelled stays not gelled (the zone was visible and the hand tracked
+    throughout the longer period)."""
+    if end >= gel["phase"]["end_frame"]:
+        return list(gel["zones"])
+    bottle = gel["bottle"]
+    zones = []
+    for zone in gel["zones"]:
+        reason = None
+        if zone["status"] != UNKNOWN and (bottle is None or bottle["start_frame"] >= end):
+            reason = f"the gel phase ends at frame {end} (a derived placement), before the bottle hand is tracked"
+        elif zone["status"] == GELLED and not any(e["event_name"] == zone["event"] and e["frame"] <= end
+                                                  for e in gel_events):
+            reason = f"its applications start only after the gel phase ends at frame {end} (a derived placement)"
+        zones.append(zone if reason is None else {**zone, "status": UNKNOWN, "reason": reason})
+    return zones
 
 
 def hand_frames(source, video, settings: GelSettings, end: int) -> list[int]:
@@ -276,14 +324,19 @@ def visits(labels, zone: str, settings: GelSettings) -> list[dict[str, Any]]:
     return found
 
 
-def derive_gel(source, video, settings: GelSettings, placement_events, issues: list[Issue]):
-    """(derived events, gel summary for the record, validation rows) for one video."""
+def derive_gel(source, video, settings: GelSettings, issues: list[Issue]):
+    """(derived events, gel summary for the record, validation rows) for one video. The phase never uses
+    9c placements (the export doesn't depend on the 9c gate); the adapter applies them past it (D-118)."""
     where = dict(archive=source.archive, task_path=source.task_path, canonical_task_id=source.canonical_task_id)
-    end, ended_by = gel_phase(source, settings, placement_events)
+    timing = gel_phase_timing(source, settings)
+    end, ended_by = timing["end_frame"], timing["ended_by"]
     tags = sorted(int(t.get("frame", -1)) for t in source.tags
                   if str(t.get("label", "")) == settings.gel_tag and int(t.get("frame", -1)) < end)
     present = hand_frames(source, video, settings, end)
-    phase = {"end_frame": end, "end_seconds": round(end / video.fps, 6), "ended_by": ended_by}
+    phase = {"end_frame": end, "end_seconds": round(end / video.fps, 6), "ended_by": ended_by,
+             # the sternal placement is unknown here (no tag marks it; 9c only past its gate, in the adapter)
+             "certain": timing["certain"], "unknown_from_frame": timing["unknown_from_frame"],
+             "flags": [] if timing["certain"] else [PLACEMENT_TIME_UNKNOWN]}
     if not present:
         issues.append(Issue("review", "gel_hand_not_tracked", label=settings.hand_label,
                             details=f"no {settings.hand_label} box in the gel phase (frames {source.start_frame}-"

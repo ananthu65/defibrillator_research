@@ -112,7 +112,7 @@ class Helper(unittest.TestCase):
 
     def test_a_paddle_placed_before_the_other_was_taken_was_taken_first(self):
         order = paddle_order([APICAL_PLACED_CANONICAL, ev("second_paddle_taken", 12)], WINDOW)
-        self.assertEqual((order.first_taken, order.take_deduced), ("apical", True))   # its take isn't tagged (P05_LL)
+        self.assertEqual((order.first_taken, order.take_deduced), ("apical", True))   # its take isn't tagged
         self.assertIsNone(paddle_order([ev("second_paddle_taken", 12)], WINDOW).first_taken)
         self.assertFalse(paddle_order(STERNAL_FIRST, WINDOW).take_deduced)
 

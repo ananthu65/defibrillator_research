@@ -1,6 +1,6 @@
 # Camera angle evidence for the rule engine
 
-**Status: interim.** This is based on the smoke-run export of 38 corrected backups (one
+**Status: interim, partial backups, not representative.** This is based on the smoke-run export of 38 corrected backups (one
 annotator's set, D-084). P14_LS is excluded as unreliable (OQ-055), so **37 videos are counted:
 12 LL, 12 LS, 13 T**. To be rerun on the final export (OQ-054). Prepared 2026-10-17 for the
 decision on the final camera angle (OQ-038).
@@ -92,9 +92,10 @@ data in any view. The table describes the final system.
 - **LS** is the only view where every rule can be checked directly in most videos. It shows
   both placement zones throughout and the screen. R8 is the exception on the annotations so far
   (next point).
-- **Step 9c on the annotations (2026-10-19, D-118):** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). So R8 has no direct
-  evidence on the annotations in any view, and R2 can't detect a parallel placement. The camera
-  view isn't the limit here; the overlap setting is, and it is to be calibrated (OQ-018).
+- **Step 9c on the annotations (D-118):** R8's direct evidence comes from the 9c placements, which
+  reach the engine only past the 9c gate, and 9c's settings are uncalibrated placeholders (OQ-018).
+  Until both are settled, R8 has no direct evidence on the annotations in any view, and R2 can't
+  detect a parallel placement. The camera view isn't the limit here; the settings are.
 - **T** shows the screen in most interim videos, but not reliably (screen tracked in 19 of 48
   older videos). Its apical zone is often only partly in view.
 - **LL** shows the apical zone throughout but never the sternal zone and almost never the

@@ -274,22 +274,28 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
 - **Detected by:** the proxy check in progress.md (Increment 17) and the 9d validation report.
 - **Related:** D-113, A-023.
 
-### A-027 "First" and "second" paddle tags mean the apical and sternal paddle
-- **Assumption (the team: Ananth, Sanjeevan, Arnikan, 2026-10-19):** in every annotated video the
-  apical paddle was taken and placed first. The team therefore treats `first_paddle_taken` and
-  `first_paddle_firmly_on_the_chest` as the **apical** paddle, and `second_paddle_taken` as the
-  **sternal** paddle. The video models are trained on these labels, so a learner who takes the
-  sternal paddle first is expected to produce `second_paddle_taken` before `first_paddle_taken`.
+### A-027 The team's working definition: `first_paddle_*` is the apical paddle, `second_paddle_*` the sternal paddle
+- **Assumption (the team: Ananth, Sanjeevan, Arnikan, 2026-10-19):** `first_paddle_taken` and
+  `first_paddle_firmly_on_the_chest` mean the **apical** paddle, and `second_paddle_taken` means the
+  **sternal** paddle. This is the team's working definition of the labels. The names give identity
+  only, never time order: wherever a rule or helper needs "first" or "second" in time, it computes
+  it from the event times (D-118).
+- **Background:** the labels were named when the annotated videos were understood to be
+  apical-first, so order and identity coincide in the training labels. The video models are
+  trained on these labels, so a learner who takes the sternal paddle first is expected to produce
+  `second_paddle_taken` before `first_paddle_taken`.
 - **The vocabulary is unchanged:** the names and the CVAT mapping stay as they are
-  (`first_paddle_firmly_on_the_chest` → `first_paddle_placed`, D-047). This is an assumption about
-  what they mean, not a rename.
-- **Untested risk:** order and identity never differed in the training data, so it is unknown
-  whether the models learned the paddle's appearance or its order. Only a recording with the
-  reversed order can test it. If the assumption is wrong, a reversed order would go unseen.
+  (`first_paddle_firmly_on_the_chest` → `first_paddle_placed`, D-047). This is a definition of what
+  they mean, not a rename.
+- **Remaining risk: untested on reversed-order recordings.** Order and identity never differed in
+  the training data, so it is unknown whether the models learned the paddle's appearance or its
+  order. Only a recording with the reversed order can test it. If the models learned the order, a
+  reversed order would go unseen.
 - **Consequences for the rules:** R8's one-zone inference compared the visible placement with
-  `first_paddle_placed`, which under this assumption is the apical placement, so it was circular;
-  it is removed (D-116). The other readers that took the tags as time order (R2, Step 9c, R1 and
-  Step 9d; listed in progress.md, 2026-10-19) now compute the order from event times (D-118).
+  `first_paddle_placed`, the apical placement under this definition, so it was circular; it is
+  removed (D-116). Every other reader of these tags reads identity only: R1, R2, R3 and R8 take
+  the order from `paddle_order`, and Steps 9c and 9d from the same times (D-118; the list is in
+  progress.md, 2026-10-19).
 - **Status:** active (team decision).
 - **Detected by:** a recording with the sternal paddle first, run through the models.
 - **Related:** D-013, D-014, D-047, D-051, D-086, D-116, D-118.

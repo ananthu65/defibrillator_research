@@ -42,7 +42,8 @@ is explained in [anomalies.md](anomalies.md).
 
 #### P-031 Derived per-paddle placement (built, Step 9c; D-081, D-086 to D-089)
 Derived per paddle **label**, across all its tracks (D-087). T1 is `first_paddle_firmly_on_the_chest`
-and T2 is `paddles_firmly_on_chest`, following the annotators' convention (A-019).
+(the apical paddle's placement under the team's working definition, A-027) and T2 is
+`paddles_firmly_on_chest`, following the annotators' convention (A-019).
 
 | Condition | Outcome | Code |
 |---|---|---|
@@ -65,7 +66,7 @@ bottle, A-024) and the zone boxes. Settings are placeholders.
 
 | Condition | Outcome |
 |---|---|
-| Gel phase | From the start to the earliest firm placement of either paddle (the apical tag, winning over its 9c placement; the 9c sternal placement), else the earliest take of either paddle, else the end of the recording (D-118) |
+| Gel phase (export) | From the start to the apical tag (`first_paddle_firmly_on_the_chest`), else the earliest take of either paddle, else the end of the recording (`paddle_timing`, D-118). The export never uses 9c placements; flagged `placement_time_unknown` when the sternal placement could have been earlier |
 | A frame: hand box within `gel_hand_zone_max_gap` (5% of the diagonal) of a zone box, the other visible zone at least 2× further | The frame belongs to the nearer zone (proximity, not overlap, A-025) |
 | A frame: about as near to both zones | Ambiguous: belongs to neither |
 | A visit to a zone (dips up to `gel_exit_frames` = 5 allowed) with at least `gel_dwell_frames` = 10 frames | An application, event `apical_gel_applied` / `sternal_gel_applied`, flagged `derived_gel_application`; separate visits count separately |
@@ -75,6 +76,7 @@ bottle, A-024) and the zone boxes. Settings are placeholders.
 | No `learner_hand` box in the gel phase | Every zone **unknown**; review issue `gel_hand_not_tracked` |
 | An application without a `Gel applied` tag within 30 frames, or a tag without an application | Reported in `gel_validation.csv`/`.md`; the event is kept |
 | 9d gate not passed | Neither the events nor the zone statuses reach the engine (D-112) |
+| Past the 9d gate, and the 9c gate approved too | The adapter ends the gel phase at the earliest firm placement of either paddle (`gel_phase` with the 9c placements). A zone can only become more cautious: gelled with no application by then, or the bottle hand only after it → **unknown**; not gelled stays not gelled (D-118) |
 
 ### Stage: adapter
 
@@ -323,8 +325,9 @@ elapsed times and checks it used.
 | Required event missing, and no approved inference applies | → P-008 |
 
 #### P-015 R8: apical before sternal (built, Increment 12; pending until approved)
-A zone counts as visible when it is covered over the placement phase, from the first paddle
-taken to paddles firmly on chest (D-092, D-099). Derived placements are used only past the gate
+A zone counts as visible when it is covered over the placement phase, from the earliest take
+of either paddle (by time, D-118) to paddles firmly on chest, else the later of the two takes
+(D-092, D-099). Derived placements are used only past the gate
 (D-088).
 
 | Condition | Outcome | Codes and flags |
@@ -332,8 +335,8 @@ taken to paddles firmly on chest (D-092, D-099). Derived placements are used onl
 | Derived placements flagged `possible_parallel_placement` | Fail; **R2 fails too, separately** (D-091, D-098) | `simultaneous`; `possible_parallel_placement` (shared cause flag), `derived_placement` |
 | Both placements observed | Compare the two placement times: apical first → Pass – Direct | `wrong_order`, `simultaneous`; `derived_placement` if derived |
 | A zone visible during the placement phase, its placement missing (both zones visible with one missing, or the one visible zone without its placement) | Unable to Verify, not `wrong_order`; R3 reports the missing placement (D-058) | `placement_missing` |
-| One placement observed, the other paddle's zone not in view | **Unable to Verify**, no inference: the first-placement tag is the apical placement under the team's labelling (A-027), so comparing with it would be circular (D-116) | `one_zone_in_view` |
-| Not determinable (no placement observed and no zone visible) | Unable to Verify; if the fallback is on: **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-014, D-060) | — |
+| One placement observed, the other paddle's zone not in view | **Unable to Verify**, no inference: the first-placement tag is the apical placement under the team's working definition (A-027), so comparing with it would be circular (D-116) | `one_zone_in_view` |
+| Not determinable (no placement observed and no zone visible) | Unable to Verify; if the fallback is on and the apical paddle was taken first (by time): **assumed** apical first, to be checked by the evaluator, and the overall result cannot be Pass (D-014, D-060); the sternal paddle taken first → Unable to Verify (D-118) | — |
 
 #### P-033 R5: shock confirmed on screen (built, Increment 13; pending until approved)
 | Condition | Outcome | Code and flags |
@@ -359,7 +362,7 @@ the chest regions (OQ-012, D-106).
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (D-057, D-115) | — |
 | No inference and no shock time | **Not evaluable because of R5** | — |
 | No inference; a low-confidence firm placement | Unable to Verify | `low_confidence_evidence` |
-| No inference; both placement zones visible throughout first paddle taken → shock | Fail | `missing` |
+| No inference; both placement zones visible throughout the earliest take of either paddle → shock (D-118) | Fail | `missing` |
 | No inference; a zone not visible throughout that window (for example one paddle visible: the tag is not made then, A-019) | Unable to Verify, never Fail | — |
 
 With the shock on screen as the inference source, the coverage rows are unreachable: a shock time
@@ -581,8 +584,8 @@ today.
 2. P-015: the visible paddle's placement is not observed, so the order cannot be established.
    **No inference** ("the apical paddle was never placed, so sternal was first" is not shown by
    the evidence).
-3. R8 → **Unable to Verify**, `placement_missing`. R3 reports the missing placement (one
-   mistake reported once, D-003).
+3. R8 → **Unable to Verify**, `placement_missing`. R3 reports the missing placement (a
+   mistake in one step is never evidence of a mistake in another, D-119).
 
 ### W-18 R8, both zones visible, one placement event missing → Unable to Verify
 *(Built in Increment 12, D-058.)*
@@ -616,6 +619,8 @@ today.
    evaluated.
 3. P-017: no rule fails → **Incomplete**, never Pass, exactly as if R8 were pending. Any Fail
    elsewhere would still make the overall result Fail.
+4. Since D-118 the fallback applies only when the apical paddle was taken first (by time). With the
+   sternal paddle taken first, R8 stays Unable to Verify.
 
 ### W-24 Under the removal fallback, "resume compressions" before the removal → restart ambiguous — *withdrawn*
 *Withdrawn on 2026-10-19 (D-115): a paddle removal is never taken as the shock or its time, so this pathway no longer exists.*
@@ -795,13 +800,15 @@ today.
    review issue `placement_duplicate_paddle_box`, for Ananth to fix, because the overlap also
    affects the training labels.
 
-### W-49 Placement disagrees with the first-placement tag → no event for either paddle
-1. Both zones visible. The earlier derived placement is at frame 20, but T1 is at frame 36, 16
-   frames later.
-2. P-031: more than the 15-frame window → **no event for either paddle**, review issue
-   `placement_disagrees_with_tag` (D-086).
-3. One-zone view instead (LL, apical only): the apical placement must not be earlier than T1 − 15.
-   Placed at frame 50 with T1 at 30 is fine: the visible paddle was simply the second.
+### W-49 The apical placement disagrees with the first-placement tag → no event for the apical paddle
+*(Revised by D-118.)*
+1. Both zones visible. The derived apical placement is at frame 20, but T1 (the apical placement
+   under the team's working definition, A-027) is at frame 36, 16 frames later.
+2. P-031: more than the 15-frame window → **no event for the apical paddle**, review issue
+   `placement_disagrees_with_tag` (D-086). The sternal placement is unaffected: T1 never decides
+   the order.
+3. One-zone view instead (LL, apical only): the same check. An apical placement at frame 50 with
+   T1 at 30 gives no event.
 
 ### W-50 The zone is hidden for 6 frames during a placement → still one placement
 *(Step 9c, A-020, D-090.)*
@@ -899,8 +906,8 @@ today.
    evidence.
 4. Both results carry **`possible_parallel_placement`** (and `derived_placement`). The feedback
    module can say that one action caused both failures.
-5. P-017: **Fail**, listing two mistakes, R2 and R8. Whether this should count as one mistake is
-   OQ-059 (supervisor).
+5. P-017: **Fail**, listing two mistakes, R2 and R8, each on its own evidence (D-119). Whether this
+   should count as one mistake is OQ-059 (supervisor).
 6. Gate not approved: neither rule sees the derived placements. R2 → `first_placement_not_observed`;
    R8 → Unable to Verify, `placement_missing` (both zones in view, no placement observed).
 
@@ -910,7 +917,7 @@ today.
    (unknown, so not visible). First placement (the first-placement tag) at 7.0 s.
 2. Apical placement at 7.2 s, 11 s or 4 s → **Unable to Verify**, `one_zone_in_view`. The order
    can't be established from one zone.
-3. **Why there is no inference any more:** under the team's labelling (A-027) the first-placement
+3. **Why there is no inference any more:** under the team's working definition (A-027) the first-placement
    tag is the apical placement. A sternal-first learner (sternal taken and placed first) still gets
    the tag at the apical placement, so the apical placement always "matches" it. The old one-zone
    inference therefore gave a false **Pass – Inferred**.
@@ -919,7 +926,7 @@ today.
 
 ### W-59 A zone in view only after the placement phase does not count
 *(Built in Increment 12; D-099.)*
-1. Placement phase 5–14 s (first paddle taken → paddles firmly on chest). The apical zone is
+1. Placement phase 5–14 s (the earliest take of either paddle → paddles firmly on chest). The apical zone is
    visible throughout it; the sternal zone only from 20 s.
 2. Only the apical placement is observed. The sternal zone was not in view during the phase, so
    its missing placement is **not** `placement_missing`. It is a one-zone view: **Unable to
@@ -1117,3 +1124,24 @@ today.
    frames from T1, so both placements were dropped (`placement_disagrees_with_tag`).
 3. Now T1 cross-checks only the apical placement (frame 60, in agreement). Both events are kept,
    and R8 can report `wrong_order`.
+
+### W-84 Step 9d with and without the 9c gate
+*(Built; D-118.)*
+1. A sternal-first video: sternal paddle taken at 2 s, placed at 3 s (only 9c sees it), apical
+   paddle taken at 4 s, tagged placed at 5 s. Gel on the apical zone at 1.2 s and on the sternal
+   zone at 3.6 s. The 9d gate is approved.
+2. The export's gel phase ends at the apical tag (5 s), flagged `placement_time_unknown` from 2 s:
+   no tag marks the sternal placement, and the export never uses 9c.
+3. **9c gate closed:** both zones gelled, but the sternal gel at 3.6 s may come after the sternal
+   placement → R1 **Unable to Verify**, `placement_time_unknown`.
+4. **9c gate approved:** the adapter ends the gel phase at the sternal placement (3 s). The sternal
+   zone's only application is later, so it becomes **unknown** → R1 Unable to Verify (apical zone
+   gelled, sternal zone unknown).
+
+### W-85 A sternal-first learner and the R3 and R8 windows
+*(Built; D-118.)*
+1. Sternal paddle taken at 3 s (`second_paddle_taken`, the sternal paddle under A-027), apical at
+   6 s, paddles firmly on the chest at 14 s.
+2. R8's placement phase and R3's missing-placement window start at 3 s, the earliest take of
+   either paddle, not at `first_paddle_taken` (6 s). A zone in view only from 4 s therefore doesn't
+   count as visible over them.

@@ -334,7 +334,7 @@ def _inference_sources(ctx, definition, rule_id):
     return sources
 
 
-@rule("R3", requires=(BOTH_PLACED, SHOCK, REMOVAL, FIRST_TAKEN, *PLACEMENTS),
+@rule("R3", requires=(BOTH_PLACED, SHOCK, REMOVAL, FIRST_TAKEN, SECOND_TAKEN, *PLACEMENTS),
       description="Paddles placed firmly on the chest before the shock")
 def paddles_firmly_on_chest(ctx, definition, results):
     """R3 (P-035): both paddles placed firmly on the chest before the shock.
@@ -395,11 +395,12 @@ def _derived_placements_before(ctx, time):
 
 
 def _firm_placement_missing(ctx, shock):
-    taken = ctx.named(FIRST_TAKEN)
-    start = taken[0].start if taken and taken[0].start <= shock.time else 0.0
+    taken = ctx.paddle_order.earliest_taken   # the earliest take of either paddle, by time (D-118)
+    known = taken is not None and taken.start <= shock.time
+    start = taken.start if known else 0.0
     window = (start, shock.time)
-    where = (f"between taking the first paddle ({start:g} s) and the shock ({shock.time:g} s)" if taken
-             and taken[0].start <= shock.time else f"before the shock ({shock.time:g} s)")
+    where = (f"between taking the first paddle ({start:g} s) and the shock ({shock.time:g} s)" if known
+             else f"before the shock ({shock.time:g} s)")
     weak = ctx.missing(BOTH_PLACED, window)
     if LOW_CONFIDENCE_FLAG in weak.flags:
         return unable("R3", "paddles firmly on the chest may have been seen with low confidence",
@@ -731,18 +732,18 @@ def _paddle(name):
 def _placement_phase(ctx):
     """(start, end) of the placement phase in seconds, or None (whole recording) (D-099).
 
-    From the first paddle taken (else the earliest placement) to paddles firmly on chest (else the
-    second paddle taken, else the latest placement).
+    From the earliest take of either paddle (else the earliest placement) to paddles firmly on chest
+    (else the later of the two takes, when both are known, else the latest placement). The takes are
+    ordered by time, never by tag name (A-027, D-118).
     """
-    def first_time(name):
-        events = ctx.named(name)
-        return events[0].start if events else None
+    order = ctx.paddle_order
     placements = [a.time for a in (ctx.anchor("first_placement"), ctx.anchor("apical_placement"),
                                    ctx.anchor("sternal_placement")) if a.present]
-    start = first_time(FIRST_TAKEN)
+    takes = [e.start for e in order.taken.values() if e is not None]
+    start = order.earliest_taken.start if order.earliest_taken is not None else None
     start = start if start is not None else (min(placements) if placements else None)
-    end = first_time(BOTH_PLACED)
-    end = end if end is not None else first_time(SECOND_TAKEN)
+    both = ctx.named(BOTH_PLACED)
+    end = both[0].start if both else (max(takes) if len(takes) == 2 else None)
     end = end if end is not None else (max(placements) if placements else None)
     if start is None or end is None or end < start:
         return None
@@ -783,8 +784,14 @@ def _one_zone(ctx, name, seen):
 def _not_determinable(ctx):
     why = "no placement could be observed and no placement zone was in view"
     if ctx.config.engine.value("assume_first_taken_is_apical"):
-        taken = ctx.named(FIRST_TAKEN)
-        return assumed("R8", f"assumed apical first (the first paddle taken is taken to be apical): {why}; "
-                       "to be checked by the evaluator (D-014, D-060)",
-                       evidence=(taken[0].event_id,) if taken else ())
+        # D-014 under A-027: the takes say which paddle is which, so the paddle taken first is known by
+        # time; the fallback assumes only that it was also placed first, and only when it is the apical one
+        order = ctx.paddle_order
+        if order.first_taken == "apical":
+            return assumed("R8", f"assumed apical first (the apical paddle was taken first, at "
+                           f"{order.taken['apical'].start:g} s, and is assumed to have been placed first): {why}; "
+                           "to be checked by the evaluator (D-014, D-060, D-118)",
+                           evidence=tuple(e.event_id for e in order.taken.values() if e is not None))
+        return unable("R8", f"the order cannot be established: {why}; the apical-first fallback doesn't apply "
+                      f"({order.reason}, D-014, D-118)")
     return unable("R8", f"the order cannot be established: {why}")

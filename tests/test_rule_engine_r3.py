@@ -144,6 +144,16 @@ class Coverage(unittest.TestCase):
         self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "missing"))
         self.assertIn("between taking the first paddle (5 s) and the shock (15 s)", outcome.reason)
 
+    def test_the_phase_starts_at_the_earliest_take_of_either_paddle(self):
+        """D-118: a sternal-first learner takes second_paddle_taken first (A-027); the phase starts there."""
+        sternal_first = [ev("second_paddle_taken", 3), ev("first_paddle_taken", 6), SHOCK]
+        outcome = r3(sternal_first, header(apical=((2.0, 30.0),), sternal=((2.0, 30.0),)), NO_INFERENCE)
+        self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "missing"))
+        self.assertIn("between taking the first paddle (3 s)", outcome.reason)
+        # a zone in view only from 4 s doesn't cover a phase that starts at the sternal take (3 s)
+        outcome = r3(sternal_first, header(apical=((4.0, 30.0),), sternal=((2.0, 30.0),)), NO_INFERENCE)
+        self.assertEqual(outcome.kind, "unable_to_verify")
+
     def test_one_paddle_visible_is_unable_to_verify(self):
         """The tag is not made when only one paddle is visible (A-019)."""
         outcome = r3([TAKEN, SHOCK], header(sternal=None), NO_INFERENCE)

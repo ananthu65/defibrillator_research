@@ -53,8 +53,11 @@ derived_placements:
 # Step 9d: per-zone gel applications derived from the learner_hand and zone boxes (D-111, D-112).
 # learner_hand covers only the hand holding the gel bottle and is tracked during gel application
 # (A-024). Gel is applied on or near a zone, not strictly inside it (A-023, A-025), so proximity is
-# used, not overlap. The gel phase ends at derived_placements.first_placement_tag, else the earliest
-# 9c placement of the same export, else first_paddle_taken_tag (9d's settings hash includes 9c's).
+# used, not overlap. The gel phase ends at the earliest firm placement of either paddle, else the
+# earliest take of either paddle (D-118). The export never uses 9c placements, so it ends at
+# derived_placements.first_placement_tag (the apical placement, A-027) and flags the phase
+# placement_time_unknown when the sternal placement could have been earlier; past the 9c gate the
+# adapter ends it at the earliest 9c placement instead (9d's settings hash includes 9c's for that).
 derived_gel:
   hand_label: learner_hand
   zones:   # CVAT zone label -> its canonical gel event and the engine region carrying its gel status (R1)

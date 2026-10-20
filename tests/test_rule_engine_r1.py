@@ -6,6 +6,7 @@ import unittest
 import yaml
 
 from annotation.derive_gel_applications import GelReview
+from annotation.derive_paddle_placements import PlacementReview
 from annotation.export_rule_engine_records import load_config as load_export_config
 from pipeline.config import ROOT
 from rules.adapters.annotation import RECORD_KIND, adapt_record
@@ -256,6 +257,51 @@ class Gate(unittest.TestCase):
         adapted = adapt_record(data, R1, APPROVED, MANIFEST)
         self.assertIn("exporter version 3", adapted.gel_gate)
         self.assertIn("tag-count proxy", r1(adapted.events, adapted.header).reason)
+
+
+class NinthCGate(unittest.TestCase):
+    """D-118: 9d uses the 9c placements only past the 9c gate; otherwise the sternal placement time is unknown.
+
+    A sternal-first video: sternal taken at 2 s and placed at 3 s (9c only), apical taken at 4 s and tagged
+    placed at 5 s. Gel on the apical zone at 1.2 s and on the sternal zone at 3.6 s, after the sternal
+    placement but before the apical tag. The 9d gate is approved in both cases."""
+    TAGS = [("second_paddle_taken", 50), ("first_paddle_taken", 100), ("first_paddle_firmly_on_the_chest", 125),
+            ("paddles_firmly_on_chest", 130)]
+    GEL = [("apical_gel_applied", "apical_placement_zone", 30), ("sternal_gel_applied", "sternal_placement_zone", 90)]
+    MANIFEST = {**MANIFEST, "placement_settings_sha256": EXPORT.placements.digest()}
+
+    def adapt(self, placements_reviewed):
+        data = record(self.TAGS, self.GEL, ("gelled", "gelled"))
+        data["gel"]["phase"] = {"end_frame": 125, "end_seconds": 5.0, "ended_by": "first_paddle_firmly_on_the_chest",
+                                "certain": False, "unknown_from_frame": 50, "flags": ["placement_time_unknown"]}
+        data["derived_events"] = [{"id": "P02_LS_derived_001", "event_name": "sternal_paddle_placed", "frame": 75,
+                                   "timestamp_seconds": 3.0, "evidence_type": "direct", "flags": ["derived_placement"],
+                                   "method": "paddle_in_zone_v2",
+                                   "metadata": {"settings_sha256": EXPORT.placements.digest()}}]
+        export = APPROVED
+        if placements_reviewed:
+            export = replace(APPROVED, placements=replace(APPROVED.placements, review=PlacementReview(
+                "Arnikan", "2026-10-19", "a" * 64, EXPORT.placements.digest())))
+        return adapt_record(data, R1, export, self.MANIFEST)
+
+    def test_gate_closed_the_sternal_placement_time_is_unknown(self):
+        adapted = self.adapt(placements_reviewed=False)
+        self.assertEqual((adapted.derived_included, adapted.gel_included), (0, 2))
+        self.assertEqual(adapted.header.coverage["region:sternal_gel"], "covered")   # 9d's status, unchanged
+        outcome = r1(adapted.events, adapted.header)
+        self.assertEqual(outcome.kind, "unable_to_verify")
+        self.assertIn("placement_time_unknown", outcome.flags)
+
+    def test_gate_approved_the_phase_ends_at_the_sternal_placement(self):
+        adapted = self.adapt(placements_reviewed=True)
+        self.assertEqual((adapted.derived_included, adapted.gel_included), (1, 2))
+        sternal = next(z for z in adapted.zones if z.region == "sternal_gel")
+        self.assertEqual(sternal.status, "unknown")   # its only application came after the earlier end
+        self.assertIn("only after the gel phase ends at frame 75", sternal.reason)
+        outcome = r1(adapted.events, adapted.header)
+        self.assertEqual(outcome.kind, "unable_to_verify")
+        self.assertNotIn("placement_time_unknown", outcome.flags)
+        self.assertIn("before the first placement (3 s)", outcome.reason)
 
 
 if __name__ == "__main__":

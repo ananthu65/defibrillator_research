@@ -1,8 +1,8 @@
 # Rule-engine export: how to run it on the final backups
 
 **For:** Ananth · **From:** Arnikan · **Date:** 2026-10-16 (updated for Step 9c; for paddle
-visibility and Step 9d gel on 2026-10-17) · Decisions D-074, D-083, D-085, D-086 to D-089, D-108,
-D-111 and D-112
+visibility and Step 9d gel on 2026-10-17; for exporter version 4 on 2026-10-19) · Decisions D-074,
+D-083, D-085, D-086 to D-089, D-108, D-111, D-112 and D-118
 in [decisions.md](../rule_engine/decisions.md)
 
 The rule engine needs the annotation facts of each video: every tag, the frame range and
@@ -37,22 +37,24 @@ results also serve as a ground-truth baseline to compare the model-based runs wi
 | The repo on branch `feature/rule-engine` | The two scripts and `configs/rule_engine/annotation_export.yaml` |
 | Python with PyYAML | The project's usual environment (`requirements.txt`); no extra packages |
 
-## Use exporter version 3 or later
+## Use exporter version 4 or later
 
-The final export must be run with **exporter version 3 or later**.
+The final export must be run with **exporter version 4 or later**.
 - **Version 2** adds when each paddle is visible (`paddle_tracks`, `paddle_visibility`). The rule
   engine needs it to judge a missing button press (R4, D-108).
 - **Version 3** adds the gel applications derived from the `learner_hand` and zone boxes, per zone
   (`derived_gel_events`, `gel`), and `gel_validation.csv`/`.md` (R1, D-111).
+- **Version 4** derives the gel phase without the derived placements, so the export doesn't depend
+  on my review of them (D-118).
 
 With an older export, the paddles and the gel per zone are "unknown". R4 can then never fail a
 missing press, and R1 can only count `Gel applied` tags. The interim export has neither.
 
 - **Before running:** pull the latest `feature/rule-engine`.
-- **After running:** check that `export_manifest.json` says `"exporter_version": 3` (or higher),
+- **After running:** check that `export_manifest.json` says `"exporter_version": 4` (or higher),
   that its `counts` include `paddle_intervals` and `derived_gel_events`, and that it has
   `gel_settings_sha256`.
-- **If it says 1 or 2:** the checkout is out of date. Pull, and run again into a new output
+- **If it says 1, 2 or 3:** the checkout is out of date. Pull, and run again into a new output
   folder.
 
 ## Commands
@@ -81,6 +83,19 @@ python -m annotation.audit_rule_engine_checks `
 | `data/rule_engine/annotation_export/final-<date>/` (gitignored) | `records.jsonl` (one line per video, including the per-paddle placements derived from the boxes and when the placement zones, the defibrillator screen and each paddle were visible), `export_manifest.json` (`exporter_version`, backup names and sizes, a SHA-256 of each backup's annotation JSON, counts, `export_id`, `placement_settings_sha256`, `gel_settings_sha256`), `export_issues.csv`, `placement_validation.csv` and `placement_validation.md` (how well the derived placements agree with the tags), `gel_validation.csv` and `gel_validation.md` (the derived gel applications per video and zone, and how well they agree with the `Gel applied` tags) |
 | `annotation/reports/rule_engine_audit/final-<date>/` | `README.md`, `issues.csv` (review list), `info.csv` (information only), `zone_patterns.csv`, `audit_manifest.json` |
 
+## Derived placements (Step 9c)
+
+The exporter derives when each paddle settled in its own zone from the paddle and zone boxes, and
+checks the apical one against `first_paddle_firmly_on_the_chest`. Under the team's working
+definition (A-027), `first_paddle_*` means the apical paddle and `second_paddle_*` the sternal
+paddle; the order always comes from the times, never from the names (D-118).
+- **The settings are placeholders** (`min_overlap_of_paddle`, `steady_frames`,
+  `max_centre_motion_of_diagonal`, `exit_frames`; OQ-018). They are not tuned on the interim backups.
+- **They apply to annotator-drawn boxes only.** They describe how the annotators drew the paddle and
+  zone boxes, and must not be reused for the video model's output.
+- **No result uses them until I review** `placement_validation.md` of the final export (the gate,
+  D-088).
+
 ## What to send me
 
 **Send:**
@@ -91,14 +106,14 @@ python -m annotation.audit_rule_engine_checks `
 - the whole audit folder.
 
 Please send `records.jsonl` and `export_manifest.json` from the same run, unchanged, made with
-exporter version 3 or later.
+exporter version 4 or later.
 `export_id` is the SHA-256 of that exact `records.jsonl`. My reviews of the derived placements
 and of the derived gel applications apply only to that export and its settings.
 
 **Never send media:** no backup ZIPs, no videos, no frames, no images. Please don't commit
 `records.jsonl`; exported records stay out of git.
 
-## Items to fix in the backups (found in a trial run on 39 corrected backups)
+## Items to fix in the backups (found in a trial run on 39 corrected backups; interim, partial backups, not representative)
 
 1. **`P14_LL.zip` contains a task named `P14_LS`.** Both it and `P14_LS.zip` resolve to
    P14_LS, so the P14_LL video seems to be missing from that set. Please check which video is
@@ -157,8 +172,8 @@ the learner's order of steps is never an annotation problem.
 | `duplicate_task` | Two backups contain the same task; the first, in path order, is used |
 | `unrecognized_task_name` | Neither the task name nor the media file name gives a `PXX_VIEW` ID |
 | `placement_duplicate_paddle_box` | Two tracks of one paddle overlap during its placement (item 5); no placement is derived for it |
-| `placement_disagrees_with_tag` | A derived placement contradicts `first_paddle_firmly_on_the_chest` or `paddles_firmly_on_chest`; no placement is derived. Worth a look: either a tag or the boxes may be off |
+| `placement_disagrees_with_tag` | The derived apical placement contradicts `first_paddle_firmly_on_the_chest` (the apical placement, A-027), or a placement comes after `paddles_firmly_on_chest`; no placement is derived for that paddle. Worth a look: either a tag or the boxes may be off |
 | "refusing to write inside …data\video" | Choose an output folder outside `data/video/` |
 | "output folder is not empty" | Use a new run folder |
-| `"exporter_version": 1` or `2` in the manifest | An out-of-date checkout: no paddle visibility (1) or no derived gel (1 and 2). Pull `feature/rule-engine` and export again |
+| `"exporter_version": 1`, `2` or `3` in the manifest | An out-of-date checkout: no paddle visibility (1), no derived gel (1 and 2), or a gel phase that used the derived placements (3). Pull `feature/rule-engine` and export again |
 | `gel_hand_not_tracked` (export issues and the audit's review list) | No `learner_hand` box before the first paddle placement, so the gel can't be derived for that video. The hand holding the gel bottle should be tracked during gel application (A-024) |

@@ -32,6 +32,10 @@ becomes one timeline file in the format ``rules.run`` reads: ``{"header": ..., "
   its region (`apical_gel`, `sternal_gel`): gelled or not gelled -> covered (an application there
   would have been seen), unknown -> unknown. Before it, neither is passed on, and R1 uses the
   tag-count proxy (D-113).
+- **The two gates together (D-118):** the export's gel phase never uses 9c placements (the sternal
+  placement is unknown there). Only past the 9c gate does the adapter end the gel phase at the
+  earliest firm placement of either paddle (``gel_phase`` with the 9c placements), and then the
+  zones' gel status can only become more cautious (``zones_within_phase``).
 
 Exported records stay in the gitignored data folder and are never committed (D-084).
 """
@@ -45,7 +49,9 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from annotation.derive_gel_applications import GELLED, NOT_GELLED, derived_gel_approved
+from types import SimpleNamespace
+
+from annotation.derive_gel_applications import GELLED, NOT_GELLED, derived_gel_approved, gel_phase, zones_within_phase
 from annotation.derive_paddle_placements import derived_placements_approved
 from annotation.export_rule_engine_records import DEFAULT_CONFIG as DEFAULT_EXPORT_CONFIG, load_config as load_export_config
 from rules.config import DEFAULT_PATH, ROOT, load_rules_config
@@ -193,7 +199,12 @@ def adapt_record(record: dict[str, Any], rules_config, export_config, manifest: 
     confirmed = export_config.confirmed_not_visible(task)
     coverage, visibility, zones = {}, {}, []
     if gel_approved:   # each zone's gel status as the coverage of its region (D-111)
-        for zone in record["gel"]["zones"]:
+        gel_zones = record["gel"]["zones"]
+        if approved:   # D-118: past the 9c gate the gel phase ends at the earliest firm placement of either paddle
+            source = SimpleNamespace(tags=record["tags"], stop_frame=record["stop_frame"])
+            end, _ = gel_phase(source, export_config.gel, record["derived_events"])
+            gel_zones = zones_within_phase(record["gel"], gel_events, end)
+        for zone in gel_zones:
             if zone["region"] in rules_config.engine.regions:
                 status = COVERED if zone["status"] in (GELLED, NOT_GELLED) else UNKNOWN
                 coverage[f"region:{zone['region']}"] = status

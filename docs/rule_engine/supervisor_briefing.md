@@ -68,7 +68,8 @@ first paddle went on, R1 fails ("gel after placement"). One zone gelled and the 
 
 **R2 Second paddle taken after the first is placed** ([pathway table](pathways.md#p-032-r2-second-paddle-taken-after-the-first-is-placed-built-increment-11-pending-until-approved)).
 The paddle taken first, whichever it is, must be placed firmly before the other is taken. "First"
-is by time: the team's tag names say which paddle (apical or sternal), not the order (D-118). A
+is by time: under the team's working definition (A-027), `first_paddle_*` means the apical paddle and
+`second_paddle_*` the sternal paddle, so the tag names say which paddle, never the order (D-118). A
 learner who starts with the sternal paddle but handles one paddle at a time passes R2; R8 reports
 the order.
 - Taking the second paddle at the same moment as placing the first fails ("simultaneous");
@@ -84,15 +85,14 @@ the order.
 - **Both placements seen:** they are compared directly. Sternal first is "wrong order", and both
   together is "simultaneous".
 - **Only one zone in view:** Unable to Verify. Which paddle went first can't be established from
-  one zone. (An earlier version inferred it from the first-placement tag, but the team labels that
-  tag as the apical paddle, so the inference could pass a learner who placed the sternal paddle
-  first.)
+  one zone. (An earlier version inferred it from the first-placement tag, but under the team's
+  working definition that tag is the apical paddle's placement, so the inference could pass a
+  learner who placed the sternal paddle first.)
 - **Both paddles placed together:** both R2 and R8 fail, marked as one cause.
 - **On the annotations so far:** R8 has no direct evidence yet. Its placements come from the
-  paddle and zone boxes (Step 9c), and at the current setting (a paddle counts as placed when half
-  of its box is inside its zone) no placement is found in any of the 38 interim videos. The most
-  any paddle box reaches is 0.29 inside its zone. For the same reason, R2 can't detect a parallel
-  placement yet. The setting is to be calibrated (OQ-018).
+  paddle and zone boxes (Step 9c), whose settings are still placeholders to be set later (OQ-018),
+  and they are used only after my review. For the same reason, R2 can't detect a parallel
+  placement yet.
 
 **R3 Paddles placed firmly on the chest** ([diagram](diagrams.md#l-r3-paddles-placed-firmly-on-the-chest-p-035-built-in-increment-15-pending-until-approved)).
 - **Pass:** both paddles seen firmly on the chest before the shock shown on the screen.
@@ -137,7 +137,7 @@ the order.
 | **New rule R8: apical paddle before sternal** (D-052). Judged only when both placements are seen; with one zone in view it is Unable to Verify (D-116) | It is a taught step |
 | **New rule A8: pre-shock pause** from "stop CPR" to "start CPR" at most **5 s**, approved by you (D-016) | A taught limit on the pause in compressions |
 | **R7 and A6 are one check**, reported under both IDs and counted as one mistake (D-044) | They describe the same step |
-| **A7 checks the command order only.** A missing command is reported by its own rule, not again by A7. "Stop" before "continue" is A4's mistake only (D-027) | One mistake is reported once |
+| **A7 checks the command order only.** A missing command is reported by its own rule, not again by A7. "Stop" before "continue" is A4's mistake only (D-027) | A mistake in one step is never used as evidence of a mistake in another step (D-119) |
 | **R3 does not yet judge "paddle outside its zone"** (D-106) | The chest regions are not approved yet (OQ-012) |
 | **A parallel placement fails both R2 and R8,** marked as one cause (D-098) | They are separate checklist items, but the feedback should say one action caused both (OQ-059) |
 
@@ -172,11 +172,12 @@ Each question shows what the system does until it is answered.
   - *Until then:* passes.
 
 ### R2 and R8 Paddle order
-- **OQ-059: parallel placement.** Both paddles placed together fails R2 and R8. One mistake or
-  two?
+- **OQ-059: parallel placement.** Both paddles placed together fails R2 and R8, each on its own
+  evidence (D-119). One mistake or two?
   - *Until then:* two, marked as one cause.
-- **OQ-006: fallback.** May "the first paddle taken is the apical one" ever be assumed as a last
-  resort, when no placement can be seen at all?
+- **OQ-006: fallback.** May "the paddle taken first was also placed first" ever be assumed as a
+  last resort, when no placement can be seen at all? Since the tags say which paddle is which
+  (A-027), it would apply only when the apical paddle was taken first (D-118).
   - *Until then:* off.
 - **OQ-022: paddle lifted and placed again before the shock.** Acceptable or a mistake? Which
   placement counts?

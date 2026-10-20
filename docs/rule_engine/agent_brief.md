@@ -111,9 +111,10 @@ Notes:
   exactly like a missed gel application. Do not use `critical_error` to grade mistakes.
 - **Every rule is always evaluated.** Never stop at the first failure; feedback needs all
   results.
-- **One mistake is reported once.** If a rule cannot be judged because something it depends
-  on is missing (for example, no confirmed shock), it reports "not evaluable because of X"
-  rather than a second Fail.
+- **A mistake in one step is never used as evidence of a mistake in another step.** A step fails
+  only when its own evidence shows a mistake. If it cannot be judged because a step it depends on
+  failed or was not observed, it is reported as "Not evaluable because of X", and every part of it
+  that can still be judged is checked (D-119).
 - **Never blame the learner for missing data.** Fail only when evidence clearly shows the
   mistake. Missing or unclear evidence gives Unable to Verify.
 - **Overall result:** any Fail → Fail. No Fail but at least one Unable to Verify → a

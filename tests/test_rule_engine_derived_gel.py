@@ -13,9 +13,11 @@ from annotation.derive_gel_applications import (
     GelReview,
     derive_gel,
     derived_gel_approved,
+    gel_phase,
     gel_validation_markdown,
     gel_validation_summary,
     load_gel_settings,
+    zones_within_phase,
 )
 from annotation.export_rule_engine_records import DEFAULT_CONFIG, VideoInfo, load_config
 
@@ -64,9 +66,9 @@ def video(tracks, tags=(("first_paddle_firmly_on_the_chest", 80),), stop=99):
                            standalone_shapes=[])
 
 
-def run(source, settings=SETTINGS, placements=()):
+def run(source, settings=SETTINGS):
     issues = []
-    events, record, rows = derive_gel(source, VIDEO, settings, list(placements), issues)
+    events, record, rows = derive_gel(source, VIDEO, settings, issues)
     return events, {z["zone_label"]: z for z in record["zones"]}, {r["zone"]: r for r in rows}, issues, record
 
 
@@ -178,32 +180,62 @@ class GelPhase(unittest.TestCase):
         _, _, _, _, record = run(video([*zones(), hand((20, 35, beside_apical(0)))]))
         self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (80, "first_paddle_firmly_on_the_chest"))
 
-    def test_else_at_the_derived_placement_else_at_first_paddle_taken(self):
+    def test_else_at_first_paddle_taken_else_at_the_end_of_the_recording(self):
         tracks = [*zones(), hand((20, 35, beside_apical(0)))]
-        _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75)]),
-                                 placements=[{"frame": 60, "event_name": "sternal_paddle_placed"}])
-        self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (60, "derived placement"))
         _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75)]))
         self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (75, "first_paddle_taken"))
         _, _, _, _, record = run(video(tracks, tags=[]))
         self.assertEqual(record["phase"]["ended_by"], "end of recording")
 
-    def test_the_earliest_placement_of_either_paddle_ends_it(self):
-        """D-118: a sternal placement before the apical tag ends the phase; the apical tag wins over the
-        derived apical placement; with only takes, the earliest take of either paddle ends it."""
+    def test_the_export_never_uses_9c_placements(self):
+        """D-118: the export doesn't depend on the 9c gate; the sternal placement is unknown in it, so a phase
+        that may have ended earlier is flagged. With only takes, the earliest take of either paddle ends it."""
         tracks = [*zones(), hand((20, 35, beside_apical(0)))]
-        sternal_first = [{"frame": 50, "event_name": "sternal_paddle_placed"}, {"frame": 78, "event_name": "apical_paddle_placed"}]
-        _, _, _, _, record = run(video(tracks), placements=sternal_first)          # T1 at 80
-        self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (50, "derived placement"))
-        _, _, _, _, record = run(video(tracks), placements=[{"frame": 70, "event_name": "apical_paddle_placed"}])
-        self.assertEqual(record["phase"]["end_frame"], 80)                          # the tag, not the derived 70
+        _, _, _, _, record = run(video(tracks, tags=[("second_paddle_taken", 40), ("first_paddle_firmly_on_the_chest", 80)]))
+        self.assertEqual((record["phase"]["end_frame"], record["phase"]["certain"], record["phase"]["unknown_from_frame"],
+                          record["phase"]["flags"]), (80, False, 40, ["placement_time_unknown"]))
+        _, _, _, _, record = run(video(tracks, tags=[("first_paddle_firmly_on_the_chest", 80), ("second_paddle_taken", 90)]))
+        self.assertEqual((record["phase"]["certain"], record["phase"]["flags"]), (True, []))
         _, _, _, _, record = run(video(tracks, tags=[("first_paddle_taken", 75), ("second_paddle_taken", 65)]))
         self.assertEqual((record["phase"]["end_frame"], record["phase"]["ended_by"]), (65, "second_paddle_taken"))
+
+    def test_past_the_9c_gate_the_earliest_placement_of_either_paddle_ends_it(self):
+        """gel_phase with the 9c placements (the adapter, past the 9c gate): a sternal placement before the
+        apical tag ends the phase; the apical tag wins over the derived apical placement."""
+        source = video([], tags=[("first_paddle_taken", 20), ("first_paddle_firmly_on_the_chest", 80)])
+        sternal_first = [{"frame": 50, "event_name": "sternal_paddle_placed"}, {"frame": 78, "event_name": "apical_paddle_placed"}]
+        self.assertEqual(gel_phase(source, SETTINGS, sternal_first), (50, "derived placement"))
+        self.assertEqual(gel_phase(source, SETTINGS, [{"frame": 70, "event_name": "apical_paddle_placed"}]),
+                         (80, "first_paddle_firmly_on_the_chest"))
+        self.assertEqual(gel_phase(source, SETTINGS), (80, "first_paddle_firmly_on_the_chest"))
 
     def test_an_application_after_the_gel_phase_is_not_derived(self):
         events, _, _, _, _ = run(video([*zones(), hand((20, 35, beside_apical(0)), end=90)],
                                        tags=[("first_paddle_firmly_on_the_chest", 18)]))
         self.assertEqual(events, [])
+
+
+class ZonesWithinAnEarlierPhase(unittest.TestCase):
+    """D-118: when the adapter ends the phase earlier (past the 9c gate), the zones only become more cautious."""
+    GEL = {"phase": {"end_frame": 80}, "bottle": {"start_frame": 20},
+           "zones": [{"zone_label": APICAL, "event": "apical_gel_applied", "status": "gelled", "reason": ""},
+                     {"zone_label": STERNAL, "event": "sternal_gel_applied", "status": "not_gelled", "reason": ""}]}
+
+    def test_gelled_with_no_application_by_the_new_end_is_unknown(self):
+        zones = zones_within_phase(self.GEL, [{"event_name": "apical_gel_applied", "frame": 60}], 50)
+        self.assertEqual([z["status"] for z in zones], ["unknown", "not_gelled"])
+        self.assertIn("only after the gel phase ends at frame 50", zones[0]["reason"])
+
+    def test_an_application_by_the_new_end_keeps_it_gelled(self):
+        zones = zones_within_phase(self.GEL, [{"event_name": "apical_gel_applied", "frame": 30}], 50)
+        self.assertEqual([z["status"] for z in zones], ["gelled", "not_gelled"])
+
+    def test_the_bottle_hand_only_after_the_new_end_makes_every_zone_unknown(self):
+        zones = zones_within_phase(self.GEL, [{"event_name": "apical_gel_applied", "frame": 30}], 15)
+        self.assertEqual([z["status"] for z in zones], ["unknown", "unknown"])
+
+    def test_no_earlier_end_changes_nothing(self):
+        self.assertEqual(zones_within_phase(self.GEL, [], 80), self.GEL["zones"])
 
 
 class TagAgreement(unittest.TestCase):

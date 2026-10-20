@@ -63,6 +63,7 @@ flowchart TD
 The rule runner (P-026, Increment 7) and the shared checks (P-019 to P-025, Increment 6) are
 **built**; the individual rules that use them come in Increments 11 to 23. Times on the ladder are
 compared with P-025, and time limits with P-024 (timing not checked when there is no limit).
+**Dependency policy (D-119):** A mistake in one step is never used as evidence of a mistake in another step. A step fails only when its own evidence shows a mistake. If it cannot be judged because a step it depends on failed or was not observed, it is reported as 'Not evaluable because of X', and every part of it that can still be judged is checked.
 
 ```mermaid
 flowchart TD
@@ -131,8 +132,10 @@ flowchart TD
 
 ## (f) R8: apical before sternal (P-015, built in Increment 12; pending until approved)
 
-Zones count as visible when covered over the placement phase, from the first paddle taken to
-paddles firmly on chest (D-092, D-099). Derived placements reach R8 only past the gate (D-088).
+Paddle tags follow the team's working definition (A-027): `first_paddle_*` is the apical paddle and
+`second_paddle_*` the sternal paddle; the order comes from the event times (D-118). Zones count as
+visible when covered over the placement phase, from the earliest take of either paddle to paddles
+firmly on chest (D-092, D-099). Derived placements reach R8 only past the gate (D-088).
 A parallel placement fails R2 as well, separately, with the same cause flag (D-098). With only
 one zone in view the order can't be established: there is no one-zone inference (D-116).
 
@@ -254,7 +257,8 @@ flowchart TD
 ## (j) Derived per-paddle placement (P-031, Step 9c; D-081, D-086 to D-088, D-090, D-091)
 
 Built in the exporter, per paddle **label** across all its tracks (D-087). T1 is
-`first_paddle_firmly_on_the_chest` and T2 is `paddles_firmly_on_chest` (A-019). Settings are
+`first_paddle_firmly_on_the_chest` (the apical paddle's placement under the team's working
+definition, A-027) and T2 is `paddles_firmly_on_chest` (A-019). Settings are
 placeholders.
 
 ```mermaid
@@ -334,7 +338,7 @@ flowchart TD
     I -->|yes| P3["Pass – Inferred<br/>from the shock"]
     I -->|no| W{"Low-confidence<br/>firm placement?"}
     W -->|yes| U1["Unable to Verify"]
-    W -->|no| Z{"Both placement zones visible<br/>first paddle taken → shock?"}
+    W -->|no| Z{"Both placement zones visible<br/>earliest take of either paddle → shock?<br/>(by time, D-118)"}
     Z -->|yes| F2["Fail missing"]
     Z -->|"no (e.g. one paddle visible,<br/>no tag then, A-019)"| U2["Unable to Verify"]
 ```
@@ -369,11 +373,12 @@ flowchart TD
 ## (n) Step 9d: derived per-zone gel application (P-037; D-111, D-112)
 
 Built in the rule engine's exporter from the `learner_hand` box (the bottle hand only, A-024) and
-the zone boxes. Settings are placeholders.
+the zone boxes. Settings are placeholders. The export never uses 9c placements; only past the 9c
+gate does the adapter end the gel phase at the earliest 9c placement (D-118).
 
 ```mermaid
 flowchart TD
-    PH["Gel phase: start → earliest firm placement<br/>of either paddle (apical tag, 9c sternal placement),<br/>else the earliest take of either paddle (D-118)"] --> H{"learner_hand box<br/>in the gel phase?"}
+    PH["Gel phase (export): start → the apical tag,<br/>else the earliest take of either paddle (D-118);<br/>placement_time_unknown when the sternal<br/>placement could have been earlier"] --> H{"learner_hand box<br/>in the gel phase?"}
     H -->|no| NH["Every zone unknown<br/>gel_hand_not_tracked"]
     H -->|yes| B["Bottle period: the hand box's<br/>first to last frame"]
     B --> F["Each frame: gap from the hand box to<br/>each visible zone box (over the diagonal)"]
@@ -394,7 +399,10 @@ flowchart TD
     G1 --> GATE{"9d gate: reviewed for this<br/>export_id and gel settings?"}
     G2 --> GATE
     G3 --> GATE
-    GATE -->|yes| USE["Adapter: events + gel regions<br/>(gelled/not gelled covered, unknown unknown)"]
+    GATE -->|yes| C9{"9c gate approved too?"}
+    C9 -->|yes| CUT["Adapter: the phase ends at the earliest<br/>firm placement of either paddle;<br/>zones only more cautious (D-118)"]
+    C9 -->|no| USE["Adapter: events + gel regions<br/>(gelled/not gelled covered, unknown unknown)"]
+    CUT --> USE
     GATE -->|no| HOLD["Kept in records.jsonl;<br/>R1 uses the tag-count proxy"]
 ```
 

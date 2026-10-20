@@ -270,6 +270,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** R2, R8; the overall result's list of mistakes; the feedback.
 - **Interim behaviour:** Two mistakes, both flagged `possible_parallel_placement`, so the
   feedback module can explain that one action caused both.
+- **Update 2026-10-20 (D-119):** both failures follow directly from the dependency policy: each
+  rule fails on its own evidence, so this is no longer an exception. Left open for the supervisor:
+  whether the overall list of mistakes should count them as one.
 
 ### OQ-001 Final policy when coverage is unknown
 - **Old no.:** E-1 · **Owner:** team · **Also involves:** supervisor (whether unverifiable
@@ -301,9 +304,12 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   fallback ever be switched on?
 - **Affects:** R8; P-015.
 - **Interim behaviour:** 0.5 s (placeholder, A-002). The fallback is off (D-014).
+- **Update 2026-10-19 (D-118):** the takes say which paddle is which (A-027), so the paddle taken
+  first is known by time. The fallback, if switched on, assumes only that it was also placed first,
+  and applies only when it is the apical paddle.
 - **Update 2026-10-19 (D-116):** the first part no longer applies: R8 has no one-zone inference,
   and `placement_match_window_seconds` is removed. The fallback question remains. Note that under
-  the team's labelling (A-027) "the first paddle taken" is the apical paddle by definition, so the
+  the team's working definition (A-027) "the first paddle taken" is the apical paddle by definition, so the
   fallback would always say "apical first"; it stays off.
 
 ### OQ-036 Evaluator checklist format and its mapping to rules
@@ -437,7 +443,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   `gel_zone_nearer_ratio` (2.0), `gel_exit_frames` (5), `gel_tag_agreement_frames` (30), to be tuned
   from `gel_validation.md` of the final export.
 - **`gel_minimum_gap_seconds`, set to 0.4 s (Arnikan, 2026-10-17; still a placeholder):**
-  - **Why lower:** on the interim export, 6 of the 10 videos where the R1 proxy found one
+  - **Why lower** (interim, partial backups, not representative): on the interim export, 6 of the 10 videos where the R1 proxy found one
     application had two gel tags 0.5–0.97 s apart, which the 1.0 s placeholder merged. They are
     probably one application per zone.
   - **Why not lower still:** the true duplicates found by the audit were within about 0.5 s
@@ -447,10 +453,15 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   - **Still to review:** P12_LS's pair (exactly 0.5 s apart, on the audit's duplicate list) now
     counts as two; Arnikan reviews it with P03_LS and the four single-tag videos (progress.md,
     Increment 17).
-- **9c `min_overlap_of_paddle` (2026-10-19, D-118):** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). Until it is
-  calibrated, R8 has no direct evidence on the annotations and R2 can't detect a parallel
-  placement. The value is Arnikan's to choose after a calibration against the apical tag.
-- **R6 screen delay (2026-10-17, D-105):** on the interim export, the removal tag came after the
+- **9c placement settings (2026-10-19, D-118; not decided):** `min_overlap_of_paddle` is "the share
+  of the paddle box inside its zone". When zone boxes are drawn much smaller than paddle boxes, that
+  share can't reach the threshold, and "the share of the zone covered by the paddle" may be the
+  better measure. The stability settings (`steady_frames`, `max_centre_motion_of_diagonal`) then
+  decide between a paddle placed on its zone and one passing over it. All stay placeholders; the
+  values are set later, on representative data. They apply to annotator-drawn boxes only and must
+  not be reused for model output. Until then, and until the 9c gate is approved, R8 has no direct
+  evidence on the annotations and R2 can't detect a parallel placement.
+- **R6 screen delay (2026-10-17, D-105; interim, partial backups, not representative):** on the interim export, the removal tag came after the
   shock on the screen in all 20 LS/T videos with both tags (0.13 to 1.40 s, median 0.88 s), so the
   data doesn't bound the tolerance. Placeholder 0.5 s for now.
 

@@ -142,10 +142,11 @@ decision_points:
     stage: annotation_export
     status: built
     decides: Whether the exporter derives apical_gel_applied / sternal_gel_applied from the learner_hand and zone boxes, and each zone's gel status (gelled, not gelled, unknown) (Step 9d; D-111)
-    inputs: [learner_hand boxes, zone boxes, tags first_paddle_firmly_on_the_chest, first_paddle_taken and Gel applied, the 9c placements of the same export]
+    inputs: [learner_hand boxes, zone boxes, tags first_paddle_firmly_on_the_chest, first_paddle_taken, second_paddle_taken and Gel applied; the 9c placements only in the adapter, past the 9c gate (D-118)]
     branches:
       - condition: Gel phase
-        outcome: From the start of the recording to the earliest firm placement of either paddle (T1 for the apical paddle, winning over its 9c placement; the 9c sternal placement), else the earliest take of either paddle, else the end of the recording (D-118); 9d's settings hash includes 9c's
+        outcome: In the export, from the start of the recording to first_paddle_firmly_on_the_chest (the apical placement, A-027), else the earliest take of either paddle, else the end of the recording (paddle_timing, D-118); the export never uses 9c placements, so the phase is flagged when the sternal placement could have been earlier; 9d's settings hash includes 9c's
+        flags: [placement_time_unknown]
       - condition: A frame where the hand box is within gel_hand_zone_max_gap of a zone box (gap between the boxes over the frame diagonal; proximity, not overlap) and the other visible zone is at least gel_zone_nearer_ratio times further
         outcome: The frame belongs to the nearer zone; about as near to both -> ambiguous, belongs to neither
       - condition: A visit (that zone's frames, dips of up to gel_exit_frames allowed) with at least gel_dwell_frames frames
@@ -162,8 +163,10 @@ decision_points:
         outcome: Reported in gel_validation.csv/.md; the event is kept
       - condition: 9d gate record missing, or for another export_id or other gel settings
         outcome: The Increment 10 adapter passes on neither the events nor the zone statuses; R1 uses the tag-count proxy (D-112)
+      - condition: Past the 9d gate, and the 9c gate approved too
+        outcome: The adapter ends the gel phase at the earliest firm placement of either paddle (gel_phase with the 9c placements); a zone can only become more cautious - gelled with no application by then, or the bottle hand only after it -> unknown; not gelled stays (zones_within_phase, D-118)
     config: [annotation_export.yaml derived_gel (hand_label, zones, gel_tag, gel_hand_zone_max_gap, gel_dwell_frames, gel_zone_nearer_ratio, gel_exit_frames, gel_tag_agreement_frames, reviewed_for_r1)]
-    code: annotation/derive_gel_applications.py (derive_gel, derived_gel_approved), called by annotation/export_rule_engine_records.py; annotation/audit_rule_engine_checks.py (gel_hand_not_tracked)
+    code: annotation/derive_gel_applications.py (derive_gel, gel_phase_timing, zones_within_phase, derived_gel_approved), called by annotation/export_rule_engine_records.py and rules/adapters/annotation.py; rules/paddle_timing.py (paddle_timing); annotation/audit_rule_engine_checks.py (gel_hand_not_tracked)
     decisions: [D-073, D-085, D-111, D-112, D-118]
     assumptions: [A-023, A-024, A-025]
     open_questions: [OQ-018, OQ-021]
@@ -282,7 +285,7 @@ decision_points:
       - condition: First placement not seen; a zone not visible throughout that window (partly, never, or unknown)
         outcome: Unable to Verify
     config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
-    code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order)
+    code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order), rules/paddle_timing.py (paddle_timing)
     decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118]
     assumptions: [A-019, A-027]
     open_questions: [OQ-059]
@@ -647,7 +650,7 @@ decision_points:
       - condition: Rule not approved (pending)
         outcome: Reported as pending; the overall result cannot be Pass (P-017)
       - condition: A rule-result dependency failed or could not be evaluated
-        outcome: Not evaluable because of that rule (one mistake reported once)
+        outcome: Not evaluable because of that rule; a mistake in one step is never evidence of a mistake in another (D-119); every part that can still be judged is checked
       - condition: Required facts absent (e.g. no shock time)
         outcome: Not evaluable because of the step that provides them, with its flags
       - condition: Restart needed (R7/A6, A8) but timing-ambiguous commands exist (Anchor.ambiguous - no shock time, D-054)
@@ -676,7 +679,7 @@ decision_points:
     stage: rule
     status: built
     decides: Which paddle was placed first (Increment 12); runs only when R8 is approved in rules.yaml, pending until the supervisor confirms its definition
-    inputs: [apical and sternal placement anchors (derived placements only past the gate), zone coverage over the placement phase (D-099)]
+    inputs: [apical and sternal placement anchors (derived placements only past the gate), zone coverage over the placement phase (D-099; from the earliest take of either paddle, by time, D-118), paddle_order]
     branches:
       - condition: Derived placements flagged possible_parallel_placement (past the gate)
         outcome: Fail simultaneous, with the shared cause flag; R2 fails too, separately, not as a dependency (D-091, D-098)
@@ -690,15 +693,17 @@ decision_points:
         outcome: Unable to Verify, not wrong_order; R3 reports the missing placement
         flags: [placement_missing]
       - condition: One placement observed, the other paddle's zone not visible during the placement phase
-        outcome: Unable to Verify; no inference - the first-placement tag is the apical placement under the team's labelling (A-027), so comparing with it would be circular (D-116)
+        outcome: Unable to Verify; no inference - the first-placement tag is the apical placement under the team's working definition (A-027), so comparing with it would be circular (D-116)
         flags: [one_zone_in_view]
       - condition: Not determinable (no placement observed and no zone visible), fallback off (default)
         outcome: Unable to Verify
-      - condition: Not determinable, fallback on (assume_first_taken_is_apical)
-        outcome: Result assumed (apical first), to be checked by the evaluator; the overall result cannot be Pass (D-014, D-060)
+      - condition: Not determinable, fallback on (assume_first_taken_is_apical), the apical paddle taken first (by time)
+        outcome: Result assumed (apical first), to be checked by the evaluator; the overall result cannot be Pass (D-014, D-060, D-118)
+      - condition: Not determinable, fallback on, the sternal paddle taken first or the order of the takes unknown
+        outcome: Unable to Verify; the fallback doesn't apply (D-118)
     config: [engine.yaml simultaneous_window_seconds, engine.yaml assume_first_taken_is_apical]
     code: rules/video_rules.py (apical_before_sternal)
-    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116]
+    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118]
     assumptions: [A-009, A-027]
     open_questions: [OQ-004, OQ-006, OQ-059]
 
@@ -728,7 +733,7 @@ decision_points:
     stage: rule
     status: built
     decides: R3's result (Increment 15); runs only when R3 is approved in rules.yaml, pending until the supervisor confirms its definition. Placement timing and presence only; not_in_zone is not produced until the chest regions are approved (OQ-012, D-106)
-    inputs: [paddles_firmly_on_chest tags, derived placements (past the gate), shock anchor (screen only, D-093), R3 inference_sources (rules.yaml), placement zone coverage over first paddle taken .. shock]
+    inputs: [paddles_firmly_on_chest tags, derived placements (past the gate), shock anchor (screen only, D-093), R3 inference_sources (rules.yaml), placement zone coverage over the earliest take of either paddle (by time, D-118) .. shock]
     branches:
       - condition: Shock time; a paddles_firmly_on_chest tag at or before the shock (within simultaneous_window_seconds after it counts as at it)
         outcome: Pass – Direct
@@ -747,7 +752,7 @@ decision_points:
       - condition: No inference; a low-confidence paddles_firmly_on_chest
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
-      - condition: No inference; both placement zones visible throughout first paddle taken .. shock (the recording's start when first paddle taken is missing)
+      - condition: No inference; both placement zones visible throughout the earliest take of either paddle (by time, D-118) .. shock (the recording's start when neither take is known)
         outcome: Fail missing
         failure_codes: [missing]
       - condition: No inference; a zone not visible throughout that window (for example only one paddle visible, when the tag is not made, A-019)
@@ -758,7 +763,7 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_firmly_on_chest)
-    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115]
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118]
     assumptions: [A-019]
     open_questions: [OQ-012, OQ-022, OQ-061]
 
@@ -929,7 +934,7 @@ decision_points:
         outcome: Go on
         next: P-020
       - condition: A rule it depends on failed, was unable to verify, not evaluable, pending or assumed
-        outcome: Not evaluable because of that rule (one mistake reported once)
+        outcome: Not evaluable because of that rule; a mistake in one step is never evidence of a mistake in another (D-119); every part that can still be judged is checked
     config: [configs/rules.yaml depends_on]
     code: rules/checks.py (depends)
     decisions: [D-003, D-006]

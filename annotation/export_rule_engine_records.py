@@ -67,7 +67,9 @@ DEFAULT_CONFIG = ROOT / "configs/rule_engine/annotation_export.yaml"
 DEFAULT_ENGINE_CONFIG = ROOT / "configs/rule_engine/engine.yaml"   # simultaneous_window_seconds (9c)
 DEFAULT_CONVERSION_REPORT = ROOT / "annotation/reports/phase4/video_conversion.csv"
 TRAINING_DATA = ROOT / "data/video"
-EXPORTER_VERSION = 3   # 2: paddle_tracks and paddle_visibility (R4, D-108); 3: derived gel applications (9d, D-111)
+EXPORTER_VERSION = 4   # 2: paddle_tracks and paddle_visibility (R4, D-108); 3: derived gel applications (9d, D-111)
+# 4: the 9d gel phase never uses 9c placements (the adapter applies them past the 9c gate) and records
+#    whether its end is certain (D-118)
 RECORD_KIND = "rule_engine_annotation_record"
 TASK_ID = re.compile(r"^P\d{2}_(LL|LS|T)$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -372,7 +374,7 @@ def export_record(source: TaskSource, videos: dict[str, VideoInfo], config: Expo
     derived, rows = derive_placements(source, video, config.placements, issues)
     if validation is not None:
         validation.extend(rows)
-    gel_events, gel, gel_rows = derive_gel(source, video, config.gel, derived, issues)
+    gel_events, gel, gel_rows = derive_gel(source, video, config.gel, issues)
     if gel_validation is not None:
         gel_validation.extend(gel_rows)
     return {

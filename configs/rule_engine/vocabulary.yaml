@@ -19,6 +19,9 @@ events:
   gel_applied:                   {modality: video, description: Gel applied}
   apical_gel_applied:            {modality: video, description: Gel applied to the apical zone (left side of the ribs)}
   sternal_gel_applied:           {modality: video, description: Gel applied to the sternal zone (on the chest)}
+  # Paddle tags: under the team's working definition (A-027) first_paddle_* means the apical paddle and
+  # second_paddle_* the sternal paddle. The names give identity only, never time order: the rules
+  # compute the order from the event times (D-118). The descriptions keep the original wording.
   first_paddle_taken:            {modality: video, description: First frame where the first paddle is clearly visible}
   first_paddle_placed:           {modality: video, description: First paddle placed firmly on the chest}
   second_paddle_taken:           {modality: video, description: First frame where the second paddle is clearly visible}
@@ -38,6 +41,7 @@ events:
 labels:
   annotation:
     - {label: Gel applied,                      event: gel_applied}
+    # first_paddle_* = the apical paddle, second_paddle_* = the sternal paddle (A-027); identity, not order (D-118)
     - {label: first_paddle_taken,               event: first_paddle_taken}
     - {label: first_paddle_firmly_on_the_chest, event: first_paddle_placed}
     - {label: second_paddle_taken,              event: second_paddle_taken}
@@ -68,6 +72,7 @@ labels:
     - {label: gel_applied,                 event: gel_applied}
     - {label: apical_gel_applied,          event: apical_gel_applied}
     - {label: sternal_gel_applied,         event: sternal_gel_applied}
+    # first_paddle_* = the apical paddle, second_paddle_* = the sternal paddle (A-027); identity, not order (D-118)
     - {label: first_paddle_taken,          event: first_paddle_taken}
     - {label: first_paddle_placed,         event: first_paddle_placed}
     - {label: second_paddle_taken,         event: second_paddle_taken}

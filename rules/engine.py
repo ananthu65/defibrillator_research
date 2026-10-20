@@ -7,7 +7,8 @@ shared RuleResult list that pipeline/run.py expects.
 
 Every rule is always evaluated (D-002). Pending rules are reported as pending (D-043). A rule
 reusing another's check (same_as) reports that rule's outcome under its own ID (D-044). A rule
-whose dependencies did not pass is not evaluable because of them (D-003). A registered rule that
+whose dependencies did not pass is not evaluable because of them (D-119: a step fails only on its
+own evidence). A registered rule that
 raises, or returns something invalid, is recorded as engine_error and never stops the other
 rules (D-063).
 """

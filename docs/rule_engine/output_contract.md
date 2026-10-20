@@ -37,8 +37,8 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 9 | 2026-10-17 | **Failure code added** (R1): `after_placement`, gel applied only after the first paddle placement (D-109). **Rule flag added:** `derived_gel_application`, a result resting on a gel application derived from the boxes (D-111). **New regions:** `apical_gel` and `sternal_gel` (whether gel on that zone could have been seen; set only past the 9d gate, D-112) appear in `context.zone_visibility` and `context.header.coverage`. **Meaning changed:** R1's `applied_once` and `missing` are now per zone (one gel application on each placement zone, D-110). R1 is implemented (Increment 17), so `applied_once`, `outside_time_period` and `missing` (R1) are built. R1 still reports `pending` until it is approved |
 | 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
 | 11 | 2026-10-19 | **Three flags removed** (D-115): `shock_time_from_removal` and `command_before_removal` (the shock time is never taken from the paddle removal; the `shock_time_fallback` setting is gone) and `inferred_from_removal` (R3 and R4 no longer infer from the removal: it doesn't show that a shock was delivered). R3 and R4 infer only from the shock on the screen; without a shock time they are Not evaluable because of R5 |
-| 12 | 2026-10-19 | **Rule flag removed:** `inferred_fail_policy_undecided`. **Rule flag added:** `one_zone_in_view` (R8). R8 has no one-zone inference any more: with only one zone in view it is Unable to Verify, never Pass – Inferred, because the first-placement tag is the apical placement under the team's labelling (A-027, D-116). **Meaning changed:** `contradictory` now comes from R4 only; R8's `wrong_order` only from two observed placements. The settings `inferred_fail_outcome` and `placement_match_window_seconds` no longer appear in `configuration` |
-| 13 | 2026-10-19 | **Rule flags added:** `placement_time_unknown` (R2, R1) and `take_order_from_placement` (R2). Both paddles taken within `simultaneous_window_seconds` fail R2 `simultaneous`, whichever is named first. Paddle order now comes from event times, never from the tag names (A-027, D-118). **Meaning changed:** R2 judges the paddle taken first, whichever it is (a sternal-first learner handling one paddle at a time passes R2); R1's gel phase ends at the earliest firm placement of either paddle |
+| 12 | 2026-10-19 | **Rule flag removed:** `inferred_fail_policy_undecided`. **Rule flag added:** `one_zone_in_view` (R8). R8 has no one-zone inference any more: with only one zone in view it is Unable to Verify, never Pass – Inferred, because the first-placement tag is the apical placement under the team's working definition (A-027, D-116). **Meaning changed:** `contradictory` now comes from R4 only; R8's `wrong_order` only from two observed placements. The settings `inferred_fail_outcome` and `placement_match_window_seconds` no longer appear in `configuration` |
+| 13 | 2026-10-19 | **Rule flags added:** `placement_time_unknown` (R2, R1) and `take_order_from_placement` (R2). Both paddles taken within `simultaneous_window_seconds` fail R2 `simultaneous`, whichever is named first. Paddle order now comes from event times, never from the tag names (A-027, D-118). **Meaning changed:** R2 judges the paddle taken first, whichever it is (a sternal-first learner handling one paddle at a time passes R2); R1's gel phase ends at the earliest firm placement of either paddle. R3's missing-placement window and R8's placement phase start at the earliest take of either paddle; R8's off-by-default fallback applies only when the apical paddle was taken first |
 
 ## How to get the report
 
@@ -156,6 +156,11 @@ the restart command at 33 s, and there was no "oxygen away" command.
 }
 ```
 
+### Paddle tag names (A-027)
+
+Under the team's working definition (A-027), `first_paddle_*` means the apical paddle and `second_paddle_*` the sternal paddle. The names give identity only. Every
+"first" or "second" in a reason, a code or a flag is by time, computed from the event times (D-118).
+
 ## Overall results
 
 | Result | Status | Meaning for feedback |
@@ -174,7 +179,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 | `pass_inferred` | `pass_inferred` | decided | Accepted through an approved inference (for example R3 from the shock on the screen); `evidence` names the supporting event |
 | `fail` | `fail` | decided | The evidence clearly shows the mistake; `failure_code` names it |
 | `unable_to_verify` | `unable_to_assess` | decided | The evidence is missing, unclear or low-confidence; not the learner's fault (D-004) |
-| `not_evaluable` | `unable_to_assess` | decided | Could not be judged because of another step; `blocked_by` names it (one mistake reported once, D-003) |
+| `not_evaluable` | `unable_to_assess` | decided | Could not be judged because of another step; `blocked_by` names it. A step fails only on its own evidence, and every part that can still be judged is checked (D-119) |
 | `pending` | `unable_to_assess` | decided | The rule is not yet approved by the supervisor |
 | `assumed` | `unable_to_assess` | decided | R8 by the apical-first fallback: to be checked by the evaluator (D-060) |
 | `engine_error` | `unable_to_assess` | decided | The rule crashed; `reason` holds the error. A software problem, never feedback for the learner (D-063) |
@@ -246,8 +251,8 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `after_placement` | built (R1, v9) | R1 | Gel applied only after the first paddle was placed. A shock without gel harms the patient (D-109) |
 | `outside_time_period` | built (R1) | R1 | The two gel applications were further apart than the approved period (unset now, so not produced yet) |
 | `simultaneous` | built (R2, R8) | R2, R8 | Two actions happened at the same time where order matters. A parallel placement gives it on **both** R2 and R8, each carrying the cause flag `possible_parallel_placement` (D-091, D-098) |
-| `taken_before_first_placed` | built (R2) | R2 | The second paddle was taken before the first was placed |
-| `first_placement_not_observed` | built (R2, v4) | R2 | No first placement was seen between taking the first and the second paddle, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
+| `taken_before_first_placed` | built (R2) | R2 | The other paddle was taken before the paddle taken first (by time, whichever it is) was placed (D-118) |
+| `first_placement_not_observed` | built (R2, v4) | R2 | The apical paddle was taken first, and no placement of it was seen between the two takes, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
 | `wrong_order` | built (R5, R8; A4, A7 planned) | R5, R8, A4, A7 | Steps or commands in the wrong order. For R5: the shock came before one of the preceding steps (once they are set, D-100). For R8: the sternal paddle was placed before the apical, with both placements observed (D-116) |
 | `not_in_zone` | planned | R3 | A paddle was outside its approved zone. Not produced until the supervisor approves the chest regions (OQ-012); until then R3 checks placement timing and presence only (D-106) |
 | `placed_after_shock` | built (R3) | R3 | Paddles placed firmly on the chest only after the shock on the screen (D-106) |

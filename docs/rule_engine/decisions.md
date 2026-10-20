@@ -35,12 +35,29 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** all rules; rule ladder P-014; Increment 7.
 
 ### D-003 One mistake is reported once
-- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Date / by / status:** 2026-10-10 · Arnikan · approved; **wording superseded by D-119**
+  (2026-10-20): the policy rests on evidence, not on counting
 - **Decision:** If a rule cannot be judged because something it depends on is missing (for
   example, no confirmed shock), it reports "not evaluable because of X" instead of a second
   Fail.
 - **Reason:** Repeating one mistake as several failures would overstate it in the feedback.
 - **Affects:** all shock-dependent rules, A7; P-014; Increments 6–7.
+
+### D-119 Dependencies rest on evidence: a step fails only on its own evidence
+- **Date / by / status:** 2026-10-20 · Arnikan · approved. **Supersedes the wording of D-003.**
+- **Decision:** A mistake in one step is never used as evidence of a mistake in another step. A step fails only when its own evidence shows a mistake. If it cannot be judged because a step it depends on failed or was not observed, it is reported as 'Not evaluable because of X', and every part of it that can still be judged is checked.
+- **Reason:** the policy is about evidence, not about counting mistakes. A rule's result says
+  what its own evidence shows; a missing or failed step it depends on is named, never repeated
+  as a second failure, and never hides the parts that can still be checked.
+- **Parallel placement (OQ-059):** R2 and R8 both failing for a parallel placement now follows
+  directly from the policy, because each rule has its own evidence (R2: the other paddle taken
+  before the first was placed; R8: the apical paddle not placed first). It is no longer an
+  exception to a counting rule (D-098). The shared cause flag stays, so the feedback can say one
+  action caused both.
+- **Checked against every built rule (2026-10-20):** see progress.md. Where a rule marks the whole
+  rule not evaluable although part of it could still be judged, it is reported to Arnikan and
+  not changed yet.
+- **Affects:** every rule; P-014, P-019; D-027, D-056, D-098; OQ-059.
 
 ### D-004 Never blame the learner for missing data
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
@@ -206,8 +223,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Date / by / status:** 2026-10-13 · Arnikan · approved
 - **Decision:** A rule result "not evaluable because of X" is treated like Unable to Verify by
   the overall policy (D-042). It never makes the overall result Pass.
-- **Reason:** The step was not checked. Its cause (X) is reported once, under its own rule
-  (D-003).
+- **Reason:** The step was not checked. Its cause (X) is judged by its own rule, on its own
+  evidence (D-119).
 - **Affects:** P-017; Increment 8. **Open question:** OQ-002.
 
 ### D-057 Approved inference applies when direct evidence is missing, not only weak
@@ -309,7 +326,7 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** A7 checks the order of commands only. When a command is missing, A7 reports
   "not evaluable because of Ax". A "stop" given before "continue" is A4's mistake; A2 does not
   also fail for it.
-- **Reason:** One mistake is reported once (D-003).
+- **Reason:** A mistake in one step is never evidence of a mistake in another (D-119): A2's own evidence shows no mistake.
 - **Affects:** A2, A4, A7; Increments 19 and 22. **Resolved:** OQ-011.
 
 ### D-013 R8: one-visible-zone inference, owned by the rule engine
@@ -350,7 +367,9 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** R8; P-015, P-017; Increments 8 and 12.
 
 ### D-014 "First paddle taken is apical" is an off-by-default fallback
-- **Date / by / status:** 2026-10-10 · Arnikan · approved
+- **Date / by / status:** 2026-10-10 · Arnikan · approved; **applied by time since D-118**
+  (2026-10-19): the takes say which paddle is which (A-027), so the fallback assumes only that the
+  paddle taken first was also placed first, and applies only when that is the apical one
 - **Decision:** The team's assumption that the first paddle taken is the apical one may be used
   only as a configurable last resort, **off by default**. If it is used, R8's result is
   "assumed apical first, to be checked by the evaluator", and it prevents an overall Pass
@@ -581,7 +600,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** R2 and R8 are separate checklist criteria, so a parallel placement fails
   **both**, each with **`simultaneous`**, even though one action causes both.
   - **Not a dependency cascade:** R8 has no dependency on R2. R8 can be evaluated, and the
-    apical paddle was not placed first.
+    apical paddle was not placed first. Since D-119 this follows directly from the policy (each
+    rule fails on its own evidence); it is no longer an exception.
   - **The shared cause flag:** both results carry `possible_parallel_placement`, so the feedback
     module can explain that one action caused both failures. Results resting on derived
     placements also carry `derived_placement`.
@@ -1381,7 +1401,9 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   A-027 listed in progress.md on 2026-10-19 (R2, Step 9c, R1/9d).
 - **Decision:** under A-027, `first_paddle_*` means the apical paddle and `second_paddle_*` the
   sternal one. Wherever a rule needs "first" or "second" in time, it is computed from event times.
-  - **One shared helper:** `paddle_order` in the procedure context (`rules/context.py`). It gives:
+  - **One shared, dependency-free function:** `paddle_timing` (`rules/paddle_timing.py`), on times
+    only. `paddle_order` in the procedure context (seconds, canonical events) and Step 9d's
+    `gel_phase` (frames, CVAT labels) both use it, each doing its own label mapping. It gives:
     - each paddle's take and firm-placement time. For the apical paddle, the annotators' tag
       (`first_paddle_placed`) wins over its per-paddle placement; the sternal paddle has no tag,
       so only its per-paddle placement counts;
@@ -1390,7 +1412,7 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
     - the earliest known firm placement, and whether it is certain. It isn't certain when the other
       paddle's placement is unknown and that paddle could have been placed earlier.
 
-    R1 and R2 use it, and no rule reads order from tag names.
+    R1, R2, R3 and R8 use `paddle_order`, and no rule or helper reads order from tag names.
   - **R2 (order-neutral):** Pass when the paddle taken first is placed firmly before the other
     paddle is taken, whichever paddle it is; the failure codes are unchanged.
     - A sternal-first learner handling one paddle at a time passes R2; only R8 reports the order.
@@ -1413,25 +1435,32 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   "the earlier placement". It compared `min(first placements)` with T1 and dropped both paddles
   when they were more than 15 frames apart. With the sternal paddle first, the earliest placement
   is the sternal one and T1 is the apical one, so they always disagreed.
-- **Checked on the interim backups (2026-10-19):** the rule results are identical before and
-  after, with the gates closed and simulated as approved. The exporter output and the audit are
-  identical too. At the placeholder overlap of 0.5 no placement is derived in any video either
-  way (progress.md).
+- **Interim check (interim, partial backups, not representative):** the rule results did not
+  change. Nothing is tuned or concluded from the interim backups; they are incomplete.
 - **Review additions (Arnikan, 2026-10-19):**
   - **Both paddles taken together:** both takes within `simultaneous_window_seconds` of each other
-    → R2 Fail `simultaneous`, whichever is named first; the apical tie-break never decides it. On
-    the interim backups this changes R2's code from `taken_before_first_placed` to `simultaneous`
-    in P14_LS, P14_T, P33_LS and P33_T (takes 0.06–0.47 s apart). They still fail, and no overall
-    result changes.
+    → R2 Fail `simultaneous`, whichever is named first; the apical tie-break never decides it.
   - **A take deduced from a placement:** when the paddle taken first is deduced from its placement
-    (its take isn't tagged), R2 carries the flag **`take_order_from_placement`** (P05_LL).
-  - **Step 9d and the helper agree:** a test checks that they give the same gel-phase end on the
-    same timelines. In the pipeline their inputs can differ: 9d uses the 9c placements of its export
-    even while the 9c gate is closed, while the engine sees them only past the gate (D-088).
-  - **Step 9c finding:** at the placeholder `min_overlap_of_paddle` of 0.5, Step 9c derives no placement in any of the 38 interim videos (the highest share of a paddle box inside its zone is 0.29, median 0.11). So on the annotations R8 has no direct evidence
-    and R2 can't detect a parallel placement until that setting is calibrated (OQ-018).
-- **Affects:** R2 (P-032), R1 (P-038), Step 9c (P-031), Step 9d (P-037); the output contract
-  (v13). **Assumption:** A-027.
+    (its take isn't tagged), R2 carries the flag **`take_order_from_placement`**.
+  - **Step 9d and the helper agree:** both use `paddle_timing`, and tests check the same gel-phase
+    end on the same timelines.
+  - **Step 9c settings:** placeholders, not tuned (OQ-018).
+- **Notes (Arnikan, 2026-10-19):**
+  - **Step 9d respects the 9c gate.** The export (version 4) never uses 9c placements, so it
+    doesn't depend on the gate: the gel phase ends at the apical tag, else the earliest take, and
+    the sternal placement time is unknown (the phase is flagged `placement_time_unknown` when it
+    could have been earlier; R1 then gives Unable to Verify for gel that may fall after it). Only
+    past the 9c gate does the adapter end the phase at the earliest firm placement of either
+    paddle, and the zones' gel status can then only become more cautious. The exporter can't apply
+    the gate itself: `export_id` is the hash of the records, so an export that depended on its own
+    review would change its own ID.
+  - **The remaining readers that took order from the names:** R3's missing-placement window and
+    R8's placement phase now start at the earliest take of either paddle (R8's ends, without
+    `paddles_firmly_on_chest`, at the later of the two takes). R8's off-by-default fallback (D-014)
+    assumes only that the paddle taken first was also placed first, and applies only when that is
+    the apical one.
+- **Affects:** R2 (P-032), R1 (P-038), R3 (P-035), R8 (P-015), Step 9c (P-031), Step 9d (P-037);
+  the annotation adapter; the output contract (v13). **Assumption:** A-027.
 
 ## Working method
 

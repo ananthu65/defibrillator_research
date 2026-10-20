@@ -78,7 +78,7 @@ Detailed version: [diagram (b)](diagrams.md#b-inside-the-rule-engine) and
 | **Pass – Inferred** | Not seen directly, but shown by an approved inference (for example, a confirmed shock shows the paddles were on the chest) |
 | **Fail** | The evidence clearly shows the mistake. The result always names it (a *failure code*, such as `removed_before_shock`) |
 | **Unable to Verify** | The evidence can't settle it: the area wasn't visible, the detection was low-confidence, or the evidence contradicts itself |
-| **Not evaluable because of X** | It depends on something missing that another rule reports (for example no shock time → "because of R5"). One mistake is reported once |
+| **Not evaluable because of X** | It depends on something missing that another rule reports (for example no shock time → "because of R5"). A mistake in one step is never evidence of a mistake in another; the parts that can still be judged are checked (D-119) |
 | **Pending** | The rule's definition is not yet approved by the supervisor |
 
 Results also carry **flags** that explain them, for example:
@@ -122,8 +122,8 @@ All commands run from the repository root in the project's `.venv`.
 
 Every scenario uses the same procedure, timed in seconds:
 1. Gel on the apical zone (3 s) and the sternal zone (5 s).
-2. First paddle taken (7 s), apical placed (9 s), second paddle taken (10 s), sternal placed
-   (12 s).
+2. Apical paddle taken (7 s, `first_paddle_taken`) and placed (9 s), sternal paddle taken (10 s,
+   `second_paddle_taken`) and placed (12 s).
 3. Both paddles firmly on the chest (12.5 s), buttons pressed (14 s).
 4. Shock on the screen (15 s), paddles removed (17 s).
 
@@ -135,7 +135,7 @@ settings are not decided yet: no time limit for gel (R1) or removal (R6), and R5
 not set. A Pass must mean everything was checked.
 ```
   R1 Gel applied twice             Pass  ...  timing_not_checked  gel applied to both zones before the first placement (9 s) ...
-  R2 Second paddle taken after...  Pass  ...  first paddle placed at 9 s, before the second paddle was taken at 10 s
+  R2 Second paddle taken after...  Pass  ...  the apical paddle (taken first) placed at 9 s, before the sternal paddle was taken at 10 s
   ...
   R6 Paddles removed after shock   Pass  ...  timing_not_checked  paddles removed at 17 s, after the shock at 15 s ...
   Overall: INCOMPLETE - timing not checked for R1, R6; order not checked for R5
@@ -145,7 +145,8 @@ not set. A Pass must mean everything was checked.
 **Shows:** one action breaks two checklist criteria. R2 (second paddle after the first is placed)
 and R8 (apical before sternal) both fail with `simultaneous`, and both carry the shared cause flag
 `possible_parallel_placement`, so the feedback can say one action caused both. Whether that counts
-as one mistake or two is for the supervisor (OQ-059).
+as one mistake or two is for the supervisor (OQ-059). Both fail because each rule has its own
+evidence (D-119).
 ```
   R2 Second paddle taken after...  FAIL  simultaneous  possible_parallel_placement  both paddles were placed at the same time ...
   R8 Apical paddle placed befo...  FAIL  simultaneous  possible_parallel_placement  both paddles were placed at the same time ...
@@ -271,8 +272,10 @@ production the engine will read the pipeline's procedure transcript (D-117).
   who approved it. Until then it is empty, and the rule checks presence and order only, so the
   overall result can't be Pass. "No limit" can be recorded as an approved answer (D-005, D-062,
   D-103). Engineering values (windows, thresholds) are marked as placeholders to be tuned (A-002).
-- **One mistake is reported once.** A rule that depends on a missing step says "not evaluable
-  because of …" instead of failing again (D-003).
+- **A mistake in one step is never used as evidence of a mistake in another step.** A step fails
+  only when its own evidence shows a mistake. If it cannot be judged because a step it depends on
+  failed or was not observed, it is reported as "Not evaluable because of X", and every part of it
+  that can still be judged is checked (D-119).
 - **Each camera angle is assessed on its own.** Results are never compared across angles (D-096).
 
 ## 7. Known limitations
@@ -285,10 +288,12 @@ production the engine will read the pipeline's procedure transcript (D-117).
   seen", but an arm can hide the bottle's nozzle (A-026).
 - **R3 doesn't judge "paddle outside its zone"** until the chest regions are approved (OQ-012).
 - **R8 needs both placement zones in view.** With one zone (for example LL) it is Unable to
-  Verify (D-116): the team labels the first-placement tag as the apical paddle (A-027), so it can't
-  tell which paddle went first.
-- **The first/second paddle tags are assumed to mean apical/sternal (A-027).** The models never
-  saw a sternal-first learner, so whether they learned the paddle or the order is untested.
+  Verify (D-116): under the team's working definition (A-027) the first-placement tag is the apical
+  paddle's placement, so it can't tell which paddle went first.
+- **The team's working definition (A-027):** `first_paddle_*` means the apical paddle and
+  `second_paddle_*` the sternal paddle; the order always comes from the event times (D-118). It is
+  untested on reversed-order recordings: the models never saw a sternal-first learner, so whether
+  they learned the paddle or the order is unknown.
 - **R3's "missing" and R4's "not pressed" can't happen yet.** A shock on the screen always infers a
   Pass for them. Whether that should change is OQ-061.
 - **Settings still undecided:**

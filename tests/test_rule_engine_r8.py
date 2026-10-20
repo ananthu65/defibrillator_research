@@ -164,9 +164,27 @@ class Fallback(unittest.TestCase):
         cfg = config("R8", assume_first_taken_is_apical=True)
         result = assess(self.EVENTS, cfg, header=header(apical=None, sternal=None), registry=discover())
         outcome = result.outcome("R8")
-        self.assertEqual((outcome.kind, outcome.evidence), ("assumed", ("first_paddle_taken@5",)))
+        self.assertEqual((outcome.kind, outcome.evidence), ("assumed", ("first_paddle_taken@5", "second_paddle_taken@10")))
         self.assertIn("to be checked by the evaluator", outcome.reason)
         self.assertEqual(result.overall.result, "incomplete")
+
+    def test_the_placement_phase_starts_at_the_earliest_take_of_either_paddle(self):
+        """D-118: sternal taken first (second_paddle_taken, A-027) at 3 s; the apical zone is in view only from
+        4 s, so over the phase from 3 s it doesn't count as visible: one zone, not a missing placement."""
+        events = [ev("second_paddle_taken", 3), ev("sternal_paddle_placed", 5), ev("first_paddle_taken", 6),
+                  ev("paddles_firmly_on_chest", 14)]
+        outcome = r8(events, header(apical=((4.0, 30.0),)))
+        self.assertEqual(outcome.kind, "unable_to_verify")
+        self.assertIn("one_zone_in_view", outcome.flags)
+
+    def test_on_with_the_sternal_paddle_taken_first_does_not_assume(self):
+        """D-118: the takes are ordered by time; a sternal-first take never gives "assumed apical first"."""
+        cfg = config("R8", assume_first_taken_is_apical=True)
+        events = [ev("second_paddle_taken", 5), ev("first_paddle_taken", 10), ev("paddles_firmly_on_chest", 14),
+                  ev("first_paddle_firmly_on_the_chest", 7)]
+        outcome = r8(events, header(apical=None, sternal=None), cfg)
+        self.assertEqual(outcome.kind, "unable_to_verify")
+        self.assertIn("the sternal paddle was taken first", outcome.reason)
 
     def test_fallback_never_overrides_evidence(self):
         cfg = config("R8", assume_first_taken_is_apical=True)

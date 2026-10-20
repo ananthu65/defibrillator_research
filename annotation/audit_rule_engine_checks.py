@@ -11,7 +11,8 @@ Review list (``issues.csv``): problems an annotator should look at:
   zone_pattern_off          zone tracks that differ from the view's usual pattern (configured), including none
   zone_exception_contradicted  a reviewed "not visible" exception for a zone that is visible
   gel_hand_not_tracked      no learner_hand box in the gel phase (before the first placement tag, else
-                            first_paddle_taken), so whether gel was applied can't be derived (9d, D-111)
+                            the earliest take of either paddle), so whether gel was applied can't be derived
+                            (9d, D-111, D-118)
 Information only (``info.csv``), never annotation issues: the learner's procedure order, tags repeated
 further apart than the window, a missing first-placement tag, a zone track that is never visible
 (not covered), and confirmed zone exceptions.
@@ -116,8 +117,9 @@ def _tag_information(source, info, where):
 
 
 def _gel_hand(source, video, config, issues, where):
-    """9d (D-111): the bottle hand must be tracked in the gel phase. The audit has no derived
-    placements, so the phase ends at the first-placement tag, else first_paddle_taken."""
+    """9d (D-111): the bottle hand must be tracked in the gel phase, the same phase as the export's: it
+    ends at the first-placement tag (the apical placement, A-027), else the earliest take of either paddle
+    (D-118). Like the export, the audit never uses 9c placements."""
     end, ended_by = gel_phase(source, config.gel)
     if not hand_frames(source, video, config.gel, end):
         issues.append(Issue("review", "gel_hand_not_tracked", label=config.gel.hand_label,
