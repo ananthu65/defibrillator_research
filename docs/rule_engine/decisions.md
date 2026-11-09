@@ -84,6 +84,17 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   a shock time they still judge the part that needs none (R3: whether the paddles were placed;
   R4: the press and its order against the placement; R6: whether the paddles were removed, never
   as evidence of a shock, D-115). Applied in the plan's Increment 18.
+- **Corrected on 2026-11-09 (Arnikan's review of Increment 18):** two shock-free Fails used one
+  step's mistake as evidence for another, against D-119:
+  - **R6 never fails without a shock time:** "removed after the shock" means nothing without a
+    shock, and a shock off screen can't be ruled out. It is Not evaluable because of R5, naming
+    any removal or placement seen.
+  - **No firm placement observed (R3's step):** R4 and R6 are Not evaluable because of R3, never
+    `not_pressed` or `missing`, with or without a shock time; those would follow from R3's missing
+    placement.
+
+  Kept: R3 `missing` when nothing was placed while the zones were visible to the end; R4
+  `not_pressed` when the paddles were placed and stayed visible to the end with no press.
 - **Affects:** R3, R4, R6 and every audio rule; P-014.
 
 ### D-122 Audio coverage: without clear-audio intervals a missing command is unknown

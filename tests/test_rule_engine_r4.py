@@ -125,8 +125,10 @@ class Inference(unittest.TestCase):
 
     def test_a_removal_without_a_shock_on_screen_infers_nothing(self):
         """A view without the screen: no shock time, and the removal doesn't show a shock (D-115)."""
-        outcome = r4([PLACED, REMOVED])
-        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
+        outcome = r4([PLACED, REMOVED])   # both paddles visible throughout, no press: judged without the shock (D-121)
+        self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "not_pressed"))
+        partly = r4([PLACED, REMOVED], header(sternal=((0.0, 12.0),)))
+        self.assertEqual((partly.kind, partly.blocked_by), ("not_evaluable", "R5"))
 
     def test_the_removal_is_refused_as_an_inference_source(self):
         outcome = r4([PLACED, SHOCK], cfg=config(["shock_delivered_on_screen", "paddles_removed_after_shock"]))
@@ -137,6 +139,8 @@ class Inference(unittest.TestCase):
             with self.subTest(events=[e.event_name for e in events]):
                 outcome = r4(events)
                 self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
+                self.assertIn("checked: both buttons pressed at 13 s, after the placement (10 s)", outcome.reason)
+                self.assertIn("placed", outcome.evidence)   # the checked part's evidence (D-121)
 
     def test_without_a_shock_time_an_early_press_fails_only_if_no_later_press(self):
         self.assertEqual(r4([press(8), PLACED], cfg=NO_INFERENCE).failure_code, "before_placement")
@@ -147,13 +151,20 @@ class Inference(unittest.TestCase):
         outcome = r4([PLACED, SHOCK], cfg=NO_INFERENCE)
         self.assertEqual(outcome.failure_code, "not_pressed")        # both paddles visible throughout
 
-    def test_nothing_and_no_shock_time_is_not_evaluable_because_of_r5(self):
-        self.assertEqual(r4([PLACED]).blocked_by, "R5")
+    def test_nothing_and_no_shock_time_judges_the_press_on_its_own_evidence(self):
+        """D-121: placed, both paddles visible from the placement to the end, and no press -> not_pressed."""
+        self.assertEqual(r4([PLACED]).failure_code, "not_pressed")
+        self.assertEqual(r4([PLACED], header(apical=None)).blocked_by, "R5")   # a paddle not visible: unknown
 
-    def test_with_the_shock_as_a_source_not_pressed_is_unreachable(self):
-        """With a shock time there's a shock on screen, which infers; without one, Not evaluable because of R5."""
+    def test_no_shock_time_and_no_placement_is_not_evaluable_because_of_r3(self):
+        outcome = r4([ev("Gel applied", 2)], header(), NO_INFERENCE)
+        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R3"))
+
+    def test_with_the_shock_as_a_source_not_pressed_needs_no_shock_time(self):
+        """With a shock time there's a shock on screen, which infers. Without one, not_pressed is judged on the
+        paddles' visibility to the end of the recording (D-121), so it is reachable now."""
         self.assertEqual(r4([PLACED, SHOCK]).kind, "pass_inferred")
-        self.assertEqual(r4([PLACED]).kind, "not_evaluable")
+        self.assertEqual(r4([PLACED]).failure_code, "not_pressed")
 
 
 class Coverage(unittest.TestCase):
@@ -176,12 +187,17 @@ class Coverage(unittest.TestCase):
     def test_no_paddle_tracks_is_unable_to_verify(self):
         self.assertEqual(r4([PLACED, SHOCK], header(apical=None, sternal=None), NO_INFERENCE).kind, "unable_to_verify")
 
-    def test_no_placement_uses_the_recording_start(self):
-        partly = r4([SHOCK], header(apical=((5.0, 30.0),)), NO_INFERENCE)
-        self.assertEqual(partly.kind, "unable_to_verify")
-        throughout = r4([SHOCK], header(), NO_INFERENCE)
-        self.assertEqual(throughout.failure_code, "not_pressed")
-        self.assertIn("before the shock (15 s)", throughout.reason)
+    def test_no_placement_is_not_evaluable_because_of_r3(self):
+        """D-119: "never pressed" would follow from the missing placement, R3's mistake, not from R4's evidence."""
+        for head in (header(), header(apical=((5.0, 30.0),))):
+            with self.subTest(head=head.coverage):
+                outcome = r4([SHOCK], head, NO_INFERENCE)
+                self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R3"))
+                self.assertIn("no firm placement of the paddles was observed", outcome.reason)
+
+    def test_placed_and_never_pressed_while_visible_is_not_pressed(self):
+        outcome = r4([PLACED, SHOCK], header(), NO_INFERENCE)
+        self.assertEqual(outcome.failure_code, "not_pressed")
 
     def test_low_confidence_press_is_never_a_fail(self):
         outcome = r4([PLACED, press(13, "weak", confidence=0.2, source="video"), SHOCK], cfg=NO_INFERENCE)

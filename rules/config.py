@@ -80,6 +80,7 @@ class EngineSettings:
     coverage_overrides: dict[str, dict[str, Setting]] = field(default_factory=dict)  # "region:x" -> status -> outcome
     regions: dict[str, tuple[str, ...]] = field(default_factory=dict)  # region -> canonical events it governs
     expected_counts: dict[str, Setting] = field(default_factory=dict)  # canonical event -> {bound: n} | unlimited | None
+    stated_only_regions: tuple[str, ...] = ()   # coverage must be stated in the header, else unknown (D-122)
 
     @classmethod
     def from_dict(cls, data, where="engine"):
@@ -89,24 +90,28 @@ class EngineSettings:
                     "gel_minimum_gap_seconds", "assume_first_taken_is_apical",
                     "duration_tolerance_seconds", "coverage_policy",
                     "unable_to_verify_outcome", "review_anomalies", "expected_counts",
-                    "removal_before_screen_tolerance_seconds"}
+                    "removal_before_screen_tolerance_seconds", "cross_modal_tolerance_seconds"}
         _exact_keys(data, expected, where)
         thresholds = _exact_keys(data["confidence_thresholds"], set(SOURCES), f"{where} confidence_thresholds")
         confidence = {s: _setting(f"confidence_thresholds.{s}", thresholds[s], where, _probability) for s in SOURCES}
         settings = {name: _setting(name, data[name], where, _nonnegative) for name in
                     ("simultaneous_window_seconds", "gel_minimum_gap_seconds", "duration_tolerance_seconds",
-                     "removal_before_screen_tolerance_seconds")}
+                     "removal_before_screen_tolerance_seconds", "cross_modal_tolerance_seconds")}
         settings["assume_first_taken_is_apical"] = _setting(
             "assume_first_taken_is_apical", data["assume_first_taken_is_apical"], where, _boolean)
         settings["unable_to_verify_outcome"] = _setting(
             "unable_to_verify_outcome", data["unable_to_verify_outcome"], where, _choice(OVERALL_UNABLE_OUTCOMES))
         settings["review_anomalies"] = _setting("review_anomalies", data["review_anomalies"], where, _anomaly_list)
-        policy = _exact_keys(data["coverage_policy"], {"outcomes", "by_modality", "by_source", "by_region", "regions"},
-                             f"{where} coverage_policy")
+        policy = _exact_keys(data["coverage_policy"], {"outcomes", "by_modality", "by_source", "by_region", "regions",
+                                                       "stated_only_regions"}, f"{where} coverage_policy")
         outcomes = _exact_keys(policy["outcomes"], set(COVERAGE_STATUSES), f"{where} coverage_policy.outcomes")
         coverage = {s: _setting(f"coverage_policy.outcomes.{s}", outcomes[s], where, _choice(MISSING_OUTCOMES))
                     for s in COVERAGE_STATUSES}
         regions = _regions(policy["regions"], f"{where} coverage_policy.regions")
+        stated_only = policy["stated_only_regions"] or []
+        if not isinstance(stated_only, list) or [r for r in stated_only if r not in regions]:
+            raise ConfigError(f"{where} coverage_policy.stated_only_regions: expected a list of regions defined in "
+                              f"coverage_policy.regions, got {stated_only!r}")
         overrides = {}
         for kind, allowed in (("modality", MODALITIES), ("source", SOURCES), ("region", tuple(regions))):
             at = f"{where} coverage_policy.by_{kind}"
@@ -125,7 +130,7 @@ class EngineSettings:
             raise ConfigError(f"{where} expected_counts: expected a mapping of canonical event -> expected count")
         expected_counts = {name: _setting(f"expected_counts.{name}", value, where, _count)
                            for name, value in counts.items()}
-        return cls(confidence, settings, coverage, overrides, regions, expected_counts)
+        return cls(confidence, settings, coverage, overrides, regions, expected_counts, tuple(stated_only))
 
     def value(self, name):
         return self.settings[name].value
@@ -171,11 +176,14 @@ class RuleEngineConfig:
         vocabulary_path = _path(data.get("vocabulary", DEFAULT_VOCABULARY_PATH), root, f"{where} vocabulary")
         engine = EngineSettings.from_dict(_load(engine_path), where=str(engine_path))
         vocabulary = load_vocabulary(vocabulary_path)
-        for region, events in engine.regions.items():
+        for region, events in engine.regions.items():   # a camera region, or the audio (D-122)
             for name in events:
-                if name not in vocabulary.events or vocabulary.modality(name) != "video":
+                if name not in vocabulary.events:
                     raise ConfigError(f"{engine_path} coverage_policy.regions.{region}: {name!r} is not a "
-                                      "canonical video event in the vocabulary")
+                                      "canonical event in the vocabulary")
+            if len({vocabulary.modality(name) for name in events}) > 1:
+                raise ConfigError(f"{engine_path} coverage_policy.regions.{region}: its events must share one "
+                                  "modality (video or audio)")
         missing = sorted(set(vocabulary.events) - set(engine.expected_counts))
         unknown = sorted(set(engine.expected_counts) - set(vocabulary.events))
         if missing or unknown:

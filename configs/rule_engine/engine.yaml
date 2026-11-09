@@ -11,6 +11,9 @@ confidence_thresholds:   # events below the threshold are not used as evidence (
   audio:      {value: 0.5, placeholder: true}
 
 simultaneous_window_seconds:    {value: 0.5, placeholder: true}  # two events this close count as simultaneous
+# An audio time against a video time: Whisper timestamps are approximate (D-123, D-125). Same-modality
+# comparisons keep simultaneous_window_seconds.
+cross_modal_tolerance_seconds:  {value: 1.0, placeholder: true}
 gel_minimum_gap_seconds:        {value: 0.4, placeholder: true}  # R1: two gel events closer than this are one application (0.4 since 2026-10-17, OQ-018)
 assume_first_taken_is_apical:   {value: false, placeholder: true, note: R8 last-resort fallback; off by default; R8 not counted when used}
 duration_tolerance_seconds:     {value: 0.5, placeholder: true}  # events may end this long after header duration_seconds
@@ -48,6 +51,13 @@ coverage_policy:
     # during the bottle period (Step 9d; the adapter sets them only past the 9d gate, D-111, D-112).
     apical_gel:     []
     sternal_gel:    []
+    # The audio: where a spoken command would have been recognised (clear-audio intervals, D-122,
+    # OQ-068). It governs every command event.
+    audio: [oxygen_away_command, continue_compressions_command, stand_clear_command, stop_compressions_command,
+            shock_command, start_compressions_command]
+  # Regions whose coverage must be stated in the header (D-122). Not stated -> unknown, never covered
+  # (a missing command is then Unable to Verify, never Fail); the modality not run -> not covered.
+  stated_only_regions: [audio]
 
 unable_to_verify_outcome: {value: null, undecided: true, note: "overall result when no Fail but some Unable to Verify: fail | faculty_review"}
 

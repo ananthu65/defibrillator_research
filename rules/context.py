@@ -33,6 +33,10 @@ ANCHOR_EVENTS = {  # anchor -> canonical event (earliest occurrence is used)
     "sternal_placement": "sternal_paddle_placed",
     "continue_compressions": "continue_compressions_command",
     "stop_compressions": "stop_compressions_command",
+    # the other audio commands (D-120): A1, A3, A5
+    "oxygen_away": "oxygen_away_command",
+    "stand_clear": "stand_clear_command",
+    "shock_command": "shock_command",
 }  # start_compressions: earliest start command AFTER the shock (D-025), see _start_anchor
 
 

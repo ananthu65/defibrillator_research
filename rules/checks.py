@@ -8,6 +8,8 @@
   5. missing()            weak or missing: approved inference first (D-057),
                           then ctx.missing() (coverage, low confidence)        (P-023)
   plus time_limit() / timed() for limits (P-024) and relation() for order (P-025).
+  relation_between() / timed_between() compare two events, choosing the window by modality and
+  treating a segment-timed audio event as an interval (D-125); partly_evaluable() is D-121.
 
 Every check returns either a RuleOutcome or None ("go on to the next step"). Every outcome carries
 the flags of the anchors, elapsed times and checks it used (flags_of). Times are event start
@@ -20,7 +22,9 @@ from rules.outcome import failed, flags_of, not_evaluable, passed, unable
 TIMING_NOT_CHECKED = "timing_not_checked"
 LIMIT_NOT_APPROVED = "limit_not_approved"
 ORDER_NOT_CHECKED = "order_not_checked"   # an order requirement is not set (e.g. R5's preceding steps, D-100)
-FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED)
+ORDER_PARTIALLY_CHECKED = "order_partially_checked"   # some steps' order couldn't be checked (unseen, one segment)
+TIMING_UNCERTAIN = "timing_uncertain"   # a limit can't be judged: segment-timed events straddle it (D-125)
+FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, ORDER_PARTIALLY_CHECKED, TIMING_UNCERTAIN)
 
 BEFORE, SIMULTANEOUS, AFTER = "before", "simultaneous", "after"
 
@@ -45,6 +49,13 @@ def requires(rule_id, anchor, blocked_by):
     if anchor.present:
         return None
     return not_evaluable(rule_id, blocked_by, f"not evaluable because of {blocked_by}: {anchor.reason}", uses=(anchor,))
+
+
+def partly_evaluable(rule_id, anchor, blocked_by, checked, *, evidence=(), timestamps=None, uses=(), flags=()):
+    """D-121: the part needing `anchor` can't be judged, so the rule is not evaluable because of `blocked_by`;
+    `checked` names the parts that were still checked (no mistake in them), with their evidence."""
+    return not_evaluable(rule_id, blocked_by, f"not evaluable because of {blocked_by}: {anchor.reason}; checked: "
+                         f"{checked}", uses=(anchor, *uses), flags=flags, evidence=evidence, timestamps=timestamps)
 
 
 def restart_ambiguity(rule_id, ctx):
@@ -166,5 +177,87 @@ def simultaneous_window(ctx):
     return ctx.config.engine.value("simultaneous_window_seconds")
 
 
+# ---- comparing two events: modality windows and segment-timed audio (D-123, D-125) ------------------
+
+def segment_timed(event):
+    """An audio command event carries its Whisper segment's start and end (D-125): the command itself lies
+    somewhere in it. Word-timed events (metadata time_basis: word) and all video or annotation events are
+    at their start."""
+    return event.source == "audio" and event.metadata.get("time_basis") != "word"
+
+
+def time_bounds(event):
+    """(earliest, latest) time of an event."""
+    return (event.start, event.end) if segment_timed(event) else (event.start, event.start)
+
+
+def window_between(ctx, a, b):
+    """The comparison window: cross_modal_tolerance_seconds between audio and non-audio events, else
+    simultaneous_window_seconds."""
+    if (a.source == "audio") != (b.source == "audio"):
+        return ctx.config.engine.value("cross_modal_tolerance_seconds")
+    return simultaneous_window(ctx)
+
+
+def same_segment(a, b):
+    """Two commands said in one Whisper segment: their mutual order is not known."""
+    return segment_timed(a) and segment_timed(b) and (a.start, a.end) == (b.start, b.end)
+
+
+def relation_between(ctx, a, b):
+    """P-025 for two events: `a` before / simultaneous / after `b`. A segment-timed event may lie anywhere in its
+    interval, so `a` is before `b` only when it is certainly before (beyond the window); overlapping intervals
+    are a tie. For two point events this is relation()."""
+    window = window_between(ctx, a, b)
+    a_first, a_last = time_bounds(a)
+    b_first, b_last = time_bounds(b)
+    if a_last < b_first - window:
+        return BEFORE
+    if a_first > b_last + window:
+        return AFTER
+    return SIMULTANEOUS
+
+
+def duration_bounds(start, end):
+    """(shortest, longest) possible time from event `start` to event `end`."""
+    (s_first, s_last), (e_first, e_last) = time_bounds(start), time_bounds(end)
+    return max(0.0, e_first - s_last), max(0.0, e_last - s_first)
+
+
+def bounded_time_limit(shortest, longest, limit):
+    """P-024 on bounds (D-125): checked and within only if the longest possible duration is within the limit,
+    checked and exceeded only if the shortest exceeds it; in between, timing_uncertain."""
+    if shortest == longest:
+        return time_limit(shortest, limit)
+    check = time_limit(longest, limit)
+    if not check.checked:   # no usable limit: as time_limit
+        return check
+    if longest <= limit.value:
+        return TimingCheck(True, True, longest, limit.value,
+                           f"{shortest:g}–{longest:g} s against a limit of {limit.value:g} s")
+    if shortest > limit.value:
+        return TimingCheck(True, False, shortest, limit.value,
+                           f"{shortest:g}–{longest:g} s against a limit of {limit.value:g} s")
+    return TimingCheck(False, None, None, limit.value, f"timing uncertain: {shortest:g}–{longest:g} s against a "
+                       f"limit of {limit.value:g} s (segment-timed audio)", (TIMING_UNCERTAIN,))
+
+
+def timed_between(rule_id, start, end, limit, *, code, what, evidence, uses=()):
+    """Pass, Fail or (timing uncertain) Unable to Verify on a limit between two events, judged on bounds."""
+    shortest, longest = duration_bounds(start, end)
+    check = bounded_time_limit(shortest, longest, limit)
+    uses = (*uses, check)
+    timestamps = {"shortest_seconds": shortest, "longest_seconds": longest}
+    if TIMING_UNCERTAIN in check.flags:
+        return unable(rule_id, f"{what}: {check.note}", evidence=evidence, uses=uses, timestamps=timestamps)
+    if check.checked and not check.within:
+        return failed(rule_id, code, f"{what}: {check.note}", evidence=evidence, uses=uses, timestamps=timestamps,
+                      timing_checked=True)
+    return passed(rule_id, f"{what}: {check.note}", evidence, uses=uses, timestamps=timestamps,
+                  timing_checked=check.checked)
+
+
 __all__ = ["depends", "requires", "restart_ambiguity", "occurrences", "missing", "first_valid", "infer_from",
-           "time_limit", "timed", "relation", "simultaneous_window", "Inference", "TimingCheck", "FLAGS", "flags_of"]
+           "time_limit", "timed", "relation", "simultaneous_window", "Inference", "TimingCheck", "FLAGS", "flags_of",
+           "partly_evaluable", "segment_timed", "time_bounds", "window_between", "same_segment", "relation_between",
+           "duration_bounds", "bounded_time_limit", "timed_between"]

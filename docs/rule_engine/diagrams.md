@@ -302,7 +302,7 @@ the discharge, D-105).
 
 ```mermaid
 flowchart TD
-    S{"Shock time?<br/>(screen only, D-093)"} -->|"none, or several shocks"| NE["Not evaluable<br/>because of R5<br/>(even with a removal:<br/>it doesn't show a shock, D-115)"]
+    S{"Shock time?<br/>(screen only, D-093)"} -->|"none, or several shocks"| NE["Not evaluable because of R5<br/>(even with a removal: it doesn't<br/>show a shock, D-115), naming any<br/>removal or placement seen; never<br/>a Fail without a shock time (D-121)"]
     S -->|yes| RB{"Removal tagged more than<br/>w before the shock?"}
     RB -->|yes| F1["Fail<br/>removed_before_shock"]
     RB -->|no| DE{"Past the gate: a derived placement<br/>ended by a real exit more than w<br/>before the shock, that paddle<br/>not on again at the shock?"}
@@ -327,7 +327,7 @@ screen; a paddle removal never infers (D-115).
 
 ```mermaid
 flowchart TD
-    S{"Shock time?<br/>(screen only, D-093)"} -->|"no (even with a removal, D-115)"| NE["Not evaluable<br/>because of R5"]
+    S{"Shock time?<br/>(screen only, D-093)"} -->|"no (even with a removal, D-115)"| NE["Not evaluable because of R5,<br/>naming the placement if seen;<br/>none while both zones visible<br/>to the end: Fail missing (D-121)"]
     S -->|yes| T{"paddles_firmly_on_chest<br/>at or before shock + w?"}
     T -->|yes| P1["Pass – Direct"]
     T -->|no| D{"Past the gate: both derived<br/>placements before shock + w?"}
@@ -367,7 +367,7 @@ flowchart TD
     Z -->|"no: partly, never, no track"| U2["Unable to Verify"]
     S -->|"no (even with a removal, D-115)"| E0{"A press clearly before the<br/>placement, and none after it?"}
     E0 -->|yes| F1
-    E0 -->|no| NE["Not evaluable<br/>because of R5"]
+    E0 -->|no| NE["Not evaluable because of R5,<br/>naming the press if seen; placed,<br/>none while both paddles visible<br/>to the end: Fail not_pressed (D-121);<br/>no placement: because of R3 (D-119)"]
 ```
 
 ## (n) Step 9d: derived per-zone gel application (P-037; D-111, D-112)

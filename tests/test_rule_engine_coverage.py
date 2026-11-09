@@ -39,6 +39,7 @@ def with_policy(**policy):
 
 
 VIDEO_TIMELINE = [event("Gel applied", 1), event("shock_delivered_on_screen", 30)]  # annotation, no audio
+CLEAR_AUDIO = {"region:audio": "covered"}   # the audio stated clear throughout (D-122)
 
 
 class Header(unittest.TestCase):
@@ -179,7 +180,7 @@ class Status(unittest.TestCase):
     def test_source_scope_needs_a_single_source_for_the_modality(self):
         cov = coverage(VIDEO_TIMELINE)
         self.assertEqual(cov.scopes("gel_applied"), ["source:annotation", "modality:video"])
-        self.assertEqual(cov.scopes("stand_clear_command"), ["modality:audio"])  # no audio events at all
+        self.assertEqual(cov.scopes("stand_clear_command"), ["region:audio", "modality:audio"])  # no audio events
         self.assertEqual(cov.scopes("apical_paddle_placed"),
                          ["region:apical_zone", "source:annotation", "modality:video"])
 
@@ -187,10 +188,25 @@ class Status(unittest.TestCase):
 class NoAudioVersusAudioNotAnalysed(unittest.TestCase):
     """The same timeline with no audio events, under three headers."""
 
-    def test_audio_ran_and_heard_nothing_is_a_fail(self):
+    def test_clear_audio_and_heard_nothing_is_a_fail(self):
+        result = coverage(VIDEO_TIMELINE, header(analyses_run={"video": True, "audio": True},
+                                                 coverage=CLEAR_AUDIO)).missing("stand_clear_command")
+        self.assertEqual((result.outcome, result.coverage.status, result.flags), ("fail", "covered", ()))
+
+    def test_audio_ran_without_clear_audio_is_unknown(self):
+        """D-122: analyses_run says the audio was analysed, not that a command would have been recognised."""
         result = coverage(VIDEO_TIMELINE, header(analyses_run={"video": True, "audio": True})).missing(
             "stand_clear_command")
-        self.assertEqual((result.outcome, result.coverage.status, result.flags), ("fail", "covered", ()))
+        self.assertEqual((result.outcome, result.coverage.status), ("unable_to_verify", "unknown"))
+        self.assertIn("D-122", result.coverage.basis)
+
+    def test_clear_audio_intervals_decide_a_window(self):
+        head = header(analyses_run={"audio": True}, duration_seconds=60, visibility={"region:audio": [[0, 20], [40, 60]]})
+        cov = coverage(VIDEO_TIMELINE, head)
+        self.assertEqual(cov.status("stop_compressions_command", window=(5, 15)).status, "covered")
+        self.assertEqual(cov.status("stop_compressions_command", window=(15, 45)).status, "unknown")
+        self.assertEqual(cov.status("stop_compressions_command", window=(25, 35)).status, "not_covered")
+        self.assertEqual(cov.status("stop_compressions_command").status, "unknown")   # part of the recording
 
     def test_audio_not_analysed_is_unable_to_verify(self):
         result = coverage(VIDEO_TIMELINE, header(analyses_run={"video": True, "audio": False})).missing(
@@ -208,7 +224,7 @@ class NoAudioVersusAudioNotAnalysed(unittest.TestCase):
 class LowConfidenceIsNotAbsence(unittest.TestCase):
     def test_excluded_event_gives_unable_to_verify_even_when_covered(self):
         timeline = [*VIDEO_TIMELINE, event("stand_clear_command", 20, "audio", 0.2, event_id="weak")]
-        result = coverage(timeline, header(analyses_run={"video": True, "audio": True})).missing(
+        result = coverage(timeline, header(analyses_run={"video": True, "audio": True}, coverage=CLEAR_AUDIO)).missing(
             "stand_clear_command")
         self.assertEqual((result.outcome, result.flags, result.low_confidence_event_ids),
                          ("unable_to_verify", ("low_confidence_evidence",), ("weak",)))
@@ -225,12 +241,14 @@ class LowConfidenceIsNotAbsence(unittest.TestCase):
 
     def test_only_the_same_canonical_name_counts(self):
         timeline = [*VIDEO_TIMELINE, event("oxygen_away_command", 20, "audio", 0.2)]
-        result = coverage(timeline, header(analyses_run={"audio": True})).missing("stand_clear_command")
+        result = coverage(timeline, header(analyses_run={"audio": True}, coverage=CLEAR_AUDIO)).missing(
+            "stand_clear_command")
         self.assertEqual(result.outcome, "fail")
 
 
 class EveryPolicySetting(unittest.TestCase):
-    HEADERS = {"covered": {"analyses_run": {"audio": True}}, "not_covered": {"analyses_run": {"audio": False}},
+    HEADERS = {"covered": {"analyses_run": {"audio": True}, "coverage": CLEAR_AUDIO},
+               "not_covered": {"analyses_run": {"audio": False}},
                "unknown": None}
 
     def test_every_status_follows_its_configured_outcome(self):
@@ -257,18 +275,21 @@ class EveryPolicySetting(unittest.TestCase):
 
     def test_modality_override_applies_when_nothing_more_specific(self):
         config = with_policy(by_modality={"audio": {"covered": "unable_to_verify"}})
-        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}), config).missing("shock_command")
+        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}, coverage=CLEAR_AUDIO), config).missing(
+            "shock_command")
         self.assertEqual((result.outcome, result.decided_by),
                          ("unable_to_verify", "coverage_policy.by_modality.audio.covered"))
 
     def test_override_for_another_status_falls_back_to_default(self):
         config = with_policy(by_modality={"audio": {"unknown": "fail"}})
-        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}), config).missing("shock_command")
+        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}, coverage=CLEAR_AUDIO), config).missing(
+            "shock_command")
         self.assertEqual(result.decided_by, "coverage_policy.outcomes.covered")
 
     def test_undecided_override_is_flagged(self):
         config = with_policy(by_modality={"audio": {"covered": {"value": "unable_to_verify", "undecided": True}}})
-        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}), config).missing("shock_command")
+        result = coverage(VIDEO_TIMELINE, header(analyses_run={"audio": True}, coverage=CLEAR_AUDIO), config).missing(
+            "shock_command")
         self.assertEqual(result.flags, ("coverage_policy_undecided",))
         self.assertIn("coverage_policy.by_modality.audio.covered", config.engine.undecided)
 
@@ -285,7 +306,13 @@ class RepositoryPolicy(unittest.TestCase):
                                           "sternal_zone": ("sternal_paddle_placed",),
                                           "screen": ("shock_delivered_on_screen",),   # D-094
                                           "apical_paddle": (), "sternal_paddle": (),   # visibility only (D-108)
-                                          "apical_gel": (), "sternal_gel": ()})   # visibility only (D-111)
+                                          "apical_gel": (), "sternal_gel": (),   # visibility only (D-111)
+                                          "audio": ("oxygen_away_command", "continue_compressions_command",
+                                                    "stand_clear_command", "stop_compressions_command",
+                                                    "shock_command", "start_compressions_command")})   # D-122
+        self.assertEqual(engine.stated_only_regions, ("audio",))
+        self.assertEqual(engine.value("cross_modal_tolerance_seconds"), 1.0)
+        self.assertTrue(engine.settings["cross_modal_tolerance_seconds"].placeholder)
 
 
 class InvalidCoverageConfig(unittest.TestCase):
@@ -327,19 +354,28 @@ class InvalidCoverageConfig(unittest.TestCase):
         """D-108: a region with no event (a paddle) is asked by name; it governs no event."""
         data = copy.deepcopy(ENGINE)
         data["coverage_policy"]["regions"] = {"apical_zone": ["apical_paddle_placed"], "apical_paddle": []}
+        data["coverage_policy"]["stated_only_regions"] = []
         engine = EngineSettings.from_dict(data)
         self.assertEqual(engine.regions["apical_paddle"], ())
         self.assertIsNone(engine.region_of("both_paddle_buttons_pressed"))
 
-    def test_region_event_must_be_a_video_event_in_the_vocabulary(self):
-        for events in (["apical_paddle_placd"], ["stand_clear_command"]):
+    def test_region_events_must_be_canonical_and_share_one_modality(self):
+        for events, message in ((["apical_paddle_placd"], "not a canonical event"),
+                                (["apical_paddle_placed", "stand_clear_command"], "share one modality")):
             with self.subTest(events=events), tempfile.TemporaryDirectory() as directory:
                 data = copy.deepcopy(ENGINE)
                 data["coverage_policy"]["regions"] = {"apical_zone": events}
+                data["coverage_policy"]["stated_only_regions"] = []
                 path = Path(directory) / "engine.yaml"
                 path.write_text(yaml.safe_dump(data), encoding="utf-8")
-                with self.assertRaisesRegex(ConfigError, "not a canonical video event"):
+                with self.assertRaisesRegex(ConfigError, message):
                     RuleEngineConfig.from_dict({**RULES, "engine": str(path)})
+
+    def test_stated_only_regions_must_be_defined(self):
+        data = copy.deepcopy(ENGINE)
+        data["coverage_policy"]["stated_only_regions"] = ["microphone"]
+        with self.assertRaisesRegex(ConfigError, "stated_only_regions"):
+            EngineSettings.from_dict(data)
 
 
 if __name__ == "__main__":

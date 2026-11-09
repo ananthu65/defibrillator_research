@@ -246,7 +246,7 @@ class ZoneVisibility(unittest.TestCase):
     def test_no_header_means_unknown(self):
         self.assertEqual({r: s.status for r, s in context([SHOCK]).zone_visibility.items()},
                          {"apical_zone": "unknown", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown",
-                          "apical_gel": "unknown", "sternal_gel": "unknown"})
+                          "apical_gel": "unknown", "sternal_gel": "unknown", "audio": "unknown"})
 
     def test_header_region_coverage(self):
         ctx = context([SHOCK], {"analyses_run": {"video": True}, "coverage": {"region:sternal_zone": "not_covered"}})
@@ -255,7 +255,7 @@ class ZoneVisibility(unittest.TestCase):
 
 
 class LowConfidenceResumeCommands(unittest.TestCase):
-    HEADER = {"analyses_run": {"video": True, "audio": True}}
+    HEADER = {"analyses_run": {"video": True, "audio": True}, "coverage": {"region:audio": "covered"}}   # clear (D-122)
 
     def test_weak_resume_after_shock_makes_missing_start_unverifiable(self):
         ctx = context([SHOCK, cmd("resume_compressions_command", 35, "weak", confidence=0.2)], self.HEADER)

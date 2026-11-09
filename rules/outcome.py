@@ -103,8 +103,10 @@ def unable(rule_id, reason, *, evidence=(), uses=(), flags=(), timestamps=None):
     return RuleOutcome(rule_id, UNABLE, reason, None, tuple(evidence), dict(timestamps or {}), flags_of(*uses, flags))
 
 
-def not_evaluable(rule_id, blocked_by, reason, *, uses=(), flags=()):
-    return RuleOutcome(rule_id, NOT_EVALUABLE, reason, flags=flags_of(*uses, flags), blocked_by=blocked_by)
+def not_evaluable(rule_id, blocked_by, reason, *, uses=(), flags=(), evidence=(), timestamps=None):
+    """evidence / timestamps: the parts that were still checked (D-121)."""
+    return RuleOutcome(rule_id, NOT_EVALUABLE, reason, None, tuple(evidence), dict(timestamps or {}),
+                       flags_of(*uses, flags), blocked_by=blocked_by)
 
 
 def pending(rule_id, reason=PENDING_REASON):

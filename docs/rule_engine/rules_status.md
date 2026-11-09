@@ -12,6 +12,22 @@ means). Failure codes are listed in [anomalies.md](anomalies.md).
 rule needs "first" or "second" in time, it computes it from the event times (`paddle_order`,
 D-118). Untested on reversed-order recordings.
 
+**Without a shock time (D-121, Increment 18):** R3, R4 and R6 still judge the part that needs none.
+- If that part shows a mistake, it is a Fail on the rule's own evidence: R3 `missing` (nothing
+  placed while both zones were visible to the end), R4 `not_pressed` (placed, and no press while
+  both paddles were visible to the end).
+- **R6 never fails without a shock time:** "removed after the shock" means nothing without a
+  shock, and a shock off screen can't be ruled out. It is Not evaluable because of R5, naming any
+  removal or placement seen.
+- **No firm placement observed (R3's step):** R4 and R6 are Not evaluable because of R3, never
+  `not_pressed` or `missing` (D-119), with or without a shock time.
+- Otherwise the rule is Not evaluable because of R5, and its reason names what was checked.
+
+**Audio (D-122, D-125):** the audio rules read Sanjeevan's command events. A missing command can
+fail only inside stated clear-audio intervals; otherwise it is Unable to Verify. Until stop,
+shock command, start and an unambiguous continue are detected (OQ-009), A4, A5, A8 and R7/A6 give
+Unable to Verify.
+
 | Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
 |---|---|---|---|---|---|---|---|
 | **R1** Gel applied twice | Gel once on each placement zone (either order) before the paddles are placed (D-109, D-110). The first placement is the earliest firm placement of either paddle, by time; if the other paddle's placement is unknown and could have been earlier, a Pass whose gel may follow it is Unable to Verify, `placement_time_unknown` (D-118). Gel only after the first placement → `after_placement`. Past the 9d gate, per zone: both gelled → Pass, one → `applied_once`, neither → `missing`, unknown → Unable to Verify. Before it, the tag-count proxy: separate tags against the zones' visibility in the gel phase (D-113, A-026). Period unset → `timing_not_checked` | gel applied tags, per-zone gel applications (past the 9d gate), the gel regions, first placement, zone visibility in the gel phase | P-038, P-037, P-024, P-007 | `after_placement`, `applied_once`, `missing`, `outside_time_period` | 17 | **implemented** (Increment 17); pending until the supervisor confirms its definition | OQ-016 (period), OQ-021 (more than twice), OQ-018 (9d settings, gap) |

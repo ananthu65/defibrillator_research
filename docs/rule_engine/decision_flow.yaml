@@ -215,9 +215,11 @@ decision_points:
     decides: R6's result (Increment 14); runs only when R6 is approved in rules.yaml, pending until the supervisor confirms its definition. paddles_removed_after_shock means the paddles were removed; it doesn't prove a shock (D-104)
     inputs: [shock anchor (screen only, D-093), paddles_removed_after_shock events, derived placements with end_seconds and ended_by_exit (past the gate), placement zone coverage from the shock to the end of the recording, rules.yaml shock_to_removal_seconds]
     branches:
-      - condition: No shock time (no shock on the screen, or several)
-        outcome: Not evaluable because of R5, even if a removal is tagged - a removal doesn't show a shock (D-115)
+      - condition: No shock time (no shock on the screen, or several), whatever was seen
+        outcome: Not evaluable because of R5, naming any removal (tagged, or past the gate a derived placement ended by a real exit) or placement that was seen; never a Fail - "removed after the shock" means nothing without a shock, and a shock off screen can't be ruled out; a removal never shows a shock (D-115, D-121)
         next: P-020
+      - condition: A shock time, no removal, and no firm placement observed (R3's step)
+        outcome: Not evaluable because of R3 - "never removed" would follow from the missing placement, not from R6's own evidence (D-119)
       - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
         outcome: Fail removed_before_shock
         failure_codes: [removed_before_shock]
@@ -235,14 +237,14 @@ decision_points:
       - condition: No removal, a low-confidence one exists
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
-      - condition: No removal; both placement zones visible throughout from the shock to the end of the recording (A-022)
+      - condition: No removal; the paddles placed, and both placement zones visible throughout from the shock to the end of the recording (A-022)
         outcome: Fail missing
         failure_codes: [missing]
       - condition: No removal; a placement zone not visible throughout that window (partly, never, or unknown)
         outcome: Unable to Verify, never Fail
     config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml removal_before_screen_tolerance_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_removed_after_shock)
-    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105]
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105, D-121]
     assumptions: [A-022]
     open_questions: [OQ-016, OQ-057]
 
@@ -483,6 +485,9 @@ decision_points:
       - condition: Header states coverage for the single source of the event's modality
         outcome: That status
         next: P-008
+      - condition: The event's region must be stated (coverage_policy.stated_only_regions - the audio, D-122) and the header states neither its coverage nor its intervals
+        outcome: unknown even if analyses_run says the modality ran (it ran, but that doesn't say a command would have been recognised); not covered if it didn't run; stated intervals without a window are judged over the recording
+        next: P-008
       - condition: Header states coverage for the modality, or analyses_run says whether it ran
         outcome: covered if it ran, not covered if not, or the stated status
         next: P-008
@@ -492,9 +497,9 @@ decision_points:
       - condition: A visibility-only region asked by name (a paddle, for R4)
         outcome: Only that region's visibility in the window, or its whole-recording coverage; nothing stated -> unknown (no source or modality fallback, D-108)
         next: P-008
-    config: [engine.yaml coverage_policy.regions]
+    config: [engine.yaml coverage_policy.regions, engine.yaml coverage_policy.stated_only_regions]
     code: rules/coverage.py (Coverage.status, Coverage.region_status, _windowed)
-    decisions: [D-009, D-036, D-092, D-108]
+    decisions: [D-009, D-036, D-092, D-108, D-122]
     assumptions: [A-007, A-008, A-009]
     open_questions: [OQ-020]
 
@@ -746,8 +751,15 @@ decision_points:
       - condition: No direct evidence (or no shock time to judge it against); an event in inference_sources confirmed
         outcome: Pass – Inferred, naming the shock on screen (D-057, D-115)
         next: P-016
-      - condition: No inference and no shock time
-        outcome: Not evaluable because of R5
+      - condition: No inference and no shock time; a firm placement seen (tag, or both derived placements past the gate)
+        outcome: Not evaluable because of R5, naming the placement as the part still checked (D-121)
+        next: P-020
+      - condition: No inference and no shock time; no firm placement, both placement zones visible throughout from the earliest take of either paddle to the end of the recording
+        outcome: Fail missing, judged on R3's own evidence without the shock time (D-121)
+        failure_codes: [missing]
+      - condition: No inference and no shock time; otherwise (a zone not visible throughout, or low confidence)
+        outcome: Not evaluable because of R5; whether the paddles were placed is unknown too
+        next: P-020
         next: P-020
       - condition: No inference; a low-confidence paddles_firmly_on_chest
         outcome: Unable to Verify (D-010)
@@ -763,7 +775,7 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_firmly_on_chest)
-    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118]
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118, D-121]
     assumptions: [A-019]
     open_questions: [OQ-012, OQ-022, OQ-061]
 
@@ -789,13 +801,22 @@ decision_points:
       - condition: No direct evidence (or no shock time to judge it against); a source in inference_sources confirmed
         outcome: Pass – Inferred from the shock on screen (D-057, D-115)
         next: P-016
-      - condition: No inference and no shock time
-        outcome: Not evaluable because of R5
+      - condition: No inference and no shock time; a press after the placement (or with no placement observed)
+        outcome: Not evaluable because of R5, naming the press and its order against the placement as the parts still checked (D-121)
+        next: P-020
+      - condition: No inference and no shock time; the paddles placed, no press, both paddles visible throughout from the placement to the end of the recording
+        outcome: Fail not_pressed, judged on R4's own evidence without the shock time (D-121)
+        failure_codes: [not_pressed]
+      - condition: No inference, no press, and no firm placement observed (R3's step), with or without a shock time
+        outcome: Not evaluable because of R3 - "never pressed" would follow from the missing placement, not from R4's own evidence (D-119)
+      - condition: No inference and no shock time; otherwise (a paddle not visible throughout, or low confidence)
+        outcome: Not evaluable because of R5; whether the buttons were pressed is unknown too
+        next: P-020
         next: P-020
       - condition: No inference; a low-confidence press
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
-      - condition: No inference; both paddles visible throughout placement .. shock (the recording's start when no placement is known)
+      - condition: No inference; the paddles placed, and both paddles visible throughout placement .. shock
         outcome: Fail not_pressed (unreachable while the shock on screen is an inference source, OQ-061)
         failure_codes: [not_pressed]
       - condition: No inference; a paddle not visible throughout that window (partly, never, or no track)
@@ -806,7 +827,7 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R4 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_paddle, sternal_paddle)]
     code: rules/video_rules.py (both_buttons_pressed); rules/coverage.py (region_missing)
-    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115]
+    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115, D-121]
     assumptions: []
     open_questions: [OQ-023, OQ-061]
 
@@ -883,7 +904,7 @@ decision_points:
         flags: [demo_only]
       - condition: No Fail, and a rule is pending, assumed (R8 fallback), errored, or has timing not checked / limit not approved / order not checked
         outcome: Incomplete, listing each such rule and why (rules not yet approved; assumed result; engine error; timing not checked; limit not approved; order not checked, D-100); never Pass
-        flags: [timing_not_checked, limit_not_approved, order_not_checked]
+        flags: [timing_not_checked, limit_not_approved, order_not_checked, order_partially_checked]
       - condition: No Fail, and the timeline has a review anomaly (review_anomalies, D-069, D-072; checked before the Unable-to-Verify setting)
         outcome: Incomplete, the timeline needs review, anomalies listed; never Pass
         flags: [timeline_needs_review]
@@ -951,6 +972,8 @@ decision_points:
       - condition: Anchor present
         outcome: Go on
         next: P-021
+      - condition: Anchor absent, but part of the rule needs no anchor (D-121)
+        outcome: That part is still judged on the rule's own evidence (a mistake in it is a Fail); otherwise Not evaluable because of the step, naming the parts checked and citing their evidence (checks.partly_evaluable)
       - condition: Anchor absent
         outcome: Not evaluable because of the providing step (e.g. R5), carrying the anchor's flags
     config: []
@@ -1045,9 +1068,16 @@ decision_points:
       - condition: Over the limit
         outcome: Fail with the rule's failure code (e.g. too_late, pre_shock_pause), carrying the elapsed time's flags
         failure_codes: []
+      - condition: Segment-timed audio (D-125) - the shortest and longest possible durations; the longest within the limit
+        outcome: Pass, timing checked
+      - condition: Segment-timed audio - the shortest possible duration over the limit
+        outcome: Fail with the rule's failure code
+      - condition: Segment-timed audio - the limit between the shortest and longest possible durations
+        outcome: Unable to Verify, never Fail or Pass
+        flags: [timing_uncertain]
     config: [configs/rules.yaml timing_limits]
-    code: rules/checks.py (time_limit, timed)
-    decisions: [D-005, D-016, D-061, D-062, D-103]
+    code: rules/checks.py (time_limit, timed, duration_bounds, bounded_time_limit, timed_between)
+    decisions: [D-005, D-016, D-061, D-062, D-103, D-125]
     assumptions: [A-017]
     open_questions: [OQ-016]
 
@@ -1056,7 +1086,7 @@ decision_points:
     stage: rule
     status: built
     decides: Whether one time is before, simultaneous with, or after another
-    inputs: [two start times, simultaneous_window_seconds]
+    inputs: [two start times, or two events (relation_between), simultaneous_window_seconds, cross_modal_tolerance_seconds]
     branches:
       - condition: Either time absent
         outcome: No relation
@@ -1066,9 +1096,16 @@ decision_points:
         outcome: before
       - condition: Later
         outcome: after
-    config: [engine.yaml simultaneous_window_seconds]
-    code: rules/checks.py (relation)
-    decisions: [D-011]
+      - condition: Two events of different modalities (audio and video)
+        outcome: The window is cross_modal_tolerance_seconds (1.0 s, placeholder), not simultaneous_window_seconds (D-123)
+      - condition: A segment-timed audio event (Whisper segment, D-125) - it may lie anywhere in its interval
+        outcome: before only when certainly before (beyond the window), after only when certainly after; overlapping intervals are simultaneous (a tie, never a broken order)
+      - condition: Two commands in one Whisper segment
+        outcome: Not ordered; an order check that needs their order reports it as partly checked (S1, A7)
+        flags: [order_partially_checked]
+    config: [engine.yaml simultaneous_window_seconds, engine.yaml cross_modal_tolerance_seconds]
+    code: rules/checks.py (relation, relation_between, time_bounds, same_segment)
+    decisions: [D-011, D-123, D-125]
     assumptions: [A-002]
     open_questions: [OQ-018]
 

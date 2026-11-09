@@ -360,7 +360,9 @@ the chest regions (OQ-012, D-106).
 | Shock time; past the gate, both derived placements at or before the shock | Pass – Direct | `derived_placement` |
 | Shock time; only tags clearly after the shock | Fail; comes before the inference | `placed_after_shock` |
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (D-057, D-115) | — |
-| No inference and no shock time | **Not evaluable because of R5** | — |
+| No inference and no shock time; a firm placement seen | **Not evaluable because of R5**, naming the placement as checked (D-121) | — |
+| No inference and no shock time; no placement, both zones visible from the earliest take to the end of the recording | Fail, on R3's own evidence (D-121) | `missing` |
+| No inference and no shock time; otherwise | **Not evaluable because of R5** (placement unknown too) | — |
 | No inference; a low-confidence firm placement | Unable to Verify | `low_confidence_evidence` |
 | No inference; both placement zones visible throughout the earliest take of either paddle → shock (D-118) | Fail | `missing` |
 | No inference; a zone not visible throughout that window (for example one paddle visible: the tag is not made then, A-019) | Unable to Verify, never Fail | — |
@@ -401,9 +403,12 @@ one counts; the count stays undecided (OQ-023).
 | A press clearly before the placement, none valid (without a shock time: only if no press came after the placement) | Fail; comes before the inference | `before_placement` |
 | Shock time; presses only clearly after the shock | Unable to Verify | `contradictory` |
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (P-016) | — |
-| No inference and no shock time | **Not evaluable because of R5** | — |
+| No inference and no shock time; a press after the placement | **Not evaluable because of R5**, naming the press and its order as checked (D-121) | — |
+| No inference and no shock time; the paddles placed, no press, both paddles visible from the placement to the end of the recording | Fail, on R4's own evidence (D-121) | `not_pressed` |
+| No inference, no press, and no firm placement observed (R3's step), with or without a shock time | **Not evaluable because of R3**: "never pressed" would follow from the missing placement (D-119) | — |
+| No inference and no shock time; otherwise | **Not evaluable because of R5** (press unknown too) | — |
 | No inference; a low-confidence press | Unable to Verify | `low_confidence_evidence` |
-| No inference; both paddles visible throughout the placement → the shock (the recording's start when no placement is known) | Fail (unreachable while the shock on screen is an inference source) | `not_pressed` |
+| No inference; the paddles placed, both paddles visible throughout the placement → the shock | Fail (unreachable while the shock on screen is an inference source) | `not_pressed` |
 | No inference; a paddle not visible throughout that window | Unable to Verify, never Fail | — |
 
 #### P-034 R6: paddles removed after the shock (built, Increment 14; pending until approved)
@@ -411,7 +416,8 @@ one counts; the count stays undecided (OQ-023).
 
 | Condition | Outcome | Code and flags |
 |---|---|---|
-| No shock time (no shock on the screen, or several) | **Not evaluable because of R5**, even if a removal is tagged: a removal doesn't show a shock (D-093, D-115) | — |
+| No shock time (no shock on the screen, or several), whatever was seen | **Not evaluable because of R5**, never a Fail: "removed after the shock" means nothing without a shock, and a shock off screen can't be ruled out. Any removal or placement seen is named; a removal never shows a shock (D-093, D-115, D-121) | — |
+| A shock time, no removal, and no firm placement observed (R3's step) | **Not evaluable because of R3**: "never removed" would follow from the missing placement (D-119) | — |
 | Removal clearly before the shock (more than `removal_before_screen_tolerance_seconds`: the screen may show the shock after the discharge, D-105) | Fail | `removed_before_shock` |
 | Past the gate: a derived placement ended by a real exit clearly before the shock, that paddle not placed again by the shock | Fail | `removed_before_shock`; `derived_placement` |
 | Removal after the shock, or before it within `removal_before_screen_tolerance_seconds` (treated as at the shock) | Pass – Direct; limit unset, so the overall result can't be Pass (D-062); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
@@ -1145,3 +1151,37 @@ today.
 2. R8's placement phase and R3's missing-placement window start at 3 s, the earliest take of
    either paddle, not at `first_paddle_taken` (6 s). A zone in view only from 4 s therefore doesn't
    count as visible over them.
+
+### W-86 No shock on the screen: R3, R4 and R6 still judge what they can
+*(Built in Increment 18; D-121.)*
+1. A view without the screen: no shock time. Both placement zones and both paddles are visible
+   throughout.
+2. Paddles placed firmly at 9 s, buttons pressed at 12 s, removal at 20 s → R3, R4 and R6 are each
+   **Not evaluable because of R5**, and each reason says what was still checked ("checked: …"),
+   citing that evidence.
+3. No placement at all → **R3 Fail `missing`**: the zones were visible from the first take to the
+   end, and no shock time is needed to see that the paddles were never placed. R4 and R6 are then
+   **Not evaluable because of R3**, never `not_pressed` or `missing`: those would follow from R3's
+   mistake, not from their own evidence (D-119).
+4. Placed at 9 s, never pressed, both paddles visible to the end → **R4 Fail `not_pressed`**, on its
+   own evidence.
+5. Placed and never removed → **R6 Not evaluable because of R5**, naming the placement. Without a
+   shock, "removed after the shock" means nothing, and a shock off screen can't be ruled out, so R6
+   never fails without a shock time.
+
+### W-87 A missing command without clear-audio intervals
+*(Built in Increment 18; D-122.)*
+1. The audio was analysed (`analyses_run.audio: true`), but no clear-audio intervals are stated.
+2. P-007: the `audio` region must be stated → **unknown**, so a missing command gives **Unable to
+   Verify**, never Fail.
+3. With `region:audio` intervals [0–40 s]: a command missing in 10–30 s is covered → its rule may
+   Fail; in 30–50 s, only partly clear → Unable to Verify.
+
+### W-88 Segment-timed commands near a limit
+*(Built in Increment 18; D-125.)*
+1. "Stop compressions" in a segment 10–11 s and "start compressions" in a segment 15–17 s; A8's
+   approved limit is 5 s.
+2. P-024: the pause is between 4 s (shortest) and 7 s (longest) → **Unable to Verify,
+   `timing_uncertain`**.
+3. With the start in 14–15 s (3–5 s) → Pass; in 17–18 s (6–8 s) → Fail `pre_shock_pause`.
+4. "Stop compressions, all stand clear" in one segment: the two commands are not ordered.

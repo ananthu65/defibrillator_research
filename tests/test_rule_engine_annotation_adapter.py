@@ -250,7 +250,7 @@ class ThroughTheEngine(unittest.TestCase):
         self.assertEqual(result.overall.result, "incomplete")
         self.assertEqual({r: s.status for r, s in result.context.zone_visibility.items()},
                          {"apical_zone": "covered", "sternal_zone": "unknown", "screen": "unknown", "apical_paddle": "unknown", "sternal_paddle": "unknown",
-                          "apical_gel": "unknown", "sternal_gel": "unknown"})
+                          "apical_gel": "unknown", "sternal_gel": "unknown", "audio": "not_covered"})   # no audio analysed
 
     def test_header_validation(self):
         regions = tuple(RULES.engine.regions)

@@ -14,7 +14,7 @@ built on annotation data (annotation_coverage_assumed) is marked as development 
 from a demo config (demo: true) is flagged demo_only: its rules are not approved (D-114).
 """
 from dataclasses import dataclass
-from rules.checks import LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, TIMING_NOT_CHECKED
+from rules.checks import LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, ORDER_PARTIALLY_CHECKED, TIMING_NOT_CHECKED
 from rules.coverage import ANNOTATION_COVERAGE_ASSUMED  # a header flag the engine carries onto every result (P-001)
 from rules.outcome import ASSUMED, ENGINE_ERROR, FAIL, NOT_EVALUABLE, PENDING, UNABLE
 
@@ -135,6 +135,8 @@ def _incomplete(pairs):
             yield _as(group, "limit not approved" if LIMIT_NOT_APPROVED in flags else "timing not checked")
         elif ORDER_NOT_CHECKED in flags:   # D-100: like unchecked timing (D-062), never an overall Pass
             yield _as(group, "order not checked")
+        elif ORDER_PARTIALLY_CHECKED in flags:   # some steps' order couldn't be checked: never a clean Pass
+            yield _as(group, "order partially checked")
 
 
 def _as(group, category):

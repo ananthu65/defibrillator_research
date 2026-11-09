@@ -143,14 +143,22 @@ class Coverage:
         _check_window(window)
         if self.header is None:
             return CoverageStatus(UNKNOWN, None, "no timeline header")
+        stated_only = None   # D-122: a region whose coverage must be stated (the audio)
         for scope in self.scopes(event_name):
             if window is not None and scope in self.header.visibility:
                 return _windowed(self.header.visibility[scope], window, scope)
             if scope in self.header.coverage:
                 return CoverageStatus(self.header.coverage[scope], scope, "header.coverage")
             kind, name = scope.split(":", 1)
+            if kind == "region" and name in self.config.engine.stated_only_regions:
+                if scope in self.header.visibility and self.header.duration_seconds:
+                    return _windowed(self.header.visibility[scope], (0.0, self.header.duration_seconds), scope)
+                stated_only = scope
             if kind == "modality" and name in self.header.analyses_run:
                 ran = self.header.analyses_run[name]
+                if ran and stated_only:   # it ran, but that doesn't say a command would have been recognised
+                    return CoverageStatus(UNKNOWN, None, f"{stated_only} not stated in the timeline header; "
+                                          "analyses_run alone doesn't say the audio was clear (D-122)")
                 return CoverageStatus(COVERED if ran else NOT_COVERED, scope, "header.analyses_run")
         return CoverageStatus(UNKNOWN, None, "not stated in timeline header")
 

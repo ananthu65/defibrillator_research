@@ -110,8 +110,12 @@ class Inference(unittest.TestCase):
         self.assertIn("inferred from shock_delivered_on_screen", outcome.reason)
 
     def test_a_removal_without_a_shock_on_screen_infers_nothing(self):
+        """Never Pass - Inferred from a removal (D-115). With both zones visible and no placement seen, R3 judges
+        the presence part on its own evidence (D-121)."""
         outcome = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")])
-        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
+        self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "missing"))
+        partly = r3([TAKEN, ev("paddles_removed_after_shock", 20, "removed")], header(sternal=((10.0, 30.0),)))
+        self.assertEqual((partly.kind, partly.blocked_by), ("not_evaluable", "R5"))
 
     def test_the_removal_is_refused_as_an_inference_source(self):
         for sources in (["paddles_removed_after_shock"], ["shock_delivered_on_screen", "paddles_removed_after_shock"]):
@@ -131,9 +135,19 @@ class Inference(unittest.TestCase):
         alone = r3([ev("paddles_firmly_on_chest", 12)])
         self.assertEqual((alone.kind, alone.blocked_by), ("not_evaluable", "R5"))
 
-    def test_no_evidence_and_no_shock_time_is_not_evaluable_because_of_r5(self):
-        outcome = r3([TAKEN])
-        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
+    def test_no_shock_time_still_judges_whether_the_paddles_were_placed(self):
+        """D-121: "before the shock" can't be judged without a shock time; whether they were placed can."""
+        missing = r3([TAKEN])   # both zones visible throughout, no placement seen
+        self.assertEqual((missing.kind, missing.failure_code), ("fail", "missing"))
+        self.assertIn("no shock time is needed", missing.reason)
+        unknown = r3([TAKEN], header(sternal=((10.0, 30.0),)))   # the sternal zone not visible throughout
+        self.assertEqual((unknown.kind, unknown.blocked_by), ("not_evaluable", "R5"))
+        self.assertIn("whether the paddles were placed is unknown too", unknown.reason)
+
+    def test_no_shock_time_with_a_placement_names_the_checked_part(self):
+        outcome = r3([TAKEN, ev("paddles_firmly_on_chest", 9, "firm")])
+        self.assertEqual((outcome.kind, outcome.blocked_by, outcome.evidence), ("not_evaluable", "R5", ("firm",)))
+        self.assertIn("checked: paddles placed firmly on the chest (both at 9 s)", outcome.reason)
 
 
 class Coverage(unittest.TestCase):

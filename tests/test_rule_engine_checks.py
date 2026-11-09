@@ -12,7 +12,7 @@ from schemas.event import Event
 from schemas.rule_result import RuleStatus
 
 CONFIG = load_rules_config()
-AUDIO_RAN = {"analyses_run": {"video": True, "audio": True}}
+AUDIO_RAN = {"analyses_run": {"video": True, "audio": True}, "coverage": {"region:audio": "covered"}}   # clear (D-122)
 
 
 def ev(name, t, source="annotation", confidence=1.0, event_id=None):

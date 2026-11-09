@@ -4677,3 +4677,98 @@ Full suite: **702 tests run, all pass, 1 skipped** (no code changed); the docs t
 
 ### Tests
 Full suite: **702 tests run, all pass, 1 skipped** (docs only); the docs test passes; the pipeline command exits with 0.
+
+## Increment 18: shared context for the audio rules (2026-11-09)
+
+Not committed. Plan: [audio_integration_plan.md](audio_integration_plan.md) Increment 18.
+
+### What was built
+- **Cross-modal tolerance:** `engine.yaml` `cross_modal_tolerance_seconds` = 1.0 s
+  (placeholder, D-123). `checks.window_between` picks it for audio–video pairs; same-modality
+  pairs keep `simultaneous_window_seconds`.
+- **Segment-timed audio (D-125):** `checks.segment_timed` / `time_bounds`. A command event lies
+  anywhere in its Whisper segment; `metadata.time_basis: word` makes it a point.
+  - `relation_between`: before only when certainly before; overlapping intervals are a tie.
+  - `same_segment`: two commands in one segment are not ordered.
+  - `duration_bounds`, `bounded_time_limit`, `timed_between`: a limit is judged on the shortest
+    and longest possible durations, with Unable to Verify and the flag **`timing_uncertain`** in
+    between.
+- **Audio coverage (D-122):**
+  - a new region `audio` (the six command events) and `coverage_policy.stated_only_regions:
+    [audio]`;
+  - `analyses_run.audio: true` alone gives **unknown**, so a missing command is Unable to Verify;
+  - a stated coverage, or clear-audio intervals (`visibility["region:audio"]`), decides;
+  - audio not run → not covered;
+  - regions may now hold audio events, but each region has one modality;
+  - the context reports the `audio` region.
+- **Partial results (D-121):**
+  - `checks.partly_evaluable` gives Not evaluable because of X, naming the parts checked and
+    citing their evidence; `outcome.not_evaluable` can carry evidence and timestamps.
+  - **R3, R4, R6 without a shock time:** a firm placement, press or removal seen → Not evaluable
+    because of R5, naming it. R3 Fails `missing` when nothing was placed while both zones were
+    visible to the end; R4 Fails `not_pressed` when the paddles were placed and stayed visible to
+    the end with no press. R6 never fails without a shock time. With no firm placement observed,
+    R4 and R6 are Not evaluable because of R3 (corrected after review, see below).
+- **Flags:** **`order_partially_checked`** (used by S1 and A7 later); like `order_not_checked`, it
+  gives an overall Incomplete.
+- **Command anchors:** `oxygen_away`, `stand_clear` and `shock_command`.
+- **Output contract version 14.**
+
+### Behaviour changes in existing results
+1. **R3, R4, R6 without a shock time:** they used to be Not evaluable as a whole. Now they Fail
+   when their own shock-free part shows a mistake (D-121), and otherwise name what was checked.
+2. **A missing audio command:** it used to be "covered" (Fail) whenever `analyses_run.audio` was
+   true. Now it is unknown (Unable to Verify) unless clear-audio intervals or coverage are stated
+   (D-122). No built rule uses audio events yet, so only tests saw this.
+
+The existing tests that used audio commands as examples now state clear audio explicitly. The R3
+and R4 tests for "no shock time" follow D-121.
+
+### Tests (702 → 730)
+- New `tests/test_rule_engine_shared_audio.py` (21 tests):
+  - windows; timing noise near the tolerance (scenario 8);
+  - segment intervals; commands in one segment (scenario 12);
+  - limits on bounds (scenario 13); timing not checked;
+  - the audio region (unknown, not covered, clear intervals);
+  - `partly_evaluable`; the new flags and the overall result;
+  - command anchors; config.
+- R3 (2), R6 (3) and the coverage tests (3 new) cover D-121 and D-122.
+
+Full suite: **730 tests run, all pass, 1 skipped**. The demo matches all seven expected results;
+the pipeline command exits with 0. `rules/` imports nothing from `audio/`, `video/` or `legacy/`.
+Synthetic timelines only.
+
+### Documents updated
+- **Contract and flags:** `output_contract.md` (v14), `anomalies.md`, `rules/render.py`
+  (REPORT_VERSION 14).
+- **Logic:**
+  - `decision_flow.yaml` (P-007, P-017, P-020, P-024, P-025, P-034, P-035, P-036);
+  - `pathways.md` (R3, R4, R6 rows; W-86 to W-88);
+  - `diagrams.md` ((k), (l), (m)).
+- **Status and registers:** `rules_status.md`, `assumptions.md` (A-002), `methods.md`.
+- **Plans:** `audio_integration_plan.md` (Increment 18 built), `implementation_plan.md` (its old
+  audio rows point to the new plan).
+- **Logs:** `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 19 is deferred (D-125). Next is Increment 20, the procedure-order config and loader, on
+Arnikan's "continue".
+
+### Review fix (Arnikan, 2026-11-09)
+Two "no shock time" Fails used one step's mistake as evidence for another (D-119):
+- **R6:** it now never fails `missing` without a shock time. "Removed after the shock" means nothing
+  without a shock, and a shock off screen can't be ruled out. It is Not evaluable because of R5,
+  naming any removal or placement seen.
+- **No firm placement observed (R3's step):** R4 and R6 are Not evaluable because of R3, never
+  `not_pressed` or `missing`, with or without a shock time.
+- **Kept:** R3 `missing` (nothing placed while the zones were visible to the end); R4 `not_pressed`
+  (placed, and the paddles visible to the end with no press).
+- **Code:** a shared helper `_blocked_by_placement`.
+- **Tests:**
+  - R4: no placement with and without a shock time; placed and never pressed;
+  - R6: no placement with a shock time; never failing without one.
+
+  The R6 "removal missing" tests now include a placement in their fixtures.
+- **Docs:** `decision_flow.yaml` (P-034, P-036), `pathways.md` (P-034, P-036, W-86), `rules_status.md`,
+  `diagrams.md` ((k), (m)), the D-121 note, `output_contract.md` (the v14 row).
+- **Results:** full suite **732 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.

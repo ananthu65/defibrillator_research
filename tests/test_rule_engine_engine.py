@@ -159,11 +159,13 @@ class RegisteredRulesUseTheContext(unittest.TestCase):
         self.assertEqual(caught.exception.code, "unknown_required_event")
 
     def test_header_reaches_coverage(self):
+        from rules.config import load_rules_config
         from rules.coverage import TimelineHeader
 
         def a3(ctx, definition, results):
             return checks.missing("A3", ctx, "stand_clear_command", what="stand clear")
-        header = TimelineHeader.from_dict({"analyses_run": {"audio": True}})
+        header = TimelineHeader.from_dict({"analyses_run": {"audio": True}, "coverage": {"region:audio": "covered"}},
+                                          regions=tuple(load_rules_config().engine.regions))
         result = assess([SHOCK], config(rule("A3")), header=header, registry=spec("A3", a3))
         self.assertEqual(result.outcomes[0].kind, FAIL)
 

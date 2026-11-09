@@ -27,7 +27,8 @@ annotation data, not for real assessments), `confirmed`, or `retired`.
   - minimum gap between two gel applications: 0.4 s (1.0 s until 2026-10-17, OQ-018);
   - R8 placement-match window: removed with the one-zone inference (D-116);
   - header duration tolerance: 0.5 s;
-  - R6 removal-before-screen tolerance: 0.5 s (D-105).
+  - R6 removal-before-screen tolerance: 0.5 s (D-105);
+  - cross-modal tolerance (an audio time against a video time): 1.0 s (D-123).
 - **Why:** The brief says engineering values are chosen in pilot validation, not given by the
   supervisor.
 - **Status:** active (all marked `placeholder: true` in `engine.yaml`).

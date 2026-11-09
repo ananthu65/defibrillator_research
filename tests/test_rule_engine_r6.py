@@ -123,31 +123,56 @@ class WithoutShockTime(unittest.TestCase):
         outcome = r6([ev("paddles_removed_after_shock", 20)])
         self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R5"))
 
+    def test_the_removal_seen_is_named_as_the_checked_part(self):
+        outcome = r6([ev("paddles_removed_after_shock", 20, "removed")])
+        self.assertEqual(outcome.evidence, ("removed",))
+        self.assertIn("checked: paddles removed", outcome.reason)
+        self.assertIn("a removal never shows a shock (D-115)", outcome.reason)
+
+    def test_no_shock_time_never_fails_missing(self):
+        """Without a shock, "removed after the shock" means nothing, and a shock off screen can't be ruled out:
+        always Not evaluable because of R5, naming any placement seen, even with the zones visible throughout."""
+        placed = r6([PLACED])
+        self.assertEqual((placed.kind, placed.blocked_by, placed.evidence), ("not_evaluable", "R5", ("placed",)))
+        self.assertIn("checked: paddles placed at 10 s, no removal seen", placed.reason)
+        nothing = r6([ev("Gel applied", 2)])
+        self.assertEqual((nothing.kind, nothing.blocked_by), ("not_evaluable", "R5"))
+        self.assertIn("no paddle removal and no firm placement seen", nothing.reason)
+
     def test_multiple_shocks_is_not_evaluable_because_of_r5(self):
         events = [ev("shock_delivered_on_screen", 14, "s1"), ev("shock_delivered_on_screen", 16, "s2"),
                   ev("paddles_removed_after_shock", 20)]
         self.assertEqual(r6(events).blocked_by, "R5")
 
 
+PLACED = ev("paddles_firmly_on_chest", 10, "placed")
+
+
 class RemovalMissing(unittest.TestCase):
-    """D-104: missing only if both placement zones were visible from the shock (15 s) to the end (30 s)."""
+    """D-104: missing only if the paddles were placed and both placement zones were visible from the shock (15 s)
+    to the end (30 s)."""
 
     def test_zones_visible_to_the_end_is_missing(self):
-        outcome = r6([SHOCK], header(((5.0, 30.0),)))
+        outcome = r6([PLACED, SHOCK], header(((5.0, 30.0),)))
         self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "missing"))
         self.assertIn("from the shock (15 s) to the end of the recording (30 s)", outcome.reason)
 
     def test_zones_out_of_view_before_the_end_is_unable_to_verify(self):
-        outcome = r6([SHOCK], header(((0.0, 22.0),)))
+        outcome = r6([PLACED, SHOCK], header(((0.0, 22.0),)))
         self.assertEqual(outcome.kind, "unable_to_verify")
         self.assertIn("apical zone unknown, sternal zone unknown", outcome.reason)
 
     def test_no_zone_tracks_is_unable_to_verify(self):
-        self.assertEqual(r6([SHOCK], header(None)).kind, "unable_to_verify")
+        self.assertEqual(r6([PLACED, SHOCK], header(None)).kind, "unable_to_verify")
+
+    def test_no_placement_is_not_evaluable_because_of_r3(self):
+        """D-119: "never removed" would follow from the missing placement, R3's mistake, not from R6's evidence."""
+        outcome = r6([SHOCK], header(((5.0, 30.0),)))
+        self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R3"))
 
     def test_low_confidence_removal_is_never_a_fail(self):
         weak = ev("paddles_removed_after_shock", 20, "weak", confidence=0.2, source="video")
-        outcome = r6([SHOCK, weak])
+        outcome = r6([PLACED, SHOCK, weak])
         self.assertEqual((outcome.kind, outcome.evidence), ("unable_to_verify", ("weak",)))
 
 
