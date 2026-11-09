@@ -4586,3 +4586,94 @@ Full suite: **702 tests run, all pass, 1 skipped** (no test changes). The demo m
 `methods.md`, `supervisor_briefing.md`, `demo_walkthrough.md`, `output_contract.md`, `diagrams.md`,
 `decision_flow.yaml`, `pathways.md`, `anomalies.md`, `progress.md`, `ai_usage_log.md`; code comments
 in `rules/checks.py` and `rules/engine.py`.
+
+## Audio integration plan and the combined flow (2026-10-20)
+
+Docs only; no code, not committed.
+
+### Decisions recorded (Arnikan)
+- **D-120:** the procedure is one combined flow; audio rules run in the same engine and context.
+- **D-121:** the partial-result convention. It settles the R3/R4/R6 open item of the D-119
+  entry; R3, R4 and R6 are changed in Increment 18.
+- **D-122:** without clear-audio intervals, a missing command is unknown (Unable to Verify,
+  never Fail).
+- **D-123:** one owner per order relation. A new rule S1 owns the remaining relations; one step
+  may break two relations; R5's `preceding_steps` is retired; A7's `depends_on` is removed;
+  `cross_modal_tolerance_seconds` = 1.0 s (placeholder).
+- **D-124:** a command-recognition adapter for raw transcripts, as a fallback. Single-word
+  phrases match exactly only. Unrecognised speech is data, written only under `data/`.
+
+### What was done
+- [audio_integration_plan.md](audio_integration_plan.md):
+  - the shared context additions;
+  - the procedure order as a precedence graph, from the ARTS proposal, NOT clinically approved,
+    with the unknown positions listed;
+  - the relation owners and the order-check method;
+  - each audio rule;
+  - the audio input in two formats, with the adapter;
+  - Increments 18–28;
+  - the combined scenario matrix.
+- **Open questions** OQ-062 to OQ-069: five for the supervisor, three for Sanjeevan.
+- **`upstream_requirements.md`:** clear-audio intervals, the input format, and learner speech as
+  data.
+
+### Tests
+Full suite: **702 tests run, all pass, 1 skipped** (no code changed); the docs test passes; the pipeline command exits with 0.
+
+### Next
+Increment 18 on Arnikan's instruction.
+
+## Audio rules Step 0: re-sync of the approved plan (2026-11-09)
+
+No code. Not committed.
+
+### Git
+- `feature/rule-engine` is merged into `main` (PR #7, `62882f0`).
+- `feature/audio-rules` was created from `origin/main`.
+- The audio plan docs from 2026-10-20 were never committed. They are carried onto the new branch
+  as working-tree changes.
+
+### Findings
+- **The plan is complete:** D-120 to D-124, OQ-062 to OQ-069 and both review additions are
+  present.
+- **No dependency file changed:** no commit on any branch since 2026-10-20; `schemas/`, `audio/`,
+  `pipeline/`, `video/` and `configs/pipeline.yaml` are unchanged.
+- **Audio input:** the pipeline already produces command events through Sanjeevan's
+  `detect_commands`:
+  - 3 commands;
+  - segment-level times, no word timestamps;
+  - confidence `exp(avg_logprob)`;
+  - no clear-audio intervals.
+
+### Plan changes (marked [2026-11-09], awaiting approval)
+- Segment-timed audio comparisons in Increment 18 (`timing_uncertain`).
+- The transcript adapter's input is `TranscriptSegment`, and Increment 19 is deferred until
+  OQ-067.
+- Two scenarios added to the matrix.
+- A proposed new question: charging as a step.
+- Requests for Sanjeevan listed in section 10.
+
+### Tests
+Full suite: **702 tests run, all pass, 1 skipped** (no code changed); the docs test passes; the pipeline command exits with 0.
+
+## Step 0 approved: Sanjeevan's command events are the audio input (D-125, 2026-11-09)
+
+### Decisions (Arnikan)
+- **D-125:**
+  - the input is Sanjeevan's command events (OQ-067 answered, pending his confirmation);
+  - the transcript adapter is deferred (D-124 note); the engine keeps no phrase list;
+  - the single phrase list is `configs/pipeline.yaml` (OQ-069 answered);
+  - OQ-066 moved to Sanjeevan (with the supervisor);
+  - the interval comparison for segment-timed audio, approved for Increment 18;
+  - OQ-070 (charging as a step), new;
+  - six requests to Sanjeevan, the missing commands first.
+
+### Documents updated
+- `audio_integration_plan.md` (sections 6, 6.1, 7, 9 and 10);
+- `decisions.md` (D-124, D-125);
+- `open_questions.md` (OQ-066, OQ-067, OQ-069, OQ-070);
+- `upstream_requirements.md` (the six requests);
+- `progress.md`, `ai_usage_log.md`.
+
+### Tests
+Full suite: **702 tests run, all pass, 1 skipped** (docs only); the docs test passes; the pipeline command exits with 0.

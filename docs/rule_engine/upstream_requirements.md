@@ -180,9 +180,35 @@ provisional** until the medical-faculty supervisor confirms them.
   to the shock.
 - **Current state:** `configs/pipeline.yaml` emits only `oxygen_away_command`,
   `stand_clear_command` and `resume_compressions_command`. Stop and shock are missing.
-- **Audio coverage (nice to have; format to agree):** marking where audio was missing or
-  unclear lets the rule engine say Unable to Verify instead of guessing. Without it, audio
-  coverage is `unknown`.
+### Requests from the rule engine (2026-11-09, D-125)
+The command events from `detect_commands` are the rule engine's audio input (D-125; please confirm
+it is final, OQ-067). The phrase list in `configs/pipeline.yaml` is the single list (OQ-069).
+1. **Top priority: detect the missing commands:** stop compressions, the shock command, start
+   compressions after the shock, and an unambiguous continue before it (OQ-009). Until they are
+   detected, **A4, A5, A8 and R7/A6 give Unable to Verify**.
+2. **Word timestamps** (or the command's own start time) in the command events. Today each event
+   carries its Whisper segment's start and end, so the engine compares segment intervals and can't
+   order two commands said in one segment.
+3. **Clear-audio intervals** (OQ-068): details below.
+4. **Single-word phrases** (such as "shock", "discharge"): match whole words only, with a guard
+   against phrases such as "no shock" or "shock advised".
+5. **Unrecognised speech:** keep it for review. It is what learners said, so it is data: under the
+   gitignored `data/` folder, never committed.
+6. **Confirm the input format** is final (OQ-067). Strict or lenient phrasing is an open question
+   about your matching (OQ-066).
+
+- **Clear-audio intervals (requested, OQ-068; format to agree):** the intervals where a spoken
+  command would have been recognised, for example from Whisper's per-segment confidence
+  (`avg_logprob`) and `no_speech_prob`, plus noise or silence handling; the thresholds are your
+  engineering choice. Without them, a missing command is `unknown`: Unable to Verify, never Fail
+  (D-122).
+- **Input format (OQ-067):** detected command events are preferred. If the audio branch can only
+  send a raw transcript (segments with text, times, confidence and, ideally, word timestamps), the
+  rule engine's fallback adapter turns it into command events (D-124). Command detection stays
+  your area; the adapter is only a fallback.
+- **Learner speech is data:** the fallback adapter's review list of unrecognised speech
+  (`unrecognised_speech.csv`) contains what learners said. It is written only under the
+  gitignored `data/` folder and never committed (D-124).
 
 ## Open items to agree
 
@@ -195,8 +221,10 @@ provisional** until the medical-faculty supervisor confirms them.
 3. **Per-paddle taken events:** whether they are feasible, and their final names.
 4. **Command names:** the audio stop/shock commands and the final names after supervisor
    confirmation.
-5. **Audio coverage:** the signal format.
+5. **Audio coverage:** the clear-audio intervals and their format (OQ-068).
 6. **Confidence thresholds:** which side applies them (upstream, the rule engine, or both with
    the same values), so they are not applied twice with different values.
 7. **Timeline header:** whether upstream can provide `recording_id`, `camera_angle`,
    `duration_seconds` and `analyses_run`, and in what format.
+8. **Audio input format:** command events or a raw transcript (OQ-067), and which phrase list is
+   the single source (OQ-069).

@@ -59,6 +59,102 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   not changed yet.
 - **Affects:** every rule; P-014, P-019; D-027, D-056, D-098; OQ-059.
 
+### D-120 The procedure is one combined flow of audio and video steps
+- **Date / by / status:** 2026-10-20 · Arnikan · approved
+- **Decision:** the procedure is ONE combined flow. Audio and video steps follow a fixed relative
+  order: every step has a defined position relative to every other step. Any mistake, in any step
+  or in the order, fails the procedure. The audio rules (A1–A8, R7/A6) are not a separate system:
+  they run in the same engine, over the same merged timeline, in the same evaluation order as the
+  video rules, and use the same procedure context (shock time, placement times, phases, coverage).
+- **The order is config:** "X before Y" relations (a precedence graph), so steps can later be
+  grouped as interchangeable without code changes. The draft follows the ARTS proposal (Figure 2
+  and the audio command sequence) and is **NOT clinically approved** (OQ-062, OQ-063).
+- **Plan:** [audio_integration_plan.md](audio_integration_plan.md).
+- **Affects:** every rule; the new rule S1 "Procedure order"; A7. **Related:** D-119, D-121 to D-124.
+
+### D-121 Partial-result convention: judge every part that can be judged
+- **Date / by / status:** 2026-10-20 · Arnikan · approved
+- **Decision:** a rule with several parts reports:
+  - **Fail** if any part that can be judged shows a mistake;
+  - otherwise, if a part can't be judged because a step it depends on failed or wasn't observed,
+    **Not evaluable because of X**, with the parts that were checked named in the reason and
+    evidence;
+  - otherwise **Pass**.
+- **Applies D-119.** It settles the open item on R3, R4 and R6 (progress.md, 2026-10-20): without
+  a shock time they still judge the part that needs none (R3: whether the paddles were placed;
+  R4: the press and its order against the placement; R6: whether the paddles were removed, never
+  as evidence of a shock, D-115). Applied in the plan's Increment 18.
+- **Affects:** R3, R4, R6 and every audio rule; P-014.
+
+### D-122 Audio coverage: without clear-audio intervals a missing command is unknown
+- **Date / by / status:** 2026-10-20 · Arnikan · approved
+- **Decision:** a missing command can Fail only inside an interval where the audio was clear
+  (the header's `region:audio` intervals). Without such intervals its coverage is **unknown**, so
+  the result is Unable to Verify, never Fail. Audio not run → not covered.
+- **Upstream:** Sanjeevan is asked to provide the clear-audio intervals (OQ-068).
+- **Affects:** A1–A8, R7/A6, S1; P-007, P-008.
+
+### D-123 One owner per order relation
+- **Date / by / status:** 2026-10-20 · Arnikan · approved
+- **Decision:** every "X before Y" relation of the procedure order is judged by exactly one rule.
+  The existing rules keep the relations they already check (R1, R2, R3, R4, R6, R8, and the
+  planned A1–A5, R7/A6). A7 owns the remaining audio–audio pairs, and a new rule, **S1
+  "Procedure order"**, owns every remaining pair.
+  - **One step may break two relations** owned by different rules. Each rule then fails on its
+    own evidence (D-119); no relation is judged twice.
+  - **R5's `preceding_steps` is retired** (each X → R5 pair is owned by X's rule), and **A7's
+    `depends_on` is removed** (the dependency step would block a whole rule, against D-119).
+    Both are applied in the plan's increments.
+  - **Order check:** the misplaced steps are the minimum set whose removal leaves the rest
+    consistent. Ties between equal solutions are reported as one ordering mistake between the
+    steps involved, never broken arbitrarily.
+  - **Cross-modal tolerance:** `cross_modal_tolerance_seconds` = 1.0 s (placeholder, A-002) for
+    audio–video comparisons.
+- **Affects:** R5, A7, S1; P-019.
+
+### D-124 A command-recognition adapter for raw transcripts (fallback)
+- **Date / by / status:** 2026-10-20 · Arnikan · approved; **deferred, not built** (D-125,
+  2026-11-09): it is built only if the input format changes. The engine keeps no phrase list of
+  its own
+- **Decision:** the audio input may be command events (preferred) or a raw transcript (OQ-067).
+  An input adapter, `rules/adapters/transcript.py`, turns a transcript into the same command
+  events and is skipped for command events, so the engine core doesn't change. Command detection
+  stays Sanjeevan's area; the adapter is only a fallback.
+  - **Phrases** are config with provenance (several phrasings per command). Matching uses
+    normalisation and fuzzy matching with placeholder thresholds. **Single-word phrases (for
+    example "shock", "discharge") are matched exactly, never fuzzily.**
+  - **Ambiguous phrases** are resolved by context (as "continue CPR" by the shock) or flagged,
+    never guessed. Below the confidence threshold a match is not evidence and never absence
+    (D-010). Word timestamps are used where available.
+  - **Non-standard phrasing:** `lenient` (a near-match gives Unable to Verify, flagged) until the
+    supervisor decides; `strict` counts approved phrases only (OQ-066).
+  - **Unrecognised speech** is kept for review, never dropped. It contains what learners said,
+    so it is data: it is written only under the gitignored `data/` folder and never committed.
+- **Affects:** the audio input path; P-001.
+
+### D-125 The audio input is Sanjeevan's command events
+- **Date / by / status:** 2026-11-09 · Arnikan · approved (the Step 0 re-sync of the audio plan)
+- **Decision:**
+  - **The input:** the command events produced by Sanjeevan's pipeline (Whisper →
+    `detect_commands`, the shared `Event` schema) are THE audio input. The engine reads them and
+    never imports `audio/`. This answers OQ-067; Sanjeevan is to confirm it is final.
+  - **The transcript adapter** (Increment 19, D-124) is deferred, not built: it is a fallback only
+    if the input format changes. The engine keeps no phrase list of its own.
+  - **The single phrase list** is `configs/pipeline.yaml` (Sanjeevan's). This answers OQ-069.
+    Strict or lenient phrasing (OQ-066) becomes a question about his matching.
+  - **Segment-timed audio** (today's events carry the Whisper segment's start and end):
+    - an order is broken only when one event is certainly after the other;
+    - commands in the same segment are not ordered;
+    - time limits are judged on the shortest and longest possible durations, with Unable to
+      Verify, flag `timing_uncertain`, in between.
+
+    Built in Increment 18.
+  - **Charging as a step** is an open question for the supervisor and Sanjeevan (OQ-070).
+  - **Six requests to Sanjeevan** are in `upstream_requirements.md`. The top priority is the
+    missing commands (stop, shock command, start, unambiguous continue); until they are detected,
+    A4, A5, A8 and R7/A6 give Unable to Verify.
+- **Affects:** every audio rule, S1; the audio input path. **Related:** D-120 to D-124.
+
 ### D-004 Never blame the learner for missing data
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
 - **Decision:** A rule fails only when the evidence clearly shows the mistake. Missing or

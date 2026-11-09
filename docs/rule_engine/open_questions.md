@@ -35,6 +35,11 @@ first, so that section can be printed for supervisor meetings.
 | OQ-059 | new (2026-10-17) | supervisor | Arnikan, Sanjeevan | open | Does a parallel placement count as one mistake or two? |
 | OQ-060 | new (2026-10-17) | supervisor | Arnikan | answered | Should paddle removal still support an inferred Pass for R3 and R4? |
 | OQ-061 | new (2026-10-17) | supervisor | Arnikan | open | Should the shock-on-screen inference apply when the direct evidence was visible but absent? |
+| OQ-062 | new (2026-10-20) | supervisor | Arnikan | open | The approved full order of audio and video steps |
+| OQ-063 | new (2026-10-20) | supervisor | Arnikan | open | Which steps, if any, may swap? |
+| OQ-064 | new (2026-10-20) | supervisor | Arnikan | open | Is the procedure-order rule (S1) its own checklist item? |
+| OQ-065 | new (2026-10-20) | supervisor | Sanjeevan, Arnikan | open | The accepted phrases per command |
+| OQ-070 | new (2026-11-09) | supervisor | Sanjeevan, Arnikan | open | Should charging be a step in the procedure order? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | Is the apical-first fallback clinically acceptable? (the R8 window part no longer applies, D-116) |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -47,6 +52,10 @@ first, so that section can be printed for supervisor meetings.
 | OQ-055 | new (2026-10-16) | Ananth | Arnikan | open | Does anything take the camera view from the backup file name? |
 | OQ-009 | E-4 | Sanjeevan | Arnikan | open | Missing audio command events |
 | OQ-045 | new (2026-10-14) | Sanjeevan | Arnikan | open | Confirm the output contract's versioning rule |
+| OQ-066 | new (2026-10-20) | Sanjeevan | supervisor, Arnikan | open | Non-standard phrasing in command matching: strict or lenient? |
+| OQ-067 | new (2026-10-20) | Sanjeevan | Arnikan | answered | Audio input format: command events or a raw transcript? |
+| OQ-068 | new (2026-10-20) | Sanjeevan | Arnikan | open | Clear-audio intervals: signal and format |
+| OQ-069 | new (2026-10-20) | Sanjeevan | Arnikan | answered | Which phrase list is the single source? |
 | OQ-015 | E-8 | team | supervisor | open | Final IDs for R8 and A8 |
 | OQ-018 | E-11 | team | Ananth, Sanjeevan, Arnikan | open | Engineering placeholder values |
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
@@ -328,6 +337,55 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ---
 
+### OQ-062 The approved full order of audio and video steps
+- **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** open
+- **Question:** confirm the combined order drafted from the proposal
+  ([audio_integration_plan.md](audio_integration_plan.md), section 2):
+  1. Video: gel → paddle taken first → first placement → second paddle → firm placement → both
+     buttons → shock on the screen → paddles removed → restart command.
+  2. Commands: O₂ away → continue → stand clear → stop → shock command → shock → restart.
+  3. **Shock command before the button press:** proposed, to confirm.
+  4. **Paddles removed before the restart command:** from the proposal's Figure 2, to confirm.
+  5. **Unknown positions:** where do O₂ away, continue, stand clear, stop and the shock command
+     belong relative to gel, the paddles and firm placement? The proposal doesn't say.
+- **Affects:** S1, A7 and every rule's order relations (D-120, D-123).
+- **Interim behaviour:** the draft is used, marked NOT clinically approved; unknown pairs are
+  not checked.
+
+### OQ-063 Which steps, if any, may swap?
+- **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** open
+- **Question:** are any steps interchangeable (their mutual order free)?
+- **Affects:** S1, A7 (config only: interchangeable groups).
+- **Interim behaviour:** none.
+
+### OQ-064 Is the procedure-order rule (S1) its own checklist item?
+- **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** open
+- **Question:** should the overall order be a separate checklist item, or map onto existing
+  items?
+- **Affects:** S1; the checklist (P-018).
+- **Interim behaviour:** S1 is planned as its own rule, pending.
+
+### OQ-065 The accepted phrases per command
+- **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Sanjeevan, Arnikan
+  · **Raised:** 2026-10-20 · **Status:** open
+- **Question:** approve the phrases for each command (proposal §8 item 5). Seed list: the
+  proposal's examples. Note that "continue CPR" appears under both A2 and A6.
+- **Affects:** the transcript adapter (D-124); OQ-010.
+- **Interim behaviour:** the proposal's examples, provisional.
+
+### OQ-070 Should charging be a step in the procedure order?
+- **Old no.:** new (2026-11-09) · **Owner:** supervisor · **Also involves:** Sanjeevan, Arnikan ·
+  **Raised:** 2026-11-09 · **Status:** open
+- **Question:** the proposal places "continue compressions" (A2) "during the preparation or
+  charging stage". The audio branch already detects a `charging_sound` event (unused by any rule).
+  Should charging be a step in the order (for example, continue before or during charging), and
+  can its detection be relied on?
+- **Affects:** A2, S1, the procedure order (D-120); the vocabulary (charging is listed as unused).
+- **Interim behaviour:** charging is not a step; no rule uses it.
+
 ## For Ananth (video and pipeline)
 
 ### OQ-004 Who produces per-paddle placement events?
@@ -420,6 +478,44 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Interim behaviour:** D-070 is applied as written and stays interim until Sanjeevan confirms.
 
 ---
+
+### OQ-066 Non-standard phrasing in command matching: strict or lenient?
+- **Old no.:** new (2026-10-20) · **Owner:** Sanjeevan (moved from the supervisor on 2026-11-09,
+  D-125) · **Also involves:** supervisor, Arnikan · **Raised:** 2026-10-20 · **Status:** open
+- **Question:** when a learner says a command in non-approved words, should Sanjeevan's command
+  matching ignore it (strict: only approved phrases count) or emit a flagged candidate that the
+  engine reports as Unable to Verify (lenient)? The clinical part (which wordings are acceptable)
+  is the supervisor's.
+- **Affects:** `detect_commands` (the single phrase list is `configs/pipeline.yaml`, D-125);
+  A1–A8, R7/A6.
+- **Interim behaviour:** today's matching is strict (approved phrases only, exact).
+
+### OQ-067 Audio input format: command events or a raw transcript?
+- **Old no.:** new (2026-10-20) · **Owner:** Sanjeevan · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** answered (2026-11-09, D-125); Sanjeevan to confirm it is final
+- **Question:** will the audio branch send detected command events, or a raw transcript (with
+  word timestamps)?
+- **Answered:** 2026-11-09 → **D-125**: the command events produced by Sanjeevan's pipeline (Whisper → `detect_commands`,
+  the shared `Event` schema). The transcript adapter is deferred, a fallback only if this changes.
+- **Affects:** P-001; the transcript adapter (D-124).
+
+### OQ-068 Clear-audio intervals: signal and format
+- **Old no.:** new (2026-10-20) · **Owner:** Sanjeevan · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** open
+- **Question:** can the audio branch mark where a spoken command would have been recognised (for
+  example from Whisper's `avg_logprob` and `no_speech_prob`, plus noise handling)? In what format?
+- **Affects:** every missing-command result (D-122).
+- **Interim behaviour:** without the intervals, a missing command is unknown: Unable to Verify,
+  never Fail.
+
+### OQ-069 Which phrase list is the single source?
+- **Old no.:** new (2026-10-20) · **Owner:** Sanjeevan · **Also involves:** Arnikan ·
+  **Raised:** 2026-10-20 · **Status:** answered (2026-11-09, D-125)
+- **Question:** `configs/pipeline.yaml` (Sanjeevan's) or `configs/rule_engine/command_phrases.yaml`
+  (the fallback adapter's)? Two lists could drift apart.
+- **Answered:** 2026-11-09 → **D-125**: `configs/pipeline.yaml`. The engine keeps no phrase list of its own; the rule
+  engine never edits that file (D-028).
+- **Affects:** the transcript adapter (D-124).
 
 ## For the team
 
