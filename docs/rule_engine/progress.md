@@ -4772,3 +4772,20 @@ Two "no shock time" Fails used one step's mistake as evidence for another (D-119
 - **Docs:** `decision_flow.yaml` (P-034, P-036), `pathways.md` (P-034, P-036, W-86), `rules_status.md`,
   `diagrams.md` ((k), (m)), the D-121 note, `output_contract.md` (the v14 row).
 - **Results:** full suite **732 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Check before Increment 20: R3's inferred pass (Arnikan, 2026-11-09)
+With the shock on screen and no placement seen:
+- **Before the fix:** R3 Pass – Inferred, R4 Pass – Inferred, R6 Pass when a removal was seen.
+  But with no removal, R6 gave **Not evaluable because of R3**, although R3 passed. The previous
+  R6 test used an R6-only config with no R3, so it never exercised R3's inference.
+- **Fix:** "Not evaluable because of R3" now applies only when R3 doesn't pass: no firm
+  placement seen, and none of R3's configured inference sources confirmed (`_r3_inferred`).
+  Otherwise R6 is judged normally against the shock time. R4 got the same guard, for a config
+  where R4 can't infer but R3 can.
+- **Tests:** R3, R4 and R6 together with the shock on screen and no placement:
+  - R3 and R4 inferred;
+  - R6 with a removal → Pass; absent while visible → `missing`; not visible → Unable to Verify;
+  - R3 without inference → R4 and R6 Not evaluable because of R3.
+- **Docs:** `decision_flow.yaml` (P-034, P-036), `pathways.md` (P-034, P-036, W-86),
+  `rules_status.md`, the D-121 note, `output_contract.md`.
+- **Results:** full suite **737 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.

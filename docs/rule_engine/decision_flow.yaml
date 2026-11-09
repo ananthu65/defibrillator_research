@@ -218,8 +218,8 @@ decision_points:
       - condition: No shock time (no shock on the screen, or several), whatever was seen
         outcome: Not evaluable because of R5, naming any removal (tagged, or past the gate a derived placement ended by a real exit) or placement that was seen; never a Fail - "removed after the shock" means nothing without a shock, and a shock off screen can't be ruled out; a removal never shows a shock (D-115, D-121)
         next: P-020
-      - condition: A shock time, no removal, and no firm placement observed (R3's step)
-        outcome: Not evaluable because of R3 - "never removed" would follow from the missing placement, not from R6's own evidence (D-119)
+      - condition: A shock time, no removal, no firm placement observed (R3's step), and R3 not passing by inference either
+        outcome: Not evaluable because of R3 - "never removed" would follow from the missing placement, not from R6's own evidence (D-119). When R3 passes by inference (the shock on screen, D-102), R6 is judged normally against the shock time
       - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
         outcome: Fail removed_before_shock
         failure_codes: [removed_before_shock]
@@ -807,8 +807,8 @@ decision_points:
       - condition: No inference and no shock time; the paddles placed, no press, both paddles visible throughout from the placement to the end of the recording
         outcome: Fail not_pressed, judged on R4's own evidence without the shock time (D-121)
         failure_codes: [not_pressed]
-      - condition: No inference, no press, and no firm placement observed (R3's step), with or without a shock time
-        outcome: Not evaluable because of R3 - "never pressed" would follow from the missing placement, not from R4's own evidence (D-119)
+      - condition: No inference, no press, no firm placement observed (R3's step), and R3 not passing by inference either, with or without a shock time
+        outcome: Not evaluable because of R3 - "never pressed" would follow from the missing placement, not from R4's own evidence (D-119). When R3 passes by inference (D-102), R4 is judged normally
       - condition: No inference and no shock time; otherwise (a paddle not visible throughout, or low confidence)
         outcome: Not evaluable because of R5; whether the buttons were pressed is unknown too
         next: P-020

@@ -165,8 +165,9 @@ class RemovalMissing(unittest.TestCase):
     def test_no_zone_tracks_is_unable_to_verify(self):
         self.assertEqual(r6([PLACED, SHOCK], header(None)).kind, "unable_to_verify")
 
-    def test_no_placement_is_not_evaluable_because_of_r3(self):
-        """D-119: "never removed" would follow from the missing placement, R3's mistake, not from R6's evidence."""
+    def test_no_placement_and_r3_not_passing_is_not_evaluable_because_of_r3(self):
+        """D-119: "never removed" would follow from the missing placement, R3's mistake, not from R6's evidence.
+        R6 alone in the config: R3 isn't configured, so it can't pass by inference either."""
         outcome = r6([SHOCK], header(((5.0, 30.0),)))
         self.assertEqual((outcome.kind, outcome.blocked_by), ("not_evaluable", "R3"))
 
@@ -175,6 +176,49 @@ class RemovalMissing(unittest.TestCase):
         outcome = r6([PLACED, SHOCK, weak])
         self.assertEqual((outcome.kind, outcome.evidence), ("unable_to_verify", ("weak",)))
 
+
+
+def with_r3_r4(r3_sources=("shock_delivered_on_screen",)):
+    """R3, R4 and R6 approved; R3 (and R4) infer from the shock on screen unless r3_sources is empty."""
+    data = copy.deepcopy(CATALOGUE)
+    sources = list(r3_sources)
+    data["rules"] = [{"id": "R3", "status": "approved", "parameters": {"inference_sources": sources}},
+                     {"id": "R4", "status": "approved", "parameters": {"inference_sources": sources}},
+                     {"id": "R6", "status": "approved"}]
+    return RuleEngineConfig.from_dict(data)
+
+
+class FollowsR3InferredPass(unittest.TestCase):
+    """D-102, D-121: the shock on screen and no placement seen -> R3 Pass - Inferred, so R4 keeps its inferred pass
+    and R6 is judged normally against the shock time. "Not evaluable because of R3" only when R3 doesn't pass."""
+
+    def outcomes(self, events, head, cfg=None):
+        result = run(events, head, cfg or with_r3_r4())
+        return {r: result.outcome(r) for r in ("R3", "R4", "R6")}
+
+    def test_r3_and_r4_pass_by_inference(self):
+        outcome = self.outcomes([SHOCK], header())
+        self.assertEqual((outcome["R3"].kind, outcome["R4"].kind), ("pass_inferred", "pass_inferred"))
+
+    def test_r6_removal_seen_passes(self):
+        outcome = self.outcomes([SHOCK, ev("paddles_removed_after_shock", 20, "removed")], header())
+        self.assertEqual(outcome["R6"].kind, "pass_direct")
+
+    def test_r6_removal_absent_while_visible_is_missing(self):
+        outcome = self.outcomes([SHOCK], header())
+        self.assertEqual((outcome["R6"].kind, outcome["R6"].failure_code), ("fail", "missing"))
+        self.assertIn("from the shock (15 s) to the end of the recording", outcome["R6"].reason)
+
+    def test_r6_removal_absent_while_not_visible_is_unable_to_verify(self):
+        outcome = self.outcomes([SHOCK], header(((0.0, 22.0),)))
+        self.assertEqual(outcome["R6"].kind, "unable_to_verify")
+
+    def test_without_r3_inference_r4_and_r6_are_not_evaluable_because_of_r3(self):
+        outcome = self.outcomes([SHOCK], header(), with_r3_r4(()))
+        self.assertEqual(outcome["R3"].kind, "fail")   # nothing placed while the zones were visible
+        for rule in ("R4", "R6"):
+            with self.subTest(rule=rule):
+                self.assertEqual((outcome[rule].kind, outcome[rule].blocked_by), ("not_evaluable", "R3"))
 
 def record(derived, tags):
     """derived: (event name, frame, end frame, ended by exit)."""

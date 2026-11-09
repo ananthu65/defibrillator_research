@@ -496,8 +496,9 @@ def both_buttons_pressed(ctx, definition, results):
        -> Not evaluable because of R5, naming it; the paddles placed and no press while both paddles were
        visible throughout, from the placement to the end of the recording -> Fail `not_pressed`; otherwise
        Not evaluable because of R5.
-    6. No press and no firm placement observed (R3's step), with or without a shock time -> Not evaluable
-       because of R3: "never pressed" would follow from the missing placement (D-119).
+    6. No press and no firm placement observed (R3's step), with or without a shock time, and R3 not passing
+       by inference either -> Not evaluable because of R3: "never pressed" would follow from the missing
+       placement (D-119). When R3 passes by inference (D-102), R4 is judged normally.
     5. Coverage: Fail `not_pressed` only if both paddles were visible throughout from the placement
        to the shock (D-108); otherwise Unable to Verify. Low confidence is never a Fail (D-010).
     """
@@ -542,10 +543,11 @@ def _press_without_shock(ctx, shock, placement, later):
             "can't be judged", evidence=(press.event_id, *((placement.event_id,) if placement else ())),
             timestamps={BUTTONS: press.start, **({"placement": placement.start} if placement else {})},
             flags=_evidence_flags([placement] if placement else []))
-    if placement is None:
+    if placement is None and _r3_inferred(ctx) is None:   # R3 doesn't pass: placement unseen, not inferred
         return _blocked_by_placement("R4", "the buttons were pressed after it")
-    window = _window_to_end(ctx, placement.start)
-    where = f"after the placement ({placement.start:g} s)" + (f" to the end ({window[1]:g} s)" if window else "")
+    start = placement.start if placement is not None else 0.0
+    window = _window_to_end(ctx, start)
+    where = (f"after the placement ({start:g} s)" if placement is not None else "in the recording") +         (f" to the end ({window[1]:g} s)" if window else "")
     weak = ctx.missing(BUTTONS, window)
     if LOW_CONFIDENCE_FLAG in weak.flags:
         return checks.partly_evaluable("R4", shock, "R5", "both buttons may have been pressed: seen with low "
@@ -554,7 +556,7 @@ def _press_without_shock(ctx, shock, placement, later):
     if all(p.coverage.status == COVERED and p.outcome == "fail" for p in paddles):
         return failed("R4", "not_pressed", f"buttons not seen pressed {where}, although both paddles were visible "
                       "throughout (D-108); no shock time is needed to judge this (D-121)",
-                      evidence=(placement.event_id,), uses=tuple(paddles))
+                      evidence=(placement.event_id,) if placement is not None else (), uses=tuple(paddles))
     statuses = ", ".join(f"{region.split('_')[0]} paddle {p.coverage.status}" for region, p in zip(PADDLE_REGIONS, paddles))
     return checks.partly_evaluable("R4", shock, "R5", f"buttons not seen pressed {where}, and the paddles were not "
                                    f"visible throughout ({statuses}), so whether they were pressed is unknown too",
@@ -586,9 +588,9 @@ def _pressed(press, placement, shock):
 
 
 def _press_missing(ctx, placement, shock):
-    if placement is None:
+    if placement is None and _r3_inferred(ctx) is None:   # R3 doesn't pass: placement unseen, not inferred
         return _blocked_by_placement("R4", "the buttons were pressed after it")
-    start = placement.start if placement.start <= shock.time else 0.0
+    start = placement.start if placement is not None and placement.start <= shock.time else 0.0
     window = (start, shock.time)
     where = (f"between the placement ({start:g} s) and the shock ({shock.time:g} s)" if placement is not None
              and placement.start <= shock.time else f"before the shock ({shock.time:g} s)")
@@ -699,8 +701,9 @@ def paddles_removed_after_shock(ctx, definition, results):
        (D-103); exceeded -> Fail `too_late`.
     5. No removal -> Fail `missing` only if the paddles were placed (R3's step) and both placement zones
        were visible throughout from the shock time to the end of the recording; otherwise Unable to Verify
-       (D-104). No firm placement observed -> Not evaluable because of R3: "never removed" would follow
-       from the missing placement (D-119).
+       (D-104). No firm placement observed and R3 not passing (no inference either) -> Not evaluable because
+       of R3: "never removed" would follow from the missing placement (D-119). When R3 passes by inference
+       (the shock on screen, D-102), R6 is judged normally against the shock time.
     """
     shock = ctx.shock
     if not shock.present:
@@ -773,8 +776,17 @@ def _removal_without_shock(ctx, shock):
                                    evidence=(placement.event_id,), flags=_evidence_flags([placement]))
 
 
+def _r3_inferred(ctx):
+    """R3's Pass - Inferred (D-102): its first confirmed inference source, else None. R3 not configured -> None."""
+    definition = next((r for r in ctx.config.rules if r.id == "R3"), None)
+    sources = definition.parameters.get("inference_sources") if definition is not None else None
+    if not isinstance(sources, list):
+        return None
+    return _inferred(ctx, "R3", sources, "paddles firmly on the chest")
+
+
 def _removal_missing(ctx, shock):
-    if _placement(ctx) is None:
+    if _placement(ctx) is None and _r3_inferred(ctx) is None:   # R3 doesn't pass: placement unseen, not inferred
         return _blocked_by_placement("R6", "the paddles were removed after the shock")
     end = _recording_end(ctx)
     window = (shock.time, end) if end is not None and end >= shock.time else None

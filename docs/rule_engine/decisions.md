@@ -91,7 +91,9 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
     any removal or placement seen.
   - **No firm placement observed (R3's step):** R4 and R6 are Not evaluable because of R3, never
     `not_pressed` or `missing`, with or without a shock time; those would follow from R3's missing
-    placement.
+    placement. **Only when R3 doesn't pass** (Fail or Unable to Verify): when the shock is on screen
+    and R3 is Pass – Inferred (D-102), R4 keeps its inferred pass and R6 is judged normally against
+    the shock time (Arnikan, 2026-11-09).
 
   Kept: R3 `missing` when nothing was placed while the zones were visible to the end; R4
   `not_pressed` when the paddles were placed and stayed visible to the end with no press.

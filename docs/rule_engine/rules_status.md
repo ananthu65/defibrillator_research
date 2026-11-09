@@ -19,8 +19,10 @@ D-118). Untested on reversed-order recordings.
 - **R6 never fails without a shock time:** "removed after the shock" means nothing without a
   shock, and a shock off screen can't be ruled out. It is Not evaluable because of R5, naming any
   removal or placement seen.
-- **No firm placement observed (R3's step):** R4 and R6 are Not evaluable because of R3, never
-  `not_pressed` or `missing` (D-119), with or without a shock time.
+- **No firm placement observed (R3's step), and R3 not passing by inference:** R4 and R6 are Not
+  evaluable because of R3, never `not_pressed` or `missing` (D-119), with or without a shock time.
+  When R3 passes by inference from the shock on screen (D-102), R4 keeps its inferred pass and R6 is
+  judged normally against the shock time.
 - Otherwise the rule is Not evaluable because of R5, and its reason names what was checked.
 
 **Audio (D-122, D-125):** the audio rules read Sanjeevan's command events. A missing command can

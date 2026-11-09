@@ -405,7 +405,7 @@ one counts; the count stays undecided (OQ-023).
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (P-016) | — |
 | No inference and no shock time; a press after the placement | **Not evaluable because of R5**, naming the press and its order as checked (D-121) | — |
 | No inference and no shock time; the paddles placed, no press, both paddles visible from the placement to the end of the recording | Fail, on R4's own evidence (D-121) | `not_pressed` |
-| No inference, no press, and no firm placement observed (R3's step), with or without a shock time | **Not evaluable because of R3**: "never pressed" would follow from the missing placement (D-119) | — |
+| No inference, no press, no firm placement observed (R3's step), and R3 not passing by inference, with or without a shock time | **Not evaluable because of R3**: "never pressed" would follow from the missing placement (D-119). If R3 passes by inference (D-102), R4 is judged normally | — |
 | No inference and no shock time; otherwise | **Not evaluable because of R5** (press unknown too) | — |
 | No inference; a low-confidence press | Unable to Verify | `low_confidence_evidence` |
 | No inference; the paddles placed, both paddles visible throughout the placement → the shock | Fail (unreachable while the shock on screen is an inference source) | `not_pressed` |
@@ -417,7 +417,8 @@ one counts; the count stays undecided (OQ-023).
 | Condition | Outcome | Code and flags |
 |---|---|---|
 | No shock time (no shock on the screen, or several), whatever was seen | **Not evaluable because of R5**, never a Fail: "removed after the shock" means nothing without a shock, and a shock off screen can't be ruled out. Any removal or placement seen is named; a removal never shows a shock (D-093, D-115, D-121) | — |
-| A shock time, no removal, and no firm placement observed (R3's step) | **Not evaluable because of R3**: "never removed" would follow from the missing placement (D-119) | — |
+| A shock time, no removal, no firm placement observed (R3's step), and R3 not passing by inference | **Not evaluable because of R3**: "never removed" would follow from the missing placement (D-119) | — |
+| A shock time, no placement seen, R3 Pass – Inferred from the shock on screen (D-102) | Judged normally: removal seen → Pass; absent while both zones visible to the end → Fail `missing`; zones not visible → Unable to Verify | `missing` |
 | Removal clearly before the shock (more than `removal_before_screen_tolerance_seconds`: the screen may show the shock after the discharge, D-105) | Fail | `removed_before_shock` |
 | Past the gate: a derived placement ended by a real exit clearly before the shock, that paddle not placed again by the shock | Fail | `removed_before_shock`; `derived_placement` |
 | Removal after the shock, or before it within `removal_before_screen_tolerance_seconds` (treated as at the shock) | Pass – Direct; limit unset, so the overall result can't be Pass (D-062); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
@@ -1162,7 +1163,9 @@ today.
 3. No placement at all → **R3 Fail `missing`**: the zones were visible from the first take to the
    end, and no shock time is needed to see that the paddles were never placed. R4 and R6 are then
    **Not evaluable because of R3**, never `not_pressed` or `missing`: those would follow from R3's
-   mistake, not from their own evidence (D-119).
+   mistake, not from their own evidence (D-119). This applies only when R3 doesn't pass: with the
+   shock on screen, R3 is Pass – Inferred (D-102), R4 keeps its inferred pass, and R6 is judged
+   normally against the shock time.
 4. Placed at 9 s, never pressed, both paddles visible to the end → **R4 Fail `not_pressed`**, on its
    own evidence.
 5. Placed and never removed → **R6 Not evaluable because of R5**, naming the placement. Without a
