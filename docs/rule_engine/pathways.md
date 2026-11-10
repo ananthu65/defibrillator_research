@@ -252,6 +252,24 @@ run with a clear error, and no assessment is produced (D-064).
 | The rule **raises an error** or returns something invalid | **`engine_error`** with the message; every other rule still runs; dependents not evaluable; overall incomplete (D-063) |
 | A shared-contract rule (`module:function`) breaks the contract | The run stops (shared contract) |
 
+### Stage: configuration
+
+#### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
+The expected order of every audio and video step, as "X before Y" chains
+(`configs/rule_engine/procedure_order.yaml`, D-120). No rule reads it yet: S1 and A7 will
+(Increments 26-27).
+
+| Condition | Outcome |
+|---|---|
+| A step's events not canonical, mixed modalities, or an unknown derived kind | Configuration error |
+| The chains form a cycle | Configuration error naming the cycle |
+| Every pair implied by the chains (transitive closure) | A relation; `confirm` when it awaits the supervisor (A5 before R4) |
+| Two steps in one interchangeable group | Their mutual order is dropped (OQ-063) |
+| A pair marked unknown (the proposal is silent) | Not ordered, not checked; ordered by the chains anyway → configuration error |
+| A relation claimed by a rule | That rule owns it; claimed twice or not a relation → configuration error (D-123) |
+| An unclaimed audio–audio relation | A7 |
+| Any other unclaimed relation | S1 "Procedure order" (planned) |
+
 ### Stage: rule — shared checks (built, Increment 6)
 
 The building blocks every rule uses, in the order of the ladder (P-014, diagram c). Each one
@@ -1188,3 +1206,18 @@ today.
    `timing_uncertain`**.
 3. With the start in 14–15 s (3–5 s) → Pass; in 17–18 s (6–8 s) → Fail `pre_shock_pause`.
 4. "Stop compressions, all stand clear" in one segment: the two commands are not ordered.
+
+### W-89 The procedure order from the proposal
+*(Built in Increment 20; D-120, D-123.)*
+1. The chains give 14 steps and 60 relations:
+   - video: gel → paddle placement → firm placement → buttons → shock on screen → removal → restart;
+   - audio: O₂ away → continue → stand clear → stop → shock command → shock → restart;
+   - the shock command before the button press, marked `confirm`.
+2. Owners:
+   - R4 owns firm placement → buttons and buttons → shock;
+   - A4 owns continue → stop and stop → shock;
+   - A7 owns the other audio pairs (14);
+   - S1 owns the rest (31), such as removal → restart and shock command → button press.
+3. O₂ away and gel are unordered (unknown, OQ-062): no rule checks their order.
+4. A chain making the restart come before O₂ away creates a cycle, so the catalogue doesn't load:
+   "circular order: … R7 -> A1".

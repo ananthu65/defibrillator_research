@@ -9,7 +9,7 @@ schema_version: 1
 #   decisions (D-), assumptions (A-), open_questions (OQ-).
 # Every flag, anomaly, rejection and failure code listed here must exist in docs/rule_engine/anomalies.md,
 # and (for built points) in the code; tests/test_rule_engine_docs.py checks this.
-stages: [annotation_export, adapter, preparation, coverage, context, rule, overall_policy, renderer]
+stages: [configuration, annotation_export, adapter, preparation, coverage, context, rule, overall_policy, renderer]
 
 decision_points:
 
@@ -1179,3 +1179,33 @@ decision_points:
     decisions: [D-066, D-070, D-114]
     assumptions: []
     open_questions: [OQ-017, OQ-045]
+
+  # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
+  - id: P-039
+    name: Procedure order (precedence graph)
+    stage: configuration
+    status: built
+    decides: The expected relative order of every audio and video step, and which rule judges each "X before Y" relation (D-120, D-123); loaded and validated with the catalogue. NOT clinically approved (OQ-062); no rule reads it yet
+    inputs: [configs/rule_engine/procedure_order.yaml (steps, chains, unknown, interchangeable, owners, default_owner), the vocabulary]
+    branches:
+      - condition: A step's events are not canonical, or mix modalities, or its derived kind is not earliest_take, later_take or earliest_placement
+        outcome: Configuration error; the catalogue doesn't load
+      - condition: The chains form a cycle
+        outcome: Configuration error naming the cycle
+      - condition: Every pair implied by the chains (transitive closure)
+        outcome: A relation, marked direct when a chain gives it and confirm when it awaits the supervisor (A5 before R4)
+      - condition: Two steps in one interchangeable group
+        outcome: Their mutual order is dropped; their order against the other steps is kept (OQ-063)
+      - condition: A pair listed as unknown (the proposal is silent, OQ-062)
+        outcome: Not ordered and not checked; if the chains order it anyway, a configuration error
+      - condition: A relation claimed by a rule
+        outcome: That rule owns it (R1, R2, R3, R4, R6, A1-A5, R7 - the relations they already check); claimed twice, or not a relation, is a configuration error (one owner per relation, D-123)
+      - condition: An unclaimed relation between two audio steps
+        outcome: Owned by A7 (scope audio)
+      - condition: Any other unclaimed relation
+        outcome: Owned by the default owner, S1 "Procedure order" (planned, Increment 27)
+    config: [configs/rule_engine/procedure_order.yaml, configs/rules.yaml procedure_order]
+    code: rules/procedure.py (load_procedure_order, ProcedureOrder), rules/config.py (RuleEngineConfig.procedure_order)
+    decisions: [D-118, D-120, D-123]
+    assumptions: [A-027]
+    open_questions: [OQ-062, OQ-063, OQ-064]

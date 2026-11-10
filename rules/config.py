@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 import re
 import yaml
+from rules.procedure import load_procedure_order
 from rules.errors import ConfigError
 from rules.vocabulary import Vocabulary, load_vocabulary
 
@@ -11,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATH = ROOT / "configs/rules.yaml"
 DEFAULT_ENGINE_PATH = "configs/rule_engine/engine.yaml"
 DEFAULT_VOCABULARY_PATH = "configs/rule_engine/vocabulary.yaml"
+DEFAULT_PROCEDURE_ORDER_PATH = "configs/rule_engine/procedure_order.yaml"
 RULE_STATUSES = ("pending", "approved")
 RULE_KEYS = {"id", "title", "status", "enabled", "implementation", "same_as", "depends_on", "parameters"}
 VALUE_KEYS = {"value", "no_limit", "approved_by", "approved_on", "date_pending", "provided_by", "provided_on",
@@ -159,6 +161,7 @@ class RuleEngineConfig:
     engine: EngineSettings
     vocabulary: Vocabulary
     demo: bool = False   # a demo config (configs/rule_engine/demo/): every report says "DEMO ONLY" (D-114)
+    procedure_order: object = None   # ProcedureOrder (D-120, D-123), validated at load; used by S1 and A7
 
     @classmethod
     def from_dict(cls, data, where="rules", root=ROOT):
@@ -189,7 +192,9 @@ class RuleEngineConfig:
         if missing or unknown:
             raise ConfigError(f"{engine_path} expected_counts: every canonical event needs an expected count; "
                               f"missing {missing}, not in the vocabulary {unknown}")
-        return cls(rules, timing, engine, vocabulary, demo)
+        order_path = _path(data.get("procedure_order", DEFAULT_PROCEDURE_ORDER_PATH), root, f"{where} procedure_order")
+        order = load_procedure_order(_load(order_path), vocabulary, where=str(order_path))
+        return cls(rules, timing, engine, vocabulary, demo, order)
 
     def rule(self, rule_id):
         return next(r for r in self.rules if r.id == rule_id)

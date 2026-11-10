@@ -25,6 +25,10 @@ D-118). Untested on reversed-order recordings.
   judged normally against the shock time.
 - Otherwise the rule is Not evaluable because of R5, and its reason names what was checked.
 
+**Procedure order (D-120, D-123):** `configs/rule_engine/procedure_order.yaml` gives every step's
+expected position and the owner of each order relation (validated at load; Increment 20). It is
+NOT clinically approved (OQ-062). S1 "Procedure order" (planned) and A7 will read it.
+
 **Audio (D-122, D-125):** the audio rules read Sanjeevan's command events. A missing command can
 fail only inside stated clear-audio intervals; otherwise it is Unable to Verify. Until stop,
 shock command, start and an unambiguous continue are detected (OQ-009), A4, A5, A8 and R7/A6 give

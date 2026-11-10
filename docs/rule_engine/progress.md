@@ -4789,3 +4789,52 @@ With the shock on screen and no placement seen:
 - **Docs:** `decision_flow.yaml` (P-034, P-036), `pathways.md` (P-034, P-036, W-86),
   `rules_status.md`, the D-121 note, `output_contract.md`.
 - **Results:** full suite **737 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+## Increment 20: procedure-order config and loader (2026-11-09)
+
+Not committed.
+
+### Before it: the Increment 18 fix (committed `69147d4`)
+"Not evaluable because of R3" for R4 and R6 now applies only when R3 doesn't pass. With the shock on
+screen, R3's inferred pass lets R4 keep its inferred pass and R6 be judged normally (see the entry
+above).
+
+### What was built
+- **`configs/rule_engine/procedure_order.yaml`**, NOT clinically approved (OQ-062):
+  - 14 steps, each with its events (`R2A`, `PLACE` and `R2B` derived from the paddle order,
+    D-118);
+  - the proposal's chains, with A5 before R4 marked `confirm`;
+  - the unknown pairs (A1–A5 against gel, the paddles and firm placement);
+  - interchangeable groups (none yet);
+  - owners: R1, R2, R3, R4, R6, A1–A5 and R7 for the relations they already check; A7 for the
+    other audio pairs; S1 by default.
+- **`rules/procedure.py`** (`load_procedure_order`, `ProcedureOrder`, `Step`, `Relation`):
+  - checks the events and the one-modality rule;
+  - takes the transitive closure and refuses a cycle, naming it;
+  - drops pairs inside interchangeable groups;
+  - refuses unknown pairs that the chains order;
+  - gives every relation exactly one owner (a pair claimed twice, or not a relation, is an error).
+- **The catalogue** loads it (`RuleEngineConfig.procedure_order`; `rules.yaml` and the demo copy
+  link it).
+- **Result:** 60 relations: S1 31, A7 14, R2 3, R4 2, A4 2, and one each for R1, R3, R6, R7 and
+  A1, A2, A3, A5. No rule reads them yet, so no result changes.
+
+### Tests (737 → 758)
+New `tests/test_rule_engine_procedure_order.py` (21):
+- the repository order: a draft; the proposal chains; A5 before R4 awaiting confirmation; one
+  owner each; the existing rules' relations; A7's audio scope; unknown pairs unordered; derived
+  steps; every owner in `rules.yaml` or the planned S1;
+- validation: a cycle named; an unknown step; non-canonical or mixed-modality events; an unknown
+  derived kind; two owners; an owned non-relation; an invalid owner ID; an unknown pair that the
+  chains order; an interchangeable group; exact keys;
+- a bad order stops the catalogue from loading.
+
+Full suite: **758 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-039, stage `configuration`), `pathways.md` (P-039, W-89);
+- `methods.md`, `rules_status.md`, `audio_integration_plan.md` (Increment 20 built);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 21 (A1, A3) on Arnikan's "continue".

@@ -11,6 +11,7 @@ status: pending_supervisor_review
 # Rule engine catalogue (owner: Arnikan). Loaded and validated by rules/config.py.
 vocabulary: configs/rule_engine/vocabulary.yaml   # canonical event names
 engine: configs/rule_engine/engine.yaml           # engineering placeholders and policies
+procedure_order: configs/rule_engine/procedure_order.yaml   # the order of all steps (D-120, D-123); NOT clinically approved
 
 # Clinical values. Never invented: anything not provided stays null, and a rule with a null
 # limit checks presence and order only and says that timing was not checked. Unused keys are
