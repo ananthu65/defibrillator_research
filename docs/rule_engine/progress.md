@@ -4838,3 +4838,50 @@ Full suite: **758 tests run, all pass, 1 skipped**; the docs test passes; the de
 
 ### Next
 Increment 21 (A1, A3) on Arnikan's "continue".
+
+## Procedure order: config-only path for the complete order; testing practice (2026-11-10)
+
+Increment 20 was committed (`6e8328b`) and pushed.
+
+### Status of the order
+Arnikan has asked the medical supervisor for the complete order. Until it arrives, the config holds
+only what the proposal states, and the rest stays "unknown" and unchecked. This is noted in OQ-062
+and in the plan.
+
+### Adaptability check (applying the complete order = editing `procedure_order.yaml` only)
+- **Unowned relations:** a relation without an explicit owner already goes to A7 between audio
+  steps, otherwise to S1. New relations need no owner entries, and the explicit owners stay.
+  Interchangeable groups were already config only.
+- **Fixed:** "unknown" was only a group (steps × relative_to), so resolving one pair meant
+  splitting a group. Pairs can now be listed one by one (`{pairs, question}`).
+- **Error message:** for a pair still marked unknown, it now says the pair may be ordered "through
+  other relations". "A1 before PLACE" also orders A1 before R2B and R3, so those pairs must leave
+  `unknown` too.
+- **How-to:** in the plan, section 11.
+- **Tests (3):**
+  - a copy with every unknown pair resolved, by an example interleaving for the test only, loads;
+    every former unknown pair is ordered and owned by S1, the order is total, and the explicit
+    owners are kept;
+  - a single pair resolved together with the pairs it implies;
+  - a new relation still marked unknown is refused.
+
+### S1 and implied relations (report only, OQ-071)
+- **Option A (proposed):** S1 owns only relations not implied by the other rules' relations. This
+  leaves 21 of its 31. Most still mix another rule's relation with S1's own direct ones (gel after
+  firm placement would fail R1 and S1).
+- **Option B:** also drop the relations implied through S1's own direct ones. This leaves 3:
+  PLACE→R3, R6→R7, A5→R4.
+
+The loader is unchanged.
+
+### Testing practice
+Recorded in `methods.md`: tests of how rules interact use the full `rules.yaml`. Applied from
+Increment 21 on.
+
+### Documents updated
+`open_questions.md` (OQ-062 status, OQ-071), `audio_integration_plan.md` (status, section 11),
+`procedure_order.yaml` (comment), `decision_flow.yaml` (P-039), `methods.md`, `progress.md`,
+`ai_usage_log.md`.
+
+### Tests
+Full suite: **761 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.

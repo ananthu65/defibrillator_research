@@ -182,19 +182,26 @@ def _groups(raw, steps, where):
 
 
 def _unknown(raw, steps, pairs, where):
+    """Pairs the proposal is silent on (OQ-062): {steps, relative_to, question} (every step against every other)
+    or {pairs: [[a, b], ...], question} (one by one, so resolving a single pair is a one-line change)."""
     if not isinstance(raw, list):
-        raise ConfigError(f"{where} unknown: expected a list of {{steps, relative_to, question}}")
+        raise ConfigError(f"{where} unknown: expected a list of {{steps, relative_to, question}} or {{pairs, question}}")
     unknown = []
     for entry in raw:
-        if not isinstance(entry, dict) or set(entry) != {"steps", "relative_to", "question"} or \
-                [s for s in [*entry["steps"], *entry["relative_to"]] if s not in steps]:
-            raise ConfigError(f"{where} unknown: expected {{steps, relative_to, question}} of known steps, got {entry!r}")
-        for a in entry["steps"]:
-            for b in entry["relative_to"]:
-                if (a, b) in pairs or (b, a) in pairs:
-                    raise ConfigError(f"{where} unknown: {a} and {b} are marked unknown ({entry['question']}), but the "
-                                      "chains order them")
-                unknown.append((a, b))
+        if isinstance(entry, dict) and set(entry) == {"steps", "relative_to", "question"}:
+            listed = [(a, b) for a in entry["steps"] for b in entry["relative_to"]]
+        elif isinstance(entry, dict) and set(entry) == {"pairs", "question"} and isinstance(entry["pairs"], list)                 and all(isinstance(p, list) and len(p) == 2 for p in entry["pairs"]):
+            listed = [tuple(p) for p in entry["pairs"]]
+        else:
+            raise ConfigError(f"{where} unknown: expected {{steps, relative_to, question}} or {{pairs, question}}, "
+                              f"got {entry!r}")
+        for a, b in listed:
+            if a not in steps or b not in steps:
+                raise ConfigError(f"{where} unknown: {a!r} or {b!r} is not a step")
+            if (a, b) in pairs or (b, a) in pairs:
+                raise ConfigError(f"{where} unknown: {a} and {b} are marked unknown ({entry['question']}), but the "
+                                  "chains order them, directly or through other relations: remove the pair from unknown")
+            unknown.append((a, b))
     return tuple(unknown)
 
 

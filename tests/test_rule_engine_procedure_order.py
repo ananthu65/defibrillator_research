@@ -136,6 +136,41 @@ class Validation(unittest.TestCase):
             load_procedure_order(data, CONFIG.vocabulary)
 
 
+
+class ApplyingTheCompleteOrder(unittest.TestCase):
+    """When the supervisor's complete order arrives (OQ-062), applying it is a change to procedure_order.yaml only:
+    move pairs from "unknown" to chains; new relations get owners automatically (S1, or A7 between audio steps)."""
+
+    # an example interleaving for the test only, NOT a clinical order: O2 away and continue before the gel,
+    # stand clear, stop and the shock command after firm placement
+    COMPLETE = [{"chain": ["A1", "A2", "R1", "R2A"], "source": "test"},
+                {"chain": ["R2B", "R3", "A3"], "source": "test"}]
+
+    def test_every_unknown_pair_resolved_loads_and_gets_owners(self):
+        order = load(chains=[*DATA["chains"], *self.COMPLETE], unknown=[])
+        self.assertEqual(order.unknown, ())
+        for a, b in ORDER.unknown:   # every pair the proposal left open is now ordered and owned
+            with self.subTest(pair=(a, b)):
+                relation = order.relation(a, b)
+                self.assertIsNotNone(relation)
+                self.assertEqual(relation.owner, "S1")   # cross-modal: the default owner, no owner entry needed
+        steps = len(order.steps)
+        self.assertEqual(len(order.relations), steps * (steps - 1) // 2)   # a total order now
+        self.assertEqual(owner("R4", "R5", order), ("R4", "R5", "R4"))   # explicit owners kept
+
+    def test_a_single_pair_can_be_resolved_with_the_pairs_it_implies(self):
+        """A1 before PLACE also orders A1 before R2B and R3 (PLACE -> R2B, PLACE -> R3): all three leave unknown."""
+        resolved = {("A1", "PLACE"), ("A1", "R2B"), ("A1", "R3")}
+        unknown = [{"pairs": [[a, b] for a, b in ORDER.unknown if (a, b) not in resolved], "question": "OQ-062"}]
+        order = load(chains=[*DATA["chains"], {"chain": ["A1", "PLACE"], "source": "test"}], unknown=unknown)
+        for a, b in resolved:
+            self.assertEqual(owner(a, b, order), (a, b, "S1"))
+        self.assertEqual(len(order.unknown), len(ORDER.unknown) - 3)
+
+    def test_a_new_relation_still_marked_unknown_is_refused(self):
+        with self.assertRaisesRegex(ConfigError, "marked unknown"):
+            load(chains=[*DATA["chains"], {"chain": ["A1", "PLACE"], "source": "test"}])
+
 class LoadedWithTheCatalogue(unittest.TestCase):
     def test_a_bad_order_stops_the_catalogue_from_loading(self):
         data = copy.deepcopy(DATA)

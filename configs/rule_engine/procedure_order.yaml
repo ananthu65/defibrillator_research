@@ -42,7 +42,8 @@ chains:
   - {chain: [A5, R4], source: "Arnikan: the shock command before the button press", confirm: true}
 
 # Pairs the proposal is silent on. They must stay unordered (not checked) until the supervisor
-# places them (OQ-062).
+# places them (OQ-062). Either {steps, relative_to, question} or {pairs: [[a, b], ...], question};
+# to apply the complete order, see audio_integration_plan.md section 11.
 unknown:
   - {steps: [A1, A2, A3, A4, A5], relative_to: [R1, R2A, PLACE, R2B, R3], question: OQ-062}
 

@@ -61,6 +61,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
+| OQ-071 | new (2026-11-10) | Arnikan | — | open | Should S1 own relations already implied by other rules' relations? |
 | OQ-007 | E-3c | Arnikan | — | answered | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | answered | Annotation label lists that drop the first-placement tag |
 | OQ-046 | new (2026-10-14) | Arnikan | — | answered | Do count anomalies block an overall Pass? Zero found = missing? |
@@ -352,6 +353,17 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Affects:** S1, A7 and every rule's order relations (D-120, D-123).
 - **Interim behaviour:** the draft is used, marked NOT clinically approved; unknown pairs are
   not checked.
+- **Status (2026-11-10):** Arnikan has asked the medical supervisor for the complete procedure order
+  (audio and video interleaved). Until it arrives, `procedure_order.yaml` uses only what the
+  proposal states:
+  - the visual sequence (Figure 2);
+  - the audio command sequence (section 5.2.2);
+  - their links before and after the shock;
+  - A5 before R4 (pending confirmation).
+
+  Every pair the proposal doesn't order stays "unknown" and unchecked. Applying the complete order
+  is a change to `procedure_order.yaml` only ([audio_integration_plan.md](audio_integration_plan.md),
+  section 11).
 
 ### OQ-063 Which steps, if any, may swap?
 - **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
@@ -593,6 +605,28 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 ---
 
 ## For Arnikan (rule engine and annotation)
+
+### OQ-071 Should S1 own relations already implied by other rules' relations?
+- **Old no.:** new (2026-11-10) · **Owner:** Arnikan · **Raised:** 2026-11-10 · **Status:** open
+  (to settle before Increment 27, S1)
+- **Question:** with the transitive closure, S1 owns long-range relations that other rules' relations
+  already imply. For example, "O₂ away before removal" follows from A1's "O₂ away before the shock"
+  and R6's "shock before removal". A late command would then fail both its own rule and S1, for the
+  same fact.
+- **Option A (proposed):** at load time, S1 owns only the relations NOT implied by the closure of the
+  relations owned by other rules, so S1 never reads rule results.
+  - On today's order this leaves **21 of S1's 31** relations: R1→R3, R1→R4, R1→R5, R1→R6, R1→R7, R2A→R3, R2A→R4, R2A→R5, R2A→R6, R2A→R7, PLACE→R3, PLACE→R4, PLACE→R5, PLACE→R6, PLACE→R7, R6→R7, A1→R4, A2→R4, A3→R4, A4→R4, A5→R4.
+  - It drops 10: R1→R2B, R3→R6, R3→R7, R4→R6, R4→R7, and A1…A5→R6.
+  - **Limit:** most of the 21 are implied by mixing other rules' relations with S1's own direct
+    ones. For example, R1→R3 follows from R1→PLACE (R1's) and PLACE→R3 (S1's). Gel after firm
+    placement would still fail both R1 (`after_placement`) and S1.
+- **Option B:** S1 owns only the relations not implied by the closure of all other relations
+  (other rules' plus S1's own direct ones).
+  - On today's order this leaves **3**: PLACE→R3, R6→R7, A5→R4.
+  - Those 3 together with the other rules' relations already imply all 31. A step misplaced
+    against another rule's relation is then judged once, by that rule.
+- **Affects:** S1 (Increment 27), the loader (`rules/procedure.py`), D-123.
+- **Interim behaviour:** the loader is unchanged: S1 owns all 31; no rule reads them yet.
 
 
 

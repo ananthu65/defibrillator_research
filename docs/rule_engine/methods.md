@@ -114,3 +114,9 @@ From 2026-10-13, an increment is done when:
   listing the documents updated, and naming each new open question with its OQ-ID;
 - `ai_usage_log.md` has a row for the increment;
 - the commit message is shown first and carries no AI attribution (D-026).
+
+**Testing practice (from 2026-11-10, after the R3 inferred-pass bug):** a test of how rules interact
+uses the **full `configs/rules.yaml`**, with the rules under test approved, never a config holding
+only the rule under test. The R6 test for "no placement" passed on an R6-only config, where R3
+couldn't infer, and so missed R3's inferred pass (D-102). Tests of a single rule's own logic may
+still use a one-rule config.

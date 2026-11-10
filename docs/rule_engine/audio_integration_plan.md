@@ -76,6 +76,12 @@ It contains:
 | A1 → A2 → A3 → A4 → A5 → R5 → R7 | proposal A7 sequence; A1–A5 "before shock"; A6/R7 "after shock" |
 | **A5 → R4** (the shock command before the button press) | Arnikan, **for supervisor confirmation** (OQ-062) |
 
+**Status of the order (2026-11-10):** Arnikan has asked the medical supervisor for the complete
+order (OQ-062). Until it arrives, the config holds only what the proposal states: the visual
+sequence, the audio command sequence, their before/after-the-shock links, and A5 before R4 (pending
+confirmation). Everything else is "unknown" and unchecked. Section 11 explains how to apply the
+complete order.
+
 **Unknown:** pairs the proposal is silent on. They are not checked, and they are listed in
 OQ-062:
 - A1, A2, A3, A4 and A5 relative to R1, R2A/PLACE/R2B and R3 (for example, may "O₂ away" come
@@ -389,3 +395,29 @@ there affects the plan.
   - OQ-068: the clear-audio intervals;
   - OQ-009: the missing command events;
   - OQ-037: what audio confidence means.
+
+## 11. How to apply the approved order (a change to `procedure_order.yaml` only)
+When the supervisor's complete order arrives (OQ-062), no code changes. In
+`configs/rule_engine/procedure_order.yaml`:
+1. **Record the approval:** fill `approval` (`approved_by`, `approved_on`, `source`) and change the
+   note.
+2. **Add the relations:** a new `chains` entry for each sequence, for example
+   `{chain: [A1, A2, R1], source: "supervisor, <date>"}`. Drop `confirm: true` from A5 → R4 if it
+   is confirmed; remove a chain the supervisor rejects.
+3. **Remove the resolved pairs from `unknown`.** Each pair can be listed on its own
+   (`{pairs: [[A1, PLACE], ...], question: OQ-062}`). A new relation also orders every pair implied
+   through the existing chains. For example, "A1 before PLACE" also orders A1 before R2B and R3
+   (PLACE → R2B, PLACE → R3), so those pairs leave `unknown` too. If one is left, the loader names
+   it ("marked unknown … but the chains order them").
+4. **Interchangeable steps:** list them under `interchangeable` (OQ-063). Their mutual order is
+   then not checked.
+5. **Owners:** nothing to add. A new relation without an owner goes to A7 when both steps are
+   audio, otherwise to S1. The explicit owners stay for the existing rules. Edit them only if a
+   relation they claim is removed: the loader then reports "not a relation of the procedure order".
+6. **Check:** run the full suite. The loader refuses a cycle (naming it), a pair still marked
+   unknown, or a relation claimed twice. A test shows the path: a copy with every unknown pair
+   resolved loads, and every new relation gets an owner
+   (`tests/test_rule_engine_procedure_order.py`, ApplyingTheCompleteOrder).
+
+A new step that isn't a canonical event yet (for example charging, OQ-070) also needs a vocabulary
+entry. That is a config change too, but outside this file.

@@ -1196,8 +1196,8 @@ decision_points:
         outcome: A relation, marked direct when a chain gives it and confirm when it awaits the supervisor (A5 before R4)
       - condition: Two steps in one interchangeable group
         outcome: Their mutual order is dropped; their order against the other steps is kept (OQ-063)
-      - condition: A pair listed as unknown (the proposal is silent, OQ-062)
-        outcome: Not ordered and not checked; if the chains order it anyway, a configuration error
+      - condition: A pair listed as unknown (the proposal is silent, OQ-062), as steps x relative_to or pair by pair
+        outcome: Not ordered and not checked; if the chains order it anyway (directly or through other relations), a configuration error naming the pair
       - condition: A relation claimed by a rule
         outcome: That rule owns it (R1, R2, R3, R4, R6, A1-A5, R7 - the relations they already check); claimed twice, or not a relation, is a configuration error (one owner per relation, D-123)
       - condition: An unclaimed relation between two audio steps
