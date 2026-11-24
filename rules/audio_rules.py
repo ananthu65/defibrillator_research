@@ -371,10 +371,8 @@ def restart_compressions(ctx, definition, results):
                                            "can't be judged", evidence=(seen[0].event_id,),
                                            timestamps={seen[0].event_name: seen[0].start})
         return _missing_without_shock(ctx, "R7", START, "the restart command", shock)
-    screen = _screen(ctx)
-    valid = [c for c in starts if checks.relation_between(ctx, c, screen) != checks.BEFORE]
-    if valid:
-        command = valid[0]
+    screen, command = _screen(ctx), _restart(ctx)
+    if command is not None:
         return checks.timed_between("R7", screen, command, ctx.config.limit("shock_to_compressions_seconds"),
                                     code="too_late", what=f"restart said at {command.start:g} s, after the shock on "
                                     f"the screen at {shock.time:g} s", evidence=(command.event_id, shock.event_id),
@@ -407,7 +405,91 @@ def restart_compressions(ctx, definition, results):
     return unable("R7", f"no restart command heard {where}, but {reason}", evidence=found.low_confidence_event_ids,
                   uses=(shock, found))
 
+def _restart(ctx):
+    """The restart command, or None: the context's start anchor (D-025, D-125), shared by R7/A6 and A8 so they
+    always judge the same command."""
+    anchor = ctx.anchor("start_compressions")
+    return next((e for e in ctx.named(START) if e.event_id == anchor.event_id), None) if anchor.present else None
+
+
 def _recording_end(ctx):
     header = ctx.coverage.header
     ends = [e.end for e in ctx.prepared.events]
     return header.duration_seconds if header is not None and header.duration_seconds else (max(ends) if ends else None)
+
+
+# ---- A8: the pre-shock pause ------------------------------------------------------------------------
+
+END_EVENTS = {"start": "the restart", "shock": "the shock on the screen"}
+
+
+@rule("A8", requires=(STOP, CONTINUE, START, SHOCK), description="Pre-shock pause within the approved limit")
+def pre_shock_pause(ctx, definition, results):
+    """A8 (P-044): the pause from stopping compressions to its end, within pre_shock_pause_seconds (5 s, approved).
+
+    The end event is a config value, parameters.end_event (OQ-076): "start" (the restart, as approved; the
+    default until the supervisor decides) or "shock" (the shock on the screen, never the removal, D-093);
+    anything else is a configuration error (engine_error).
+    - Pause start: the stop compressions command not certainly after the shock and not followed, before the
+      shock, by a continue command (compressions resumed). A4 judges the stop itself.
+    - Pause end: the restart is the context's start anchor (D-025, D-125), the same command R7/A6 judge.
+    - Duration on the shortest and longest possible gap (D-125): both within the limit -> Pass; both over ->
+      Fail `pre_shock_pause`; in between -> Unable to Verify (`timing_uncertain`).
+    Missing references (D-121): no shock time (needed to find the restart, or as the end event) -> Not
+    evaluable because of R5; no stop -> because of A4; no restart -> because of R7. A8 never fails for them.
+    """
+    end_event = definition.parameters.get("end_event", "start")
+    if end_event not in END_EVENTS:
+        # a configuration error: recorded as engine_error (D-063), never a result about the learner
+        raise ValueError(f"A8 end_event must be one of {sorted(END_EVENTS)}, got {end_event!r} (OQ-076)")
+    shock, limit, end_name = ctx.shock, ctx.config.limit("pre_shock_pause_seconds"), END_EVENTS[end_event]
+    stops = ctx.named(STOP)
+    if not shock.present:
+        seen = f"; checked: stop said at {stops[0].start:g} s" if stops else ""
+        return not_evaluable("A8", "R5", f"not evaluable because of R5: {shock.reason}; without the shock time "
+                             f"{end_name} can't be identified (D-093){seen}", uses=(shock,),
+                             evidence=(stops[0].event_id,) if stops else (),
+                             timestamps={STOP: stops[0].start} if stops else None)
+    screen = _screen(ctx)
+    stop = _pause_start(ctx, stops, screen)
+    end = screen if end_event == "shock" else _restart(ctx)
+    if stop is None:
+        also = "; the restart is missing too (R7)" if end is None else ""
+        return not_evaluable("A8", "A4", f"not evaluable because of A4: {_why_no_stop(ctx, stops, screen)}, so the "
+                             f"pause has no start{also}", uses=(shock,))
+    if end is None:
+        return not_evaluable("A8", "R7", f"not evaluable because of R7: {_why_no_restart(ctx)}, so the pause has no "
+                             f"end; checked: stop said at {stop.start:g} s", uses=(shock,), evidence=(stop.event_id,),
+                             timestamps={STOP: stop.start})
+    return checks.timed_between("A8", stop, end, limit, code="pre_shock_pause",
+                                what=f"pause from stop ({stop.start:g} s) to {end_name} ({end.start:g} s)",
+                                evidence=(stop.event_id, end.event_id), uses=(shock,))
+
+
+def _pause_start(ctx, stops, screen):
+    """The stop compressions were not resumed after: not certainly after the shock, and no continue command
+    certainly after it and not after the shock. The earliest such stop starts the pause."""
+    continues = ctx.named(CONTINUE)
+    for stop in stops:
+        if checks.relation_between(ctx, stop, screen) == checks.AFTER:
+            continue
+        if not any(checks.relation_between(ctx, c, stop) == checks.AFTER
+                   and checks.relation_between(ctx, c, screen) != checks.AFTER for c in continues):
+            return stop
+    return None
+
+
+def _why_no_stop(ctx, stops, screen):
+    if not stops:
+        return "no stop compressions command heard (A4 judges whether that is a mistake)"
+    if all(checks.relation_between(ctx, s, screen) == checks.AFTER for s in stops):
+        return f"stop said only after the shock ({stops[0].start:g} s)"
+    return "every stop before the shock was followed by continue, so compressions resumed"
+
+
+def _why_no_restart(ctx):
+    if _possibly(ctx, START):
+        return f"a continue/resume command near the shock is unresolved; {MERGED_CAUSE}"
+    if ctx.named(START):
+        return "start said only before the shock"
+    return "no restart command heard after the shock"

@@ -77,4 +77,6 @@ rules:
   - {id: R7, title: Compressions restarted promptly after shock, status: approved, implementation: null, parameters: {}}
   - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: approved}
   - {id: A7, title: Correct sequence of audio commands, status: pending, enabled: false, implementation: null, depends_on: [A1, A2, A3, A4, A5], parameters: {}}
-  - {id: A8, title: Pre-shock pause, status: pending, enabled: false, implementation: null, parameters: {}}
+  # A8: stop -> end of the pause within pre_shock_pause_seconds. end_event is start (the restart, as approved)
+  # or shock (the shock on the screen); start until the supervisor decides (OQ-076).
+  - {id: A8, title: Pre-shock pause, status: pending, enabled: false, implementation: null, parameters: {end_event: start}}

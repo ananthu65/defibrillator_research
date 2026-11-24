@@ -611,7 +611,7 @@ decision_points:
         flags: [low_confidence_evidence]
       - condition: No candidate at all
         outcome: Absent, with a reason
-      - condition: A start command at or before a confirmed on-screen shock (start anchor only; each start command is checked on its own, so a later one can still be the restart)
+      - condition: A start command whose whole segment is certainly before a confirmed on-screen shock, beyond cross_modal_tolerance_seconds (start anchor only, D-125 since Increment 25; a segment overlapping the shock is a tie and counts; each start command is checked on its own, so a later one can still be the restart). The one restart picker, shared by R7/A6 and A8
         outcome: Does not count as the restart; listed as ineligible, for A7 to report as a sequence problem
         flags: [start_command_before_shock]
       - condition: No shock time (start anchor only)
@@ -1350,6 +1350,37 @@ decision_points:
     decisions: [D-025, D-044, D-053, D-093, D-103, D-115, D-121, D-122, D-123, D-125]
     assumptions: []
     open_questions: [OQ-009, OQ-016]
+
+  - id: P-044
+    name: A8 the pre-shock pause
+    stage: rule
+    status: built
+    decides: A8's result (Increment 25). The pause from stopping compressions to its end, within pre_shock_pause_seconds (5 s, approved). The end event is a config value (parameters.end_event, OQ-076) - start (the restart, as approved; the default until the supervisor decides) or shock (the shock on the screen). The restart is the context's start anchor, the same command R7/A6 judge (P-012)
+    inputs: [stop_compressions_command and continue_compressions_command (audio, Whisper segment), the start anchor (P-012), shock anchor (the screen only), rules.yaml pre_shock_pause_seconds, A8 parameters.end_event]
+    branches:
+      - condition: end_event is neither start nor shock
+        outcome: Configuration error, recorded as engine_error (D-063)
+      - condition: No shock time (needed to find the restart, or as the end event)
+        outcome: Not evaluable because of R5, naming the stop if heard (D-121); never the removal (D-093)
+        next: P-020
+      - condition: No stop to start the pause (none heard, only after the shock, or every stop before the shock followed by continue)
+        outcome: Not evaluable because of A4 (A4 judges the stop itself); a missing restart is named too
+      - condition: end_event start; no restart (none heard, start only before the shock, or a continue/resume unresolved near the shock)
+        outcome: Not evaluable because of R7, naming the stop that was checked and the likely cause for an unresolved command
+      - condition: Both events; the longest possible pause within the limit
+        outcome: Pass - Direct, timing checked
+        next: P-024
+      - condition: Both events; the shortest possible pause over the limit
+        outcome: Fail pre_shock_pause (mistake label "Pre-Shock Pause")
+        failure_codes: [pre_shock_pause]
+      - condition: Both events; the limit between the shortest and longest possible pause
+        outcome: Unable to Verify (D-125)
+        flags: [timing_uncertain]
+    config: [configs/rules.yaml timing_limits.pre_shock_pause_seconds, configs/rules.yaml A8 parameters.end_event, engine.yaml cross_modal_tolerance_seconds]
+    code: rules/audio_rules.py (pre_shock_pause, _pause_start, _restart)
+    decisions: [D-016, D-025, D-063, D-093, D-121, D-125]
+    assumptions: []
+    open_questions: [OQ-009, OQ-076]
 
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039

@@ -266,7 +266,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `wrong_stage` | built (A2) | A2 | "Continue compressions" said only certainly after the shock on the screen (a resume phrase there is the restart, P-011) |
 | `before_shock` | built (R7/A6) | R7/A6 | The start command was said only certainly before the shock on the screen, and none after it while the audio was clear from the shock to the end of the recording (D-122); a start before the shock is not the restart (D-025, D-053) |
 | `too_late` | built (R6, R7/A6) | R6, R7/A6 | Done after the approved delay. For R6: the paddles were removed later than an approved `shock_to_removal_seconds` (unset now, so not produced yet). For R7/A6: even the shortest possible time from the shock to the restart command exceeds an approved `shock_to_compressions_seconds` (unset now, so not produced yet; D-125) |
-| `pre_shock_pause` | planned | A8 | "Stop CPR" to "Start CPR" took longer than 5 s; mistake label "Pre-Shock Pause" |
+| `pre_shock_pause` | built (A8) | A8 | The pause from "Stop CPR" to its end took longer than 5 s, even at its shortest possible length (D-125); mistake label "Pre-Shock Pause". The end is the restart ("Start CPR", as approved) or the shock on the screen, a config value until the supervisor decides (OQ-076) |
 | `unspecified` | built | shared-contract path rules | A rule plugged in through the old `module:function` path reported a Fail without a code |
 
 ### Errors: no report is produced

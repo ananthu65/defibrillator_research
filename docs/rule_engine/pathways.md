@@ -316,6 +316,21 @@ screen (D-093), never from the removal.
 | No command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
 | No shock time; a start or continue/resume seen | **Not evaluable because of R5**, naming it | — |
 
+#### P-044 A8 the pre-shock pause (built, Increment 25; pending until approved)
+The pause from stopping compressions to its end, within 5 s (approved). The end event is a config
+value, `end_event` (OQ-076): `start`, the restart, as approved (the default), or `shock`, the shock
+on the screen. The restart is the same one R7/A6 judge (P-012).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| `end_event` not start or shock | engine_error (a configuration error) | — |
+| No shock time | **Not evaluable because of R5** (never the removal) | — |
+| No stop to start the pause (not heard, only after the shock, or followed by continue) | **Not evaluable because of A4** | — |
+| `end_event: start`; no restart | **Not evaluable because of R7**, naming the stop checked | — |
+| The longest possible pause within 5 s | Pass – Direct, timing checked | — |
+| The shortest possible pause over 5 s | Fail | `pre_shock_pause` |
+| 5 s between the shortest and longest possible pause | Unable to Verify (D-125) | `timing_uncertain` |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
@@ -1337,3 +1352,18 @@ today.
    the removal never gives the shock time.
 5. With a 5 s limit (once approved): a start in a segment 18–22 s is 3 to 7 s after the shock →
    **Unable to Verify, `timing_uncertain`**; a start at 21–22 s → **Fail `too_late`**.
+
+### W-94 The pre-shock pause under each end event
+*(Built in Increment 25; P-044.)*
+1. Word-timed commands, the shock at 12 s: stop at 10 s, start at 14.9, 15.0 or 15.1 s → **A8 Pass,
+   Pass, Fail `pre_shock_pause`**.
+2. Segment-timed: stop 10–11 s, start 15–16 s → 4 to 6 s → **Unable to Verify, `timing_uncertain`**.
+3. A lecturer-like timeline: stop 10–11 s, then the shocking actions (paddles taken at 11.5 and 12 s,
+   firmly on the chest at 13 s, the shock on the screen at 14 s, removal at 15 s), start 17–18 s:
+   - `end_event: start` (stop to restart, 6 to 8 s) → **Fail `pre_shock_pause`**;
+   - `end_event: shock` (stop to the shock, 3 to 4 s) → **Pass**.
+   This is the effect of OQ-076: with the whole shocking process between stop and start, "stop to
+   start within 5 s" may fail a correct learner.
+4. No shock on the screen → **Not evaluable because of R5**. No stop heard → **because of A4**. Start
+   said only before the shock → **because of R7** (under `end_event: start`).
+5. Stop at 2 s, continue at 5 s, stop again at 9 s: compressions resumed, so the pause starts at 9 s.

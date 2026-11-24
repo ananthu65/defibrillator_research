@@ -456,9 +456,22 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   correct learner. The pre-shock pause is usually measured from stopping compressions to the shock.
   Which end event is meant?
 - **Affects:** A8 (Increment 25).
-- **Interim behaviour:** the approved definition stays (stop → start, 5 s, D-016). A8 is planned with
-  its end event as a config value (start or shock), so a change needs no code. Arnikan may measure
-  stop → shock and stop → start in the lecturer's video.
+- **Interim behaviour:** the approved definition stays (stop → start, 5 s, D-016). A8 is built
+  (Increment 25) with its end event as a config value, `end_event` in `rules.yaml` (start or shock),
+  so a change needs no code. `rules.yaml` keeps `end_event: start`. A8 is held back in the demo
+  config until this is answered (as A5 for OQ-075).
+- **Evidence for the supervisor (synthetic lecturer-like timeline, Increment 25):** stop 10–11 s →
+  paddles taken 11.5 and 12 s → firmly on the chest 13 s → shock on the screen 14 s → removal 15 s →
+  start 17–18 s (segment-timed commands, judged on the shortest and longest possible pause, D-125):
+
+  | End event | Pause | A8 |
+  |---|---|---|
+  | `start` (stop → restart, the approved definition) | 6–8 s | Fail `pre_shock_pause` |
+  | `shock` (stop → the shock on the screen) | 3–4 s | Pass |
+
+  With the whole shocking process between stop and start, "stop to start within 5 s" may fail a
+  correct learner. Arnikan may measure both intervals (stop → shock and stop → start) in the
+  lecturer's video.
 
 ### OQ-077 Must oxygen away, stand clear and continue be in exactly this order?
 - **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**

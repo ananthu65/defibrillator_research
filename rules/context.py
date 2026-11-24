@@ -38,7 +38,7 @@ ANCHOR_EVENTS = {  # anchor -> canonical event (earliest occurrence is used)
     "oxygen_away": "oxygen_away_command",
     "stand_clear": "stand_clear_command",
     "shock_command": "shock_command",
-}  # start_compressions: earliest start command AFTER the shock (D-025), see _start_anchor
+}  # start_compressions: earliest start command not certainly before the shock (D-025, D-125), see _start_anchor
 
 
 @dataclass(frozen=True)
@@ -158,7 +158,7 @@ def build_context(prepared, config, header=None):
     anchors = {"shock": shock}
     for name, event_name in ANCHOR_EVENTS.items():
         anchors[name] = _earliest(name, event_name, events, prepared)
-    anchors["start_compressions"] = _start_anchor(events, shock, prepared, resolutions)
+    anchors["start_compressions"] = _start_anchor(events, shock, prepared, config)
     for name in ("continue_compressions", "start_compressions"):
         if unresolved:  # an unresolved command might have been this one: do not pretend the anchor is complete
             anchors[name] = replace(anchors[name], flags=anchors[name].flags + (UNRESOLVED_COMMANDS,))
@@ -265,20 +265,29 @@ def _resolve(resolution, event, shock, config):
     return None, (COMMAND_NEAR_SHOCK,)
 
 
-def _start_anchor(events, shock, prepared, resolutions=()):
-    """D-025: the restart is the earliest start command after the shock; earlier ones do not count.
+def _start_anchor(events, shock, prepared, config):
+    """D-025: the restart is the earliest start command not certainly before the shock; earlier ones do not count.
 
-    Each start command is checked on its own, so a later one can still be the restart. Start
-    commands at or before the shock do not count and are a sequence mistake. D-054: with no shock
-    time at all, every start command is timing-ambiguous (not counted, not a mistake).
+    The one restart picker, shared by R7/A6 and A8 so they always judge the same command. D-125: a command
+    event carries its Whisper segment, so a start is "before the shock" only when its whole segment is
+    certainly before it, beyond the window (cross_modal_tolerance_seconds for an audio event against the
+    screen, as in _resolve); a segment overlapping the shock, or within the window, is a tie and counts.
+    Each start command is checked on its own, so a later one can still be the restart. Start commands
+    certainly before the shock do not count and are a sequence mistake. D-054: with no shock time at all,
+    every start command is timing-ambiguous (not counted, not a mistake).
     """
     starts = [e for e in events if e.event_name == START_EVENT]
     if not shock.present:
         return Anchor("start_compressions", None, flags=(NO_SHOCK_TIME,) + shock.flags,
                       reason="no shock time, so the restart command cannot be identified",
                       ambiguous=tuple(e.event_id for e in starts))
-    after = [e for e in starts if e.start > shock.time]
-    before = tuple(e.event_id for e in starts if e.start <= shock.time)
+    def certainly_before(event):
+        window = config.engine.value("cross_modal_tolerance_seconds" if event.source == "audio"
+                                     else "simultaneous_window_seconds")
+        return time_bounds(event)[1] < shock.time - window
+
+    after = [e for e in starts if not certainly_before(e)]
+    before = tuple(e.event_id for e in starts if certainly_before(e))
     flags, ambiguous = ((START_BEFORE_SHOCK,) if before else ()), ()
     if not after:
         low = (LOW_CONFIDENCE_FLAG,) if prepared.excluded_named(START_EVENT) else ()

@@ -5251,3 +5251,58 @@ Increment 25 (A8) on Arnikan's "continue".
   partly clear / no intervals; an early start with a low-confidence restart.
 - **Docs:** P-043, W-93, diagram (t), anomalies, the output contract, rules_status.
 
+## Increment 25: A8 the pre-shock pause (2026-11-24)
+
+Increment 24, with the `before_shock` fix, was committed (`ea8f7c1`) and pushed. This increment is
+not committed.
+
+### What was built
+- **One restart picker** (`rules/context.py` `_start_anchor`, P-012): moved to segment timing
+  (D-125). A start counts unless its whole segment is certainly before the shock, beyond the
+  cross-modal tolerance; a segment overlapping the shock is a tie and counts. R7 now reads this
+  anchor (`_restart`), so R7/A6 and A8 always judge the same restart. R7's 18 tests are unchanged
+  and pass, so its results don't change. One context test changed: a start exactly at the shock
+  was ineligible under the old point rule; it is now a tie and counts, as R7 already judged it.
+- **A8** (`rules/audio_rules.py`, P-044):
+  - the pause from the stop (not after the shock, and not followed by continue before the shock)
+    to its end, within `pre_shock_pause_seconds` (5 s, approved), on the shortest and longest
+    possible pause (D-125): Pass, Fail `pre_shock_pause`, or Unable to Verify (`timing_uncertain`);
+  - the end event is `parameters.end_event` in `rules.yaml`: `start` (the restart, as approved;
+    the default) or `shock` (the shock on the screen, never the removal). Anything else is an
+    engine_error (OQ-076);
+  - missing references (D-121): no shock time → Not evaluable because of R5; no stop → because of
+    A4; no restart → because of R7 (with the likely cause for an unresolved command).
+- **Docs-test fix:** the Increment 24 search for codes passed to a shared check (`code="..."`)
+  held a stray control character instead of the regex word boundary, so it matched nothing (`too_late` was found
+  through R6). Fixed; it now finds `pre_shock_pause` and R7's `too_late`.
+- **Config:** `rules.yaml` A8 `parameters: {end_event: start}` (pending). **[Review, 2026-11-24]**
+  A8 is held back in the demo config until OQ-076 is answered (as A5 for OQ-075), and the demo test
+  lists it as held back. The lecturer-like table is in OQ-076 as evidence for the supervisor.
+
+### The effect of OQ-076 (synthetic lecturer-like timeline)
+Stop 10–11 s → paddles taken 11.5 and 12 s → firmly on the chest 13 s → shock 14 s → removal 15 s →
+start 17–18 s:
+- `end_event: start`: 6 to 8 s → **Fail `pre_shock_pause`**;
+- `end_event: shock`: 3 to 4 s → **Pass**.
+
+### Tests (850 → 863)
+New `tests/test_rule_engine_a8.py` (13 tests, full `rules.yaml`): 4.9, 5.0 and 5.1 s; segment
+bounds within, over and uncertain; the lecturer-like timeline under each end event; the default;
+an unknown end event; no restart needed with `end_event: shock`; no shock time under both end
+events (the removal never the shock time); no stop (four cases); no restart (three cases); the same
+restart as R7 (three cases); the stop after the last continue; stop and continue in one segment;
+pending. The context test above was updated.
+
+Results: full suite **863 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-044; P-012 on segment timing), `pathways.md` (P-044, W-94),
+  `diagrams.md` ((u); (e2) on segment timing);
+- `anomalies.md`, `output_contract.md` (`pre_shock_pause` built; version unchanged),
+  `rules_status.md`;
+- `demo_walkthrough.md`, `audio_integration_plan.md` (Increment 25 built);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 26 (A7 on its own pairs) on Arnikan's "continue".
+

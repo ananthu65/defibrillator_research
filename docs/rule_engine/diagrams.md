@@ -119,12 +119,14 @@ flowchart TD
 
 Every start command goes through these checks **on its own**. Commands that do not count are
 set aside, and the **earliest remaining** one is the restart, so a later start can still be
-the restart. The shock time is either from the screen or absent (D-093, D-115).
+the restart. Since Increment 25 a segment overlapping the shock, or within the
+cross-modal tolerance, is a tie and counts (D-125). R7/A6 and A8 use this one picker, so they
+always judge the same restart. The shock time is either from the screen or absent (D-093, D-115).
 
 ```mermaid
 flowchart TD
     K{"For each start command:<br/>is there a shock time? P-009"} -->|"no shock time<br/>(no shock on screen, D-093;<br/>or two shocks)"| A0["Ambiguous, not a mistake<br/>no_shock_time<br/>no restart time; R7/A6, A8, A7<br/>Not evaluable because of R5"]
-    K -->|shock on screen| B{"This command at or<br/>before the shock?"}
+    K -->|shock on screen| B{"This command's whole segment<br/>certainly before the shock?<br/>(beyond the tolerance, D-125)"}
     B -->|yes| B1["Does not count: a mistake<br/>start_command_before_shock<br/>(A7 reports it)"]
     B -->|no| RS["Candidate: after the shock"]
     RS --> E["Restart = earliest candidate"]
@@ -553,5 +555,28 @@ flowchart TD
     B -->|no| FM["Fail missing"]
     M -->|"no (or low confidence)"| UM["Unable to Verify<br/>(the restart may not have been heard)"]
     S -->|no| N["Not evaluable because of R5<br/>(Fail missing with clear audio and no command)"]
+```
+
+## (u) A8 the pre-shock pause (P-044, built in Increment 25; pending until approved)
+
+The end event is a config value (`end_event`, OQ-076): start (the restart, as approved) or shock.
+
+```mermaid
+flowchart TD
+    C{"end_event start or shock?"} -->|other| E["engine_error"]
+    C -->|ok| S{"Shock on the screen?"}
+    S -->|no| N5["Not evaluable because of R5"]
+    S -->|yes| P{"A stop not after the shock,<br/>not followed by continue?"}
+    P -->|no| N4["Not evaluable because of A4"]
+    P -->|yes| R{"End event"}
+    R -->|shock| T["stop → shock"]
+    R -->|start| X{"A restart?<br/>(the same one as R7)"}
+    X -->|no| N7["Not evaluable because of R7"]
+    X -->|yes| T2["stop → restart"]
+    T --> L{"shortest / longest pause vs 5 s"}
+    T2 --> L
+    L -->|"longest ≤ 5 s"| OK["Pass"]
+    L -->|"shortest > 5 s"| F["Fail pre_shock_pause"]
+    L -->|between| U["Unable to Verify<br/>timing_uncertain"]
 ```
 

@@ -214,9 +214,13 @@ class StartAnchor(unittest.TestCase):
         self.assertEqual((anchor.ineligible, anchor.flags), (("pre",), ("start_command_before_shock",)))
         self.assertEqual([e.event_id for e in ctx.named("start_compressions_command")], ["pre"])  # still visible
 
-    def test_start_exactly_at_the_shock_does_not_count(self):
-        anchor = context([SHOCK, cmd("start_compressions_command", 30, "at")]).anchor("start_compressions")
-        self.assertEqual((anchor.present, anchor.ineligible), (False, ("at",)))
+    def test_a_start_is_before_the_shock_only_when_its_whole_segment_is_certainly_before(self):
+        """D-125 (Increment 25): the segment is compared with the shock, beyond cross_modal_tolerance_seconds
+        (1.0 s); a segment overlapping the shock, or within the tolerance, is a tie and counts, as in R7."""
+        for start, counts in ((30, True), (29.5, True), (28.5, True), (27.9, False)):   # segments start..start+1
+            with self.subTest(segment=(start, start + 1)):
+                anchor = context([SHOCK, cmd("start_compressions_command", start, "s")]).anchor("start_compressions")
+                self.assertEqual((anchor.present, anchor.ineligible), (True, ()) if counts else (False, ("s",)))
 
     def test_no_shock_time_means_no_start_anchor(self):
         for timeline, shock_flag in (([cmd("start_compressions_command", 35, "s")], "no_shock"),
