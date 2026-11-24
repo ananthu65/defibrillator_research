@@ -373,8 +373,8 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Status (2026-11-24, D-127):** the interim order now comes from the lecturer's ground-truth video
   (reported by Arnikan): A1 → A3 → A2 → charging → the gel phase (gel and the spoken "applying gel",
   interchangeable) → A4 → the paddles → R3 → R4 → R5 → R6 → R7/A6. It is still NOT clinically
-  approved: `approved_by` stays null until the supervisor confirms it. Only A5 against the paddles
-  and firm placement stays unknown (OQ-075).
+  approved: `approved_by` stays null until the supervisor confirms it. Only A5 against the shocking actions (the paddles, firm placement, the buttons)
+  stays unknown (OQ-075).
 
 ### OQ-063 Which steps, if any, may swap?
 - **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
@@ -442,8 +442,10 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Question:** the lecturer gave no shock command. Is A5 required, and where does it go in the
   shocking process (against taking the paddles, the placements and the firm placement)?
 - **Affects:** A5, A7, S1; `procedure_order.yaml`.
-- **Interim behaviour:** only stop → shock command → buttons (pending confirmation) is kept; A5
-  against the paddles and firm placement is unknown and unchecked.
+- **Interim behaviour:** only stop → shock command (A7) and shock command → shock (A5's own rule)
+  are kept, as in the proposal. A5 against every shocking action (taking the paddles, the placements,
+  firm placement, the buttons) is unknown and unchecked. The suggested shock command → buttons was
+  dropped on 2026-11-24.
 
 ### OQ-076 A8 pre-shock pause: stop to start, or stop to the shock?
 - **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
@@ -695,7 +697,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
     against another rule's relation is then judged once, by that rule.
 - **Affects:** S1 (Increment 27), the loader (`rules/procedure.py`), D-123.
 - **Answered:** 2026-11-24 → **D-126**: option B. S1 owns only relations no other relation implies;
-  on the interim order (D-127) it keeps 6.
+  on the interim order (D-127) it keeps 5 (6 before the suggested A5→R4 was dropped).
 
 
 

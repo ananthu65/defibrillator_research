@@ -1230,7 +1230,7 @@ decision_points:
       - condition: The chains form a cycle
         outcome: Configuration error naming the cycle
       - condition: Every pair implied by the chains (transitive closure)
-        outcome: A relation, marked direct when a chain gives it and confirm when it awaits the supervisor (A5 before R4)
+        outcome: A relation, marked direct when a chain gives it and confirm when it awaits the supervisor
       - condition: Two steps in one interchangeable group
         outcome: Their mutual order is dropped; their order against the other steps is kept (OQ-063)
       - condition: A pair listed as unknown (the proposal is silent, OQ-062), as steps x relative_to or pair by pair

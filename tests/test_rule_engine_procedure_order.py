@@ -59,12 +59,14 @@ class RepositoryOrder(unittest.TestCase):
     def test_charging_and_the_gel_announcement_are_optional(self):
         self.assertEqual({s.id for s in ORDER.steps if s.optional}, {"CHARGE", "GELCMD"})
 
-    def test_a5_keeps_only_stop_before_it_and_before_the_buttons(self):
-        """The lecturer said no shock command (OQ-075): A4 -> A5 -> R4 stays, A5 against the paddles is unknown."""
-        relation = ORDER.relation("A5", "R4")
-        self.assertEqual((relation.owner, relation.confirm, relation.direct), ("S1", True, True))
+    def test_a5_keeps_only_stop_before_it_and_the_shock_after_it(self):
+        """The lecturer said no shock command (OQ-075): A4 -> A5 (A7) and A5 -> R5 (A5's own rule) stay, as in the
+        proposal; A5 against every shocking action, the buttons included, is unknown."""
         self.assertEqual(owner("A4", "A5"), ("A4", "A5", "A7"))
-        self.assertEqual(set(ORDER.unknown), {("A5", "R2A"), ("A5", "PLACE"), ("A5", "R2B"), ("A5", "R3")})
+        self.assertEqual(owner("A5", "R5"), ("A5", "R5", "A5"))
+        self.assertIsNone(ORDER.relation("A5", "R4"))
+        self.assertEqual(set(ORDER.unknown), {("A5", "R2A"), ("A5", "PLACE"), ("A5", "R2B"), ("A5", "R3"),
+                                              ("A5", "R4")})
         for a, b in ORDER.unknown:
             with self.subTest(pair=(a, b)):
                 self.assertIsNone(ORDER.relation(a, b))
@@ -90,9 +92,8 @@ class S1OwnsOnlyUnimpliedRelations(unittest.TestCase):
     """D-126 (OQ-071, option B): S1 owns only relations not implied by any other relation, so each mistake is
     judged by exactly one rule. An implied relation has no owner; it is judged through the relations implying it."""
 
-    def test_s1_keeps_six_relations(self):
-        self.assertEqual(owned("S1"), {("CHARGE", "R1"), ("R1", "A4"), ("A4", "R2A"), ("R2B", "R3"), ("A5", "R4"),
-                                       ("R6", "R7")})
+    def test_s1_keeps_five_relations(self):
+        self.assertEqual(owned("S1"), {("CHARGE", "R1"), ("R1", "A4"), ("A4", "R2A"), ("R2B", "R3"), ("R6", "R7")})
 
     def test_no_s1_relation_has_an_intermediate_step(self):
         pairs = {(r.before, r.after) for r in ORDER.relations}
@@ -165,7 +166,7 @@ class Validation(unittest.TestCase):
         self.assertEqual(owners - set(RULE_IDS), {"S1"})   # S1 is added to rules.yaml in Increment 27
 
     def test_an_unknown_pair_ordered_by_the_chains_is_refused(self):
-        chains = [*DATA["chains"], {"chain": ["A5", "R3"], "source": "test"}]
+        chains = [*DATA["chains"], {"chain": ["A5", "R4"], "source": "test"}]
         with self.assertRaisesRegex(ConfigError, "marked unknown"):
             load(chains=chains)
 
@@ -199,16 +200,16 @@ class ApplyingTheCompleteOrder(unittest.TestCase):
         self.assertEqual(owner("R4", "R5", order), ("R4", "R5", "R4"))   # explicit owners kept
 
     def test_a_single_pair_can_be_resolved_on_its_own(self):
-        unknown = [{"pairs": [[a, b] for a, b in ORDER.unknown if (a, b) != ("A5", "R3")], "question": "OQ-075"}]
-        order = load(chains=[*DATA["chains"], {"chain": ["A5", "R3"], "source": "test"}], unknown=unknown)
-        self.assertEqual(owner("A5", "R3", order), ("A5", "R3", "S1"))
+        unknown = [{"pairs": [[a, b] for a, b in ORDER.unknown if (a, b) != ("A5", "R4")], "question": "OQ-075"}]
+        order = load(chains=[*DATA["chains"], {"chain": ["A5", "R4"], "source": "test"}], unknown=unknown)
+        self.assertEqual(owner("A5", "R4", order), ("A5", "R4", "S1"))
         self.assertEqual(len(order.unknown), len(ORDER.unknown) - 1)
 
     def test_a_pair_implied_by_a_new_relation_must_leave_unknown_too(self):
         """R2B before A5 also orders R2A and PLACE before A5 (R2A -> PLACE -> R2B)."""
         with self.assertRaisesRegex(ConfigError, "through other relations"):
             load(chains=[*DATA["chains"], {"chain": ["R2B", "A5"], "source": "test"}],
-                 unknown=[{"pairs": [["A5", "R2A"], ["A5", "PLACE"], ["A5", "R3"]], "question": "OQ-075"}])
+                 unknown=[{"pairs": [["A5", "R2A"], ["A5", "PLACE"], ["A5", "R3"], ["A5", "R4"]], "question": "OQ-075"}])
 
 
 class LoadedWithTheCatalogue(unittest.TestCase):

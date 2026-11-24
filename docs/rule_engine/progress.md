@@ -5001,3 +5001,58 @@ Results: full suite **785 tests run, all pass, 1 skipped**; the docs test passes
 - `audio_integration_plan.md` (sections 2 and 3, A8 row, Increment 25);
 - `decision_flow.yaml` (P-039), `pathways.md` (P-039, W-89), `rules_status.md`, `methods.md`;
 - `progress.md`, `ai_usage_log.md`.
+
+## The shocking actions corrected; procedure.md (2026-11-24)
+
+The order update was committed (`9414ac2`) and pushed. This change is not committed.
+
+### Correction (Arnikan): the shocking actions are one video sequence
+First paddle taken → first paddle firmly on the chest → second paddle taken → both firmly on the
+chest → both buttons pressed (may be Pass – Inferred, D-102) → shock on the screen (LS) → paddles
+removed. This matches the existing R2A → PLACE → R2B → R3 → R4 → R5 → R6 chain.
+- **Removed:** the suggested relation A5 → R4 (it was S1's, pending confirmation; the lecturer gave
+  no shock command).
+- **Added:** chain A5 → R5 (A5's own rule, from the proposal). It was implied only through A5 → R4
+  before, so it had to be stated once A5 → R4 went. A4 → A5 (A7) is kept.
+- **Unknown (OQ-075):** A5 against R2A, PLACE, R2B, R3 and now R4.
+- **Relation and owner changes:**
+  - gone: A5→R4 (S1);
+  - no other relation changed owner, and none is new (A5→R5 was already A5's);
+  - totals: 114 relations; A7 27, **S1 5**, the existing rules 15, and 67 implied with no owner.
+- **S1's 5:** charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), removal → restart (R6→R7).
+
+### procedure.md
+[procedure.md](procedure.md) is the single reference for the procedure:
+- source and status;
+- a numbered step table: evidence, canonical events, rule, compulsory or optional, best camera
+  angle, whether it can be inferred, open questions;
+- the shock command in a separate "position unknown" table;
+- a Mermaid flowchart (also diagrams.md (q)): audio and video styles, optional steps dashed, the
+  gel phase grouped, inferable steps marked, A5 off the main line;
+- the open questions OQ-062 and OQ-072 to OQ-077.
+
+A new docs test, ProcedureDocMatchesOrder (4 tests), fails if procedure.md and
+`procedure_order.yaml` differ:
+- the same steps, each once;
+- consecutive rows ordered by the config, one number for an interchangeable group;
+- no later row ordered before an earlier one;
+- the same unknown-position steps and optional steps.
+
+Checked: swapping two steps in the doc, or dropping the A5 row, makes it fail. Plan section 11 gains
+the step "update procedure.md".
+
+### Not done: section 4 of the request
+The message was cut off at "Under option B, an implied ..."; waiting for the full text.
+
+### Tests (785 → 789)
+- the order tests for A5's relations and S1's 5;
+- ProcedureDocMatchesOrder (4 new).
+
+Results: full suite **789 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `procedure.md` (new), `diagrams.md` ((q));
+- `audio_integration_plan.md` (current order, D-126 note, section 11);
+- `decisions.md` (D-126, D-127), `open_questions.md` (OQ-062, OQ-071, OQ-075);
+- `pathways.md` (P-039, W-89), `decision_flow.yaml` (P-039);
+- `progress.md`, `ai_usage_log.md`.

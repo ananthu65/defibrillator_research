@@ -80,9 +80,11 @@ It contains:
 video, replacing the proposal draft described below (kept for history):
 A1 oxygen away → A3 stand clear → A2 continue → charging (optional) → the gel phase (R1 and the
 spoken "applying gel", optional, interchangeable) → A4 stop → the paddle taken first → the first
-firm placement → the paddle taken second → R3 → R4 → R5 → R6 → R7/A6. A4 → A5 → R4 is kept (A5 → R4
-pending); A5 against the paddles and firm placement is unknown (OQ-075). It is still NOT clinically
-approved (OQ-062). It was applied by config only (section 11).
+firm placement → the paddle taken second → R3 → R4 → R5 → R6 → R7/A6. The shock command keeps only
+A4 → A5 and A5 → R5, as in the proposal; A5 against every shocking action (R2A, PLACE, R2B, R3, R4)
+is unknown (OQ-075; the suggested A5 → R4 was dropped on 2026-11-24). It is still NOT clinically
+approved (OQ-062). It was applied by config only (section 11). Readable form:
+[procedure.md](procedure.md).
 
 **Status of the order (2026-11-10):** Arnikan has asked the medical supervisor for the complete
 order (OQ-062). Until it arrives, the config holds only what the proposal states: the visual
@@ -108,8 +110,8 @@ config only.
 
 ## 3. One owner per order relation (D-123)
 **[2026-11-24] D-126:** S1 owns only relations no other relation implies; an implied relation has
-no owner and is judged through the relations that imply it. On the interim order S1 keeps 6:
-charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), shock command → buttons (A5→R4, pending confirmation), removal → restart (R6→R7).
+no owner and is judged through the relations that imply it. On the interim order S1 keeps 5:
+charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), removal → restart (R6→R7).
 
 | Relation | Owner | Built? |
 |---|---|---|
@@ -414,8 +416,8 @@ When the supervisor's complete order arrives (OQ-062), no code changes. In
 1. **Record the approval:** fill `approval` (`approved_by`, `approved_on`, `source`) and change the
    note.
 2. **Add the relations:** a new `chains` entry for each sequence, for example
-   `{chain: [A1, A2, R1], source: "supervisor, <date>"}`. Drop `confirm: true` from A5 → R4 if it
-   is confirmed; remove a chain the supervisor rejects.
+   `{chain: [A1, A2, R1], source: "supervisor, <date>"}`. Drop `confirm: true` from a relation the
+   supervisor confirms; remove a chain the supervisor rejects.
 3. **Remove the resolved pairs from `unknown`.** Each pair can be listed on its own
    (`{pairs: [[A1, PLACE], ...], question: OQ-062}`). A new relation also orders every pair implied
    through the existing chains. For example, "A1 before PLACE" also orders A1 before R2B and R3
@@ -426,7 +428,10 @@ When the supervisor's complete order arrives (OQ-062), no code changes. In
 5. **Owners:** nothing to add. A new relation without an owner goes to A7 when both steps are
    audio, otherwise to S1. The explicit owners stay for the existing rules. Edit them only if a
    relation they claim is removed: the loader then reports "not a relation of the procedure order".
-6. **Check:** run the full suite. The loader refuses a cycle (naming it), a pair still marked
+6. **Update [procedure.md](procedure.md)**: the steps table, the "Position unknown" table and the
+   flowchart (and its copy in diagrams.md (q)). The docs test ProcedureDocMatchesOrder fails until
+   procedure.md matches the config.
+7. **Check:** run the full suite. The loader refuses a cycle (naming it), a pair still marked
    unknown, or a relation claimed twice. A test shows the path: a copy with every unknown pair
    resolved loads, and every new relation gets an owner
    (`tests/test_rule_engine_procedure_order.py`, ApplyingTheCompleteOrder).

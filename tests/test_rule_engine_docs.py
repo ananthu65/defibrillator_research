@@ -216,6 +216,52 @@ class DecisionFlowShape(unittest.TestCase):
                     self.assertIn(branch["next"], ids, f"{point['id']} -> {branch['next']}")
 
 
+
+class ProcedureDocMatchesOrder(unittest.TestCase):
+    """procedure.md is the readable form of procedure_order.yaml: the same steps, in an order the config agrees
+    with. Update both together (audio_integration_plan.md section 11)."""
+
+    ORDER = load_rules_config().procedure_order
+    TEXT = (DOCS / "procedure.md").read_text(encoding="utf-8")
+
+    def rows(self, heading):
+        section = self.TEXT.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+        return [line.split("|") for line in section.splitlines() if re.match(r"^\| *(\d+|`[A-Z0-9]+`) *\|", line)]
+
+    def main_steps(self):
+        """(number, step ID) in table order."""
+        return [(int(cells[1]), cells[2].strip().strip("`")) for cells in self.rows("Steps")]
+
+    def test_every_step_appears_once(self):
+        listed = [step for _, step in self.main_steps()] + [c[1].strip().strip("`") for c in self.rows("Position unknown")]
+        self.assertEqual(sorted(listed), sorted(s.id for s in self.ORDER.steps))
+
+    def test_the_order_matches_the_config(self):
+        steps = self.main_steps()
+        groups = [set(g) for g in self.ORDER.interchangeable]
+        for (n1, a), (n2, b) in zip(steps, steps[1:]):
+            with self.subTest(pair=(a, b)):
+                if n1 == n2:   # one number: an interchangeable group
+                    self.assertIn({a, b}, groups)
+                    continue
+                self.assertEqual(n2, n1 + 1)
+        for i, (_, a) in enumerate(steps):   # the config never orders a later row before an earlier one
+            for _, b in steps[i + 1:]:
+                relation = self.ORDER.relation(a, b)
+                self.assertFalse(relation is not None and relation.before == b, f"{b} is before {a} in the config")
+        for (n1, a), (n2, b) in zip(steps, steps[1:]):   # consecutive numbers are ordered by the config
+            if n1 != n2:
+                relation = self.ORDER.relation(a, b)
+                self.assertTrue(relation is not None and relation.before == a, f"{a} -> {b} is not in the config")
+
+    def test_unknown_positions_are_the_configs(self):
+        unknown_steps = {c[1].strip().strip("`") for c in self.rows("Position unknown")}
+        self.assertEqual(unknown_steps, {a for a, _ in self.ORDER.unknown})
+
+    def test_optional_steps_match(self):
+        optional = {cells[2].strip().strip("`") for cells in self.rows("Steps") if cells[7].strip() == "optional"}
+        self.assertEqual(optional, {s.id for s in self.ORDER.steps if s.optional})
+
 class RegisterIds(unittest.TestCase):
     def test_every_id_is_defined_exactly_once(self):
         duplicated = {i: n for i, n in definitions().items() if n > 1}

@@ -175,8 +175,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   intermediate step has no owner. It is judged through the relations that imply it, so each mistake
   is judged by exactly one rule, and S1 never reads rule results. Only the default owner is reduced:
   explicit owners keep their relations, and A7 keeps its audio pairs.
-- **On the interim order (D-127):** S1 keeps 6 relations: charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), shock command → buttons (A5→R4, pending confirmation), removal → restart (R6→R7). 67 relations are
-  implied and have no owner.
+- **On the interim order (D-127):** S1 keeps 5 relations: charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), removal → restart (R6→R7). 67 relations are
+  implied and have no owner. (6 before 2026-11-24, when the suggested A5→R4 was dropped.)
 - **Affects:** S1 (Increment 27), `rules/procedure.py`, P-039. **Related:** D-123.
 
 ### D-127 Interim procedure order from the lecturer's ground-truth video
@@ -192,8 +192,13 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
     said while the gel is applied. They are an interchangeable group with no order between them,
     after charging and before stop.
   - **Opening order:** it reverses the proposal's "continue → stand clear"; A7 follows the config.
-  - **The shock command (A5):** the lecturer said none. Only A4 → A5 → R4 is kept (A5 → R4 pending
-    confirmation); A5 against the paddles and firm placement stays unknown (OQ-075).
+  - **The shock command (A5):** the lecturer said none. Only A4 → A5 (A7) and A5 → R5 (A5's own
+    rule) are kept, as in the proposal. A5 against every shocking action (R2A, PLACE, R2B, R3, R4)
+    stays unknown (OQ-075). **Corrected 2026-11-24 (Arnikan):** the suggested A5 → R4 was removed. The
+    shocking actions are one video sequence: first paddle taken → first paddle firmly on the chest →
+    second paddle taken → both firmly on the chest → both buttons pressed (may be inferred, D-102) →
+    shock on the screen (LS) → paddles removed.
+  - **Readable form:** [procedure.md](procedure.md), kept in sync with the config by a docs test.
   - **Two optional steps:** new vocabulary entries `charging_command` and `gel_announcement_command`
     (additive; placeholder names until Sanjeevan confirms them). If present, a step must be in the
     right place (A7 or S1 checks it); if absent, nothing is reported missing. There is no presence

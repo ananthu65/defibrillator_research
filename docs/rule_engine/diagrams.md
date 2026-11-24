@@ -457,3 +457,38 @@ flowchart TD
     C2 -->|yes| F3["Fail missing (D-121)"]
     C2 -->|no| NE2["Not evaluable because of R5"]
 ```
+
+## (q) The procedure order (the lecturer's interim order, D-127; NOT clinically approved, OQ-062)
+
+The same flowchart as [procedure.md](procedure.md), which also has the step table. Audio steps are
+rounded, video steps square, optional steps dashed; the gel phase is one box; inferable steps are
+marked; the shock command's position is unknown (OQ-075).
+
+```mermaid
+flowchart TD
+    A1(["1 Oxygen away"]) --> A3(["2 All stand clear"]) --> A2(["3 Continue compressions"])
+    A2 --> CHARGE(["4 Charging (optional)"])
+    subgraph GEL["5 Gel phase (together, no order inside)"]
+        R1["Gel on both zones (R1)"]
+        GELCMD(["'Applying gel' (optional)"])
+    end
+    CHARGE --> GEL --> A4(["6 Stop CPR"])
+    subgraph SHOCKING["Shocking actions (one video sequence)"]
+        R2A["7 First paddle taken"] --> PLACE["8 First paddle firmly on chest"] --> R2B["9 Second paddle taken"]
+        R2B --> R3["10 Both firmly on chest (may be inferred)"] --> R4["11 Both buttons pressed (may be inferred)"]
+        R4 --> R5["12 Shock on screen (LS)"] --> R6["13 Paddles removed"]
+    end
+    A4 --> R2A
+    R6 --> R7(["14 Start CPR"])
+    A5(["Shock command: position unknown (OQ-075)"])
+    A4 -.-> A5
+    A5 -.-> R5
+    classDef audio fill:#e8f0fe,stroke:#3b6fd8
+    classDef video fill:#eef7ee,stroke:#3a8a3a
+    classDef audioOptional fill:#e8f0fe,stroke:#3b6fd8,stroke-dasharray: 5 5
+    classDef unknown fill:#fff4e5,stroke:#c77700,stroke-dasharray: 3 3
+    class A1,A3,A2,A4,R7 audio
+    class CHARGE,GELCMD audioOptional
+    class R1,R2A,PLACE,R2B,R3,R4,R5,R6 video
+    class A5 unknown
+```

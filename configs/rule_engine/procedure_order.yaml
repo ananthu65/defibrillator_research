@@ -9,7 +9,7 @@ schema_version: 1
 approval:
   approved_by: null
   approved_on: null
-  source: "the lecturer's ground-truth video, reported by Arnikan on 2026-11-24 (D-127); A4 -> A5 -> R4 from the proposal and Arnikan, pending"
+  source: "the lecturer's ground-truth video, reported by Arnikan on 2026-11-24 (D-127); A4 -> A5 -> R5 from the proposal"
   note: "NOT clinically approved: pending the supervisor's confirmation (OQ-062)"
 
 # Steps: each with the canonical event(s) it is observed as. A `derived` step comes from the paddle
@@ -43,12 +43,12 @@ chains:
   - chain: [CHARGE, GELCMD, A4]
     source: "the lecturer's ground-truth video: \"applying gel\" is said during the gel phase"
   - {chain: [A4, A5], source: "proposal A7 sequence: stop before the shock command"}
-  - {chain: [A5, R4], source: "Arnikan: the shock command before the button press", confirm: true}
+  - {chain: [A5, R5], source: "proposal A5: the shock command before or at the shock"}
 
 # Pairs not ordered yet; they stay unordered (not checked) until the supervisor places them.
 # Either {steps, relative_to, question} or {pairs: [[a, b], ...], question}.
 unknown:
-  - {steps: [A5], relative_to: [R2A, PLACE, R2B, R3], question: OQ-075}
+  - {steps: [A5], relative_to: [R2A, PLACE, R2B, R3, R4], question: OQ-075}   # the lecturer gave no shock command
 
 # Groups whose mutual order is free. The gel and the spoken "applying gel" happen together (D-127).
 interchangeable:

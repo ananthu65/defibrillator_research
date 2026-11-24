@@ -278,7 +278,7 @@ The expected order of every audio and video step, as "X before Y" chains
 |---|---|
 | A step's events not canonical, mixed modalities, or an unknown derived kind | Configuration error |
 | The chains form a cycle | Configuration error naming the cycle |
-| Every pair implied by the chains (transitive closure) | A relation; `confirm` when it awaits the supervisor (A5 before R4) |
+| Every pair implied by the chains (transitive closure) | A relation; `confirm` when it awaits the supervisor |
 | Two steps in one interchangeable group | Their mutual order is dropped (OQ-063) |
 | A pair marked unknown (the proposal is silent) | Not ordered, not checked; ordered by the chains anyway → configuration error |
 | A relation claimed by a rule | That rule owns it; claimed twice or not a relation → configuration error (D-123) |
@@ -1226,17 +1226,18 @@ today.
 
 ### W-89 The interim procedure order (the lecturer's ground-truth video)
 *(Built in Increment 20; the order replaced on 2026-11-24, D-126, D-127.)*
-1. The chains give 16 steps and 115 relations: A1 oxygen away → A3 stand clear → A2 continue →
+1. The chains give 16 steps and 114 relations: A1 oxygen away → A3 stand clear → A2 continue →
    charging → the gel phase → A4 stop → the paddle taken first → the first firm placement → the
-   paddle taken second → R3 → R4 → R5 → R6 → R7. Also A4 → A5 → R4, with A5 → R4 marked `confirm`.
+   paddle taken second → R3 → R4 → R5 → R6 → R7. Also A4 → A5 → R5, as in the proposal.
 2. The gel phase: gel (R1) and the spoken "applying gel" are interchangeable, so neither is checked
    against the other. Charging and "applying gel" are optional.
 3. Owners:
    - R4 owns firm placement → buttons and buttons → shock; A4 owns continue → stop and stop → shock;
    - A7 owns the audio pairs (27), now including stand clear → continue;
-   - S1 keeps only the 6 relations nothing else implies, such as removal → restart;
+   - S1 keeps only the 5 relations nothing else implies, such as removal → restart;
    - 67 implied relations have no owner (D-126).
-4. A5 against the paddles and firm placement is unknown (OQ-075): no rule checks it.
+4. A5 against every shocking action, the buttons included, is unknown (OQ-075): no rule checks it.
+   The readable form of this order is [procedure.md](procedure.md).
 5. A chain making the restart come before O₂ away creates a cycle, so the catalogue doesn't load.
 
 ### W-90 Oxygen away and stand clear around the shock
