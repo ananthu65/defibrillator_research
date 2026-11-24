@@ -21,7 +21,7 @@ from rules.outcome import failed, flags_of, not_evaluable, passed, unable
 
 TIMING_NOT_CHECKED = "timing_not_checked"
 LIMIT_NOT_APPROVED = "limit_not_approved"
-ORDER_NOT_CHECKED = "order_not_checked"   # an order requirement is not set (e.g. R5's preceding steps, D-100)
+ORDER_NOT_CHECKED = "order_not_checked"   # an order requirement is not set, or a step it needs unseen (R4; D-100)
 ORDER_PARTIALLY_CHECKED = "order_partially_checked"   # some steps' order couldn't be checked (unseen, one segment)
 TIMING_UNCERTAIN = "timing_uncertain"   # a limit can't be judged: segment-timed events straddle it (D-125)
 FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, ORDER_PARTIALLY_CHECKED, TIMING_UNCERTAIN)

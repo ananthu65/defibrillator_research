@@ -52,10 +52,9 @@ rules:
   # missing and R4 not_pressed are unreachable (OQ-061).
   - {id: R3, title: Paddles placed firmly on the chest, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen]}}
   - {id: R4, title: Both discharge buttons pressed, status: pending, implementation: null, parameters: {inference_sources: [shock_delivered_on_screen]}}
-  # R5 preceding_steps: canonical events that must come before the shock on screen (D-100). Unset
-  # (null) until the supervisor answers OQ-013; while unset R5 checks presence only and flags
-  # order_not_checked, which keeps the overall result from being Pass.
-  - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {preceding_steps: null}}
+  # R5: the shock indication only. Its preceding_steps is retired (D-123, Increment 26): each "X before
+  # the shock" relation is owned by X's rule in procedure_order.yaml.
+  - {id: R5, title: Shock confirmed on screen, status: pending, implementation: null, parameters: {}}
   # R6: paddles_removed_after_shock means the paddles were removed; it does not prove a shock (D-104).
   # Its removal time limit is timing_limits.shock_to_removal_seconds (unset; possibly no limit, D-103).
   - {id: R6, title: Paddles removed after shock, status: pending, implementation: null, parameters: {}}
@@ -68,7 +67,8 @@ rules:
   - {id: A5, title: Shock command, status: pending, implementation: null, parameters: {}}
   - {id: R7, title: Compressions restarted promptly after shock, status: pending, implementation: null, parameters: {}}
   - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: pending}
-  - {id: A7, title: Correct sequence of audio commands, status: pending, implementation: null, depends_on: [A1, A2, A3, A4, A5], parameters: {}}
+  # A7: the audio-audio relations it owns in procedure_order.yaml (D-123); no depends_on.
+  - {id: A7, title: Correct sequence of audio commands, status: pending, implementation: null, parameters: {}}
   # A8: stop -> end of the pause within pre_shock_pause_seconds. end_event is start (the restart, as approved)
   # or shock (the shock on the screen); start until the supervisor decides (OQ-076).
   - {id: A8, title: Pre-shock pause, status: pending, implementation: null, parameters: {end_event: start}}

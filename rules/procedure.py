@@ -11,7 +11,7 @@ is silent on (unknown), interchangeable groups and the owner of each relation. T
   - the default owner (S1) keeps only relations not implied by any other relation (D-126): a relation
     with an intermediate step is judged through the relations that imply it, so each mistake is judged
     by exactly one rule. Such a relation has no owner (`implied`).
-No rule reads it yet: S1 and A7 do (Increments 26-27). Not clinically approved (OQ-062).
+A7 reads it since Increment 26 (its audio scope); S1 will from Increment 27. Not clinically approved (OQ-062).
 """
 from dataclasses import dataclass
 import re

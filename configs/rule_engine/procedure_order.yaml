@@ -1,7 +1,7 @@
 schema_version: 1
 # The procedure order as a precedence graph (owner: Arnikan; D-120, D-123). Loaded and validated by
-# rules/procedure.py with the catalogue. Used by S1 "Procedure order" and A7 (planned, Increments
-# 26-27); no rule reads it yet.
+# rules/procedure.py with the catalogue. Read by A7 since Increment 26 (its audio scope); S1
+# "Procedure order" will read it from Increment 27.
 #
 # NOT CLINICALLY APPROVED: the interim order from the lecturer's ground-truth video (D-127), pending
 # the supervisor's confirmation (OQ-062). Grouping steps as interchangeable is a config change only

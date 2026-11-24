@@ -260,7 +260,8 @@ their Whisper segments.
 |---|---|---|
 | Shock time; a command not certainly after the shock (a tie within the cross-modal tolerance or a segment overlap counts) | Pass – Direct; timing not checked (limit unset); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
 | Shock time; an approved numeric limit before the shock | engine_error: no failure code is defined, never guessed | — |
-| Shock time; commands only certainly after the shock | Fail | `after_shock` |
+| Shock time; commands only certainly after the shock, the audio clear from the start to the shock | Fail | `after_shock` |
+| The same, the audio not clear there (or a low-confidence command) | Unable to Verify: a correct one may not have been heard (D-128) | — |
 | Shock time; no command, the audio clear from the start to the shock | Fail | `missing` |
 | Shock time; no command, a low-confidence one, or the audio not clear throughout (no intervals, unclear, not analysed) | Unable to Verify, never Fail (D-010, D-122) | `low_confidence_evidence` |
 | No shock time; a command seen | **Not evaluable because of R5**, naming it (D-121) | — |
@@ -276,9 +277,10 @@ shock (P-011).
 |---|---|---|
 | A2: a continue not certainly after the shock | Pass – Direct | — |
 | A2: only an unresolved continue/resume (its segment overlaps the shock) | Unable to Verify: continue or start can't be told | — |
-| A2: continue only certainly after the shock | Fail | `wrong_stage` |
-| A4: stop only certainly after the shock | Fail | `after_shock` |
-| A4: continue only certainly after every stop (with or without a shock time) | Fail, A4's own evidence (D-027, D-121) | `wrong_order` |
+| A2: continue only certainly after the shock, the audio clear from the start to the shock | Fail | `wrong_stage` |
+| A4: stop only certainly after the shock, the audio clear from the first continue (or the start) to the shock | Fail | `after_shock` |
+| A4: continue only certainly after every stop (with or without a shock time), the audio clear from the continue to the shock (or the end) | Fail, A4's own evidence (D-027, D-121) | `wrong_order` |
+| A2/A4: those cases with the audio not clear over that window | Unable to Verify: a correct one may not have been heard (D-128) | — |
 | A4: stop before the shock, no continue observed or only unresolved ones | **Not evaluable because of A2**, naming the stop | — |
 | A4: stop before the shock, after a continue | Pass – Direct; timing not checked (limit unset) | `timing_not_checked` |
 | A4: stop and continue in one Whisper segment | Pass, not ordered, never a clean Pass | `order_partially_checked` |
@@ -293,7 +295,8 @@ A5 owns only "shock command before or at the shock" (D-123). Its result never af
 |---|---|---|
 | Shock time; a command within the cross-modal tie of the shock | Pass – Direct, at the shock | — |
 | Shock time; a command certainly before the shock | Pass – Direct; how long before is not checked (tolerance unset) | `timing_not_checked` |
-| Shock time; commands only certainly after the shock | Fail: an order mistake on A5's own relation | `after_shock` |
+| Shock time; commands only certainly after the shock, the audio clear from the start to the shock | Fail: an order mistake on A5's own relation | `after_shock` |
+| The same, the audio not clear there | Unable to Verify (D-128) | — |
 | Shock time; an approved numeric tolerance | engine_error: no failure code is defined for "too early" | — |
 | No command, the audio clear throughout | Fail | `missing` |
 | No command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
@@ -331,12 +334,27 @@ on the screen. The restart is the same one R7/A6 judge (P-012).
 | The shortest possible pause over 5 s | Fail | `pre_shock_pause` |
 | 5 s between the shortest and longest possible pause | Unable to Verify (D-125) | `timing_uncertain` |
 
+#### P-045 A7 the order of the audio commands (built, Increment 26; pending until approved)
+A7 judges only the audio–audio relations it owns in `procedure_order.yaml` (D-123). Relations owned
+by other rules (A2 → A4 is A4's) are not judged again. The minimum set of misplaced commands (plan
+section 4): any occurrence in the right place counts; a tie or one segment is not ordered; missing
+commands are left out; optional steps (charging, "applying gel") are checked only if said.
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Fewer than two commands of the order heard | Unable to Verify | — |
+| None misplaced | Pass – Direct | — |
+| None misplaced; a command unseen (unclear audio, low confidence, unresolved) or two in one segment | Pass – Direct, never clean | `order_partially_checked` |
+| Misplaced, but a low-confidence or unresolved command could be in the right place | Unable to Verify | `order_partially_checked` |
+| Misplaced, the audio not clear where a correct occurrence would have been (from its latest observed required predecessor to its earliest observed required successor) | Unable to Verify (D-128) | `order_partially_checked` |
+| Misplaced, the audio clear over each reported command's window | Fail: the misplaced commands, or one ordering mistake between them | `wrong_order` |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
 The expected order of every audio and video step, as "X before Y" chains
-(`configs/rule_engine/procedure_order.yaml`, D-120). No rule reads it yet: S1 and A7 will
-(Increments 26-27).
+(`configs/rule_engine/procedure_order.yaml`, D-120). A7 reads it since Increment 26; S1 will
+(Increment 27).
 
 | Condition | Outcome |
 |---|---|
@@ -441,10 +459,8 @@ of either paddle (by time, D-118) to paddles firmly on chest, else the later of 
 | Condition | Outcome | Code and flags |
 |---|---|---|
 | Two or more shock indications | Unable to Verify (one shock can't be confirmed) | `multiple_shocks` |
-| Shock on screen, preceding steps unset (OQ-013) | Pass – Direct, presence only; the overall result can't be Pass (D-100) | `order_not_checked` |
-| Shock on screen before an observed preceding step | Fail | `wrong_order` |
-| Shock on screen, a preceding step not observed | Pass – Direct; that step's order not checked | `order_not_checked` |
-| Shock on screen after every preceding step | Pass – Direct | — |
+| Shock on screen | Pass – Direct (since Increment 26 R5 judges only the shock indication; its preceding steps are retired, D-123) | — |
+| A leftover `preceding_steps` setting | engine_error (a configuration error) | — |
 | No shock, a low-confidence one exists | Unable to Verify | `low_confidence_evidence` |
 | No shock, screen visible throughout paddles firmly on chest → paddles removed (or the whole recording if a tag is missing, D-101) | Fail | `missing` |
 | No shock, screen not visible throughout that window | Unable to Verify, never Fail (D-094) | — |
@@ -1039,7 +1055,9 @@ today.
    Verify**, `one_zone_in_view`, as in W-58 (D-116).
 
 ### W-60 R5 with a shock seen and the preceding steps not yet set → Incomplete
-*(Built in Increment 13; D-100.)*
+*(Built in Increment 13; D-100.)* **Withdrawn in Increment 26:** R5's preceding steps are retired
+(D-123); a shock on the screen is now a plain Pass – Direct, and each step's place before the
+shock is judged by its own rule.
 1. Shock on the screen at 15 s. `preceding_steps` is unset (OQ-013).
 2. P-033: **Pass – Direct**, presence only, flagged `order_not_checked`.
 3. P-017: no Fail → **Incomplete**, "order not checked for R5", never Pass (like D-062).
@@ -1367,3 +1385,22 @@ today.
 4. No shock on the screen → **Not evaluable because of R5**. No stop heard → **because of A4**. Start
    said only before the shock → **because of R7** (under `end_event: start`).
 5. Stop at 2 s, continue at 5 s, stop again at 9 s: compressions resumed, so the pause starts at 9 s.
+
+### W-95 The order of the audio commands
+*(Built in Increment 26; P-045.)*
+1. The lecturer-like sequence: oxygen away 2 s, stand clear 4 s, continue 6 s, charging 8 s, "applying
+   gel" 10 s, stop 12 s, the shock on the screen 30 s, start 34 s (no shock command) → **A7 Pass**,
+   with no flag: the missing shock command is A5's to report.
+2. Stand clear at 2 s and oxygen away at 4 s → **A7 Fail `wrong_order`**: "A1 and A3 are in the wrong
+   order (one mistake)". Neither is blamed alone.
+3. Stand clear at 0 s, oxygen away at 2 s, stand clear again at 4 s → **Pass**: the repeat is in the
+   right place.
+4. Charging said at 14 s, after stop at 12 s → **Fail `wrong_order`**, charging alone is out of order.
+   Not said at all → nothing is missing.
+5. Stop at 6 s, continue at 8 s → **A7 Pass**; **A4 Fail `wrong_order`**: that relation is A4's, so it
+   is judged once.
+6. D-128: the same swap with the audio clear only up to 20 s → still **Fail**: the windows where a
+   correct oxygen away (0–3 s) and stand clear (4–7 s) would have been were clear. With the audio
+   clear only from 10 s → **Unable to Verify**, `order_partially_checked`: a correctly placed one may
+   have been said but not heard.
+

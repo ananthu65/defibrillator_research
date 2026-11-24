@@ -121,16 +121,16 @@ charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → fir
 | R3 → R5 | R3 (`placed_after_shock`) | yes |
 | R3 → R4, R4 → R5 | R4 (`before_placement`; the `contradictory` case) | yes |
 | R5 → R6 | R6 (`removed_before_shock`) | yes |
-| A1 → R5, A3 → R5 | A1, A3 (`after_shock`) | planned |
-| A2 → R5 | A2 (`wrong_stage`) | planned |
-| A2 → A4, A4 → R5 | A4 (`wrong_order`, D-027; `after_shock`) | planned |
-| A5 → R5 | A5 (with the tolerance once approved) | planned |
+| A1 → R5, A3 → R5 | A1, A3 (`after_shock`) | yes (Increment 21) |
+| A2 → R5 | A2 (`wrong_stage`) | yes (Increment 22) |
+| A2 → A4, A4 → R5 | A4 (`wrong_order`, D-027; `after_shock`) | yes (Increment 22) |
+| A5 → R5 | A5 (`after_shock`) | yes (Increment 23) |
 | R5 → R7 | R7/A6 (`before_shock`) | yes (Increment 24) |
-| The other audio–audio pairs (A1…A5, R7) | **A7** (`wrong_order`) | planned |
+| The other audio–audio pairs (A1…A5, CHARGE, GELCMD, R7) | **A7** (`wrong_order`) | yes (Increment 26) |
 | Every remaining pair: PLACE → R3, R6 → R7, A5 → R4, and the transitive video and cross-modal pairs | **S1 "Procedure order"** (new, `wrong_order`) | new |
 
-- **R5's `preceding_steps` is retired** (D-123): each X → R5 pair is owned by X's rule.
-- **A7's `depends_on` is removed** (D-123): A7 and S1 read events, not rule results.
+- **R5's `preceding_steps` is retired** (D-123): each X → R5 pair is owned by X's rule. Done in Increment 26.
+- **A7's `depends_on` is removed** (D-123): A7 and S1 read events, not rule results. Done in Increment 26.
 - **One step may break two relations** owned by different rules. Each rule then fails on its own
   evidence (D-119). No relation is judged twice.
 
@@ -157,6 +157,10 @@ handles a partial order (interchangeable groups), repeats and ties.
   - Steps in some minimum solutions but not all are reported as **one ordering mistake between
     them** (for example, "A5 and R4 are in the wrong order").
   - Either way it is one `wrong_order` Fail, listed in expected order.
+- **[2026-11-24] D-128:** a misplaced step is a Fail only if the evidence was clear where a correctly
+  placed occurrence would have had to be: from its latest observed required predecessor to its
+  earliest observed required successor (the recording start or end where none). Otherwise Unable to
+  Verify, flagged `order_partially_checked`.
 - **Result:**
   - fewer than two observed steps → Unable to Verify;
   - none misplaced → Pass, flagged if the check was partial;
@@ -290,7 +294,7 @@ adapter is only a fallback.
 | 23 | **Built 2026-11-24.** A5 (pending; held back in the demo, OQ-075) | same | presence; R5 unaffected | A5 tolerance (null is fine) |
 | 24 | **Built 2026-11-24.** R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
 | 25 | **Built 2026-11-24.** A8, with its end event as a config value (start or shock, OQ-076). **[2026-11-24]** Also move the context's restart anchor (`_start_anchor`, a point comparison with the shock) to segment bounds (D-125), so A8 and R7 pick the same restart (done). A8 is held back in the demo until OQ-076 | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
-| 26 | A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
+| 26 | **Built 2026-11-24.** A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
 | 27 | S1 Procedure order. **[2026-11-24] Open (OQ-078):** derive S1's relations per recording from the observed steps (the transitive reduction of the order restricted to them, minus other rules' relations), so a relation bridging a missing or unseen step is still checked once | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix, including scenario 14 | the checklist mapping (OQ-064); OQ-078 |
 | 28 | Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |
 

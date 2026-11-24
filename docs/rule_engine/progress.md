@@ -5306,3 +5306,116 @@ Results: full suite **863 tests run, all pass, 1 skipped**; the docs test passes
 ### Next
 Increment 26 (A7 on its own pairs) on Arnikan's "continue".
 
+## Increment 26: A7 the order of the audio commands; R5's preceding steps retired (2026-11-24)
+
+Increment 25 was committed (`c784bc6`) with A8 held back in the demo until OQ-076, and pushed. This
+increment is not committed.
+
+### What was built
+- **A7** (`rules/audio_rules.py`, P-045): judges only the audio–audio relations it owns in
+  `procedure_order.yaml` (D-123); A2 → A4 stays A4's. The method of plan section 4:
+  - the minimum set of misplaced commands, searched over kept sets from the largest down, with a
+    topological sweep taking each step's earliest occurrence not certainly before its kept
+    predecessors (any occurrence in the right place counts; a tie or one segment is not ordered,
+    D-125);
+  - a step in every minimum solution is named misplaced; steps in some but not all are one
+    ordering mistake between them; one `wrong_order` Fail either way;
+  - missing commands are left out; optional steps (charging, "applying gel") are checked only if
+    said, never missing;
+  - unseen commands (a required step not heard with unclear audio, low confidence, an unresolved
+    continue/resume) are left out and flag `order_partially_checked`. A low-confidence or
+    unresolved command is tried as a free extra occurrence: if it could remove the misplacement,
+    the result is Unable to Verify, never Fail;
+  - a Fail also needs the audio clear throughout the recording (D-122): otherwise a correctly
+    placed occurrence may have been said but not heard → Unable to Verify;
+  - fewer than two commands heard → Unable to Verify (no flag: nothing was checked).
+- **A7's `depends_on` removed** in `rules.yaml` and the demo config (D-123). A7 is approved in the
+  demo config; the scenarios have no audio, so it is Unable to Verify there.
+- **R5's `preceding_steps` retired** (`rules/video_rules.py`, D-123): R5 judges only the shock
+  indication. A leftover `preceding_steps` parameter is an engine_error. OQ-013 is closed
+  (superseded by D-123); D-100 is marked superseded in part.
+
+### R5 on the demo scenarios, before and after
+| Scenario | Before | After |
+|---|---|---|
+| 1 correct procedure | Pass, `order_not_checked` | Pass |
+| 2 parallel placement | Pass, `order_not_checked` | Pass |
+| 3 gel after placement | Pass, `order_not_checked` | Pass |
+| 4 screen not in view | Unable to Verify | Unable to Verify (unchanged) |
+| 5 low-confidence removal | Pass, `order_not_checked` | Pass |
+| 6 removed before the shock | Pass, `order_not_checked` | Pass |
+| 7 real catalogue | pending | pending (unchanged) |
+
+The only change is the flag: R5 no longer checks an order, so it no longer says the order was not
+checked. The overall results stay the same (scenarios 1 and 5 are still Incomplete, because of R1's
+and R6's unset time limits); "order not checked for R5" is no longer in their Incomplete list.
+
+### Tests (863 → 879)
+- New `tests/test_rule_engine_a7.py` (18 tests, full `rules.yaml`): the lecturer-like sequence; one
+  swapped pair (one mistake naming both); a repeated command; an optional step out of place;
+  optional steps not said; a missing required step; one misplaced step among many; a tie;
+  ownership (only A7's relations; stop before continue judged once, by A4); no `depends_on`; fewer
+  than two commands; one segment; unclear audio (Pass flagged, misplacement Unable); a
+  low-confidence and an unresolved command that could be in the right place; pending.
+- `tests/test_rule_engine_r5.py`: the `preceding_steps` tests replaced (a clean Pass; R5 never judges
+  the order before the shock; a leftover `preceding_steps` is an engine_error).
+- `tests/test_rule_engine_config.py`: A7 has no `depends_on`; R5 has no parameters.
+
+Results: full suite **879 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-045; P-033 without preceding steps; P-039), `pathways.md` (P-045, W-95,
+  P-039), `diagrams.md` ((v));
+- `anomalies.md`, `output_contract.md` (`wrong_order` built for A7, no longer R5's; version
+  unchanged), `rules_status.md`;
+- `open_questions.md` (OQ-013 closed), `decisions.md` (D-100 superseded in part);
+- `demo_walkthrough.md`, `demo/scenarios/scenarios.yaml` (text only), `audio_integration_plan.md`
+  (Increment 26 built; the ownership table);
+- `procedure_order.yaml` and `rules/procedure.py` comments (A7 reads the order);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 27 (S1 Procedure order) on Arnikan's "continue".
+
+### Review (Arnikan, 2026-11-24): D-128, wrong-place Fails need clear evidence
+- **The decision (D-128):** a wrong-order or wrong-time Fail claims the step was observed in a wrong
+  place and was not done in the right place. The second claim is an absence, so it needs clear
+  evidence over the window where a correctly placed occurrence would have had to be; otherwise
+  Unable to Verify. Recorded in `decisions.md` and the agent brief's decision policy; the R7
+  `before_shock` fix (Increment 24 review) is the first case.
+- **Applied to the audio rules** through one helper, `_wrong_place`, which asks the same question as
+  `missing` over the window (clear audio, no low-confidence command):
+  - A1, A3, A5 `after_shock` and A2 `wrong_stage`: from the start of the recording to the shock;
+  - A4 `after_shock`: from the first continue (or the recording start) to the shock;
+  - A4 `wrong_order`: from the continue to the shock (the recording end without a shock time);
+  - A7: replaces "the audio clear throughout the recording": for each command reported, from its
+    latest observed required predecessor to its earliest observed required successor.
+- **Tests (879 → 890):** new `tests/test_rule_engine_d128.py` (10 tests: each rule's wrong-place
+  command × window clear / unclear, including R7 `before_shock` as the first case); the A7 test of
+  unclear audio split into a Pass test and a window test. The docs test also finds codes passed to
+  `_wrong_place`.
+- **Also fixed:** a stale R5 table in `pathways.md` (P-033 still listed the retired preceding steps)
+  and W-60, withdrawn.
+
+### Audit: video wrong-place Fails against D-128 (report only, no code change)
+| Fail | Could a correct occurrence be missed? | Visibility required now? |
+|---|---|---|
+| R1 `after_placement` | Yes: gel applied before the placement while the gel zones (or the chest) were out of view | **No** |
+| R2 `taken_before_first_placed` | Yes: an earlier firm placement of the first paddle while its zone was out of view, before the other was taken | **No** |
+| R3 `placed_after_shock` | Yes: a firm placement before the shock while the placement zones were out of view | **No** (R3 `missing` does check it, D-106) |
+| R4 `before_placement` | Yes: a valid press between the placement and the shock while the paddles were out of view | **No** (R4 `not_pressed` does check it, D-108) |
+| R6 `removed_before_shock` (removal tag) | No: the removal before the shock is seen directly; R6's requirement is not a missing removal | not needed |
+| R6 `removed_before_shock` (derived episode) | Yes: a re-placement after the exit while the zone was out of view ("no placement on at the shock" is an absence) | **No** |
+| R8 `wrong_order` | Yes: an earlier apical placement while the apical zone was out of view, before the sternal placement | **No** |
+| R6 `too_late`, R1 `outside_time_period` (timing) | Yes, once a limit is approved: a removal (or application) within the limit while out of view | **No** (limits unset, so not produced now) |
+
+A related observation: R3 `placed_after_shock` and R4 `before_placement` are reached even when the
+shock is on the screen, which is itself an approved inference source for both (D-102: a confirmed
+shock shows the paddles were on the chest and the buttons were pressed). The direct tag and the
+inference then contradict each other; a `contradictory` Unable to Verify (as R4 already gives for a
+press after the shock) may fit better than a Fail.
+
+Not yet applied in the audio rules either (timing Fails): R7/A6 `too_late` (an earlier restart not
+heard between the shock and the restart; limit unset now) and A8 `pre_shock_pause` (an earlier
+restart, or an unheard continue and later stop, inside the pause; the 5 s limit is approved).
+

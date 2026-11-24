@@ -1,4 +1,5 @@
-"""Increment 13: R5, shock confirmed on screen (P-033; D-093, D-094, D-100, D-101)."""
+"""Increment 13: R5, shock confirmed on screen (P-033; D-093, D-094, D-101). Since Increment 26 R5 judges only the
+shock indication: its preceding_steps is retired (D-123)."""
 import copy
 import unittest
 
@@ -14,8 +15,8 @@ from schemas.event import Event
 CATALOGUE = yaml.safe_load((ROOT / "configs/rules.yaml").read_text(encoding="utf-8"))
 
 
-def config(preceding_steps=None, *also):
-    rules = [{"id": "R5", "status": "approved", "parameters": {"preceding_steps": preceding_steps}}]
+def config(*also, parameters=None):
+    rules = [{"id": "R5", "status": "approved", "parameters": parameters or {}}]
     rules += [{"id": r, "status": "approved"} for r in also]
     return RuleEngineConfig.from_dict({**copy.deepcopy(CATALOGUE), "rules": rules})
 
@@ -49,38 +50,24 @@ def r5(events, head=None, cfg=UNSET):
 
 
 class ShockSeen(unittest.TestCase):
-    def test_preceding_steps_unset_checks_presence_only_and_blocks_a_pass(self):
+    def test_a_shock_on_screen_is_a_clean_pass(self):
+        """D-123: no order_not_checked any more; the relations before the shock are owned by their own rules."""
         result = run([*WINDOW_TAGS, ev("shock_delivered_on_screen", 15, "shock")], header())
         outcome = result.outcome("R5")
-        self.assertEqual((outcome.kind, outcome.evidence, outcome.flags), ("pass_direct", ("shock",), ("order_not_checked",)))
-        self.assertIn("order not checked", outcome.reason)
-        self.assertEqual(result.overall.result, "incomplete")              # D-100, like D-062
-        self.assertEqual([c.category for c in result.overall.incomplete], ["order not checked"])
-
-    def test_preceding_steps_set_and_met(self):
-        steps = ["paddles_firmly_on_chest", "both_paddle_buttons_pressed"]
-        events = [*WINDOW_TAGS, ev("both_paddle_buttons_pressed", 13, "buttons"), ev("shock_delivered_on_screen", 15, "shock")]
-        result = run(events, header(), config(steps))
-        outcome = result.outcome("R5")
-        self.assertEqual((outcome.kind, outcome.flags), ("pass_direct", ()))
-        self.assertEqual(outcome.evidence, ("shock", "placed", "buttons"))
+        self.assertEqual((outcome.kind, outcome.evidence, outcome.flags), ("pass_direct", ("shock",), ()))
         self.assertEqual(result.overall.result, "pass")
 
-    def test_shock_before_a_preceding_step_is_wrong_order(self):
+    def test_r5_never_judges_the_order_of_the_steps_before_the_shock(self):
+        """The buttons pressed after the shock are R4's relation (R4 -> R5), not R5's."""
         events = [*WINDOW_TAGS, ev("both_paddle_buttons_pressed", 16, "buttons"), ev("shock_delivered_on_screen", 15)]
-        outcome = r5(events, header(), config(["both_paddle_buttons_pressed"]))
-        self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "wrong_order"))
-        self.assertIn("both_paddle_buttons_pressed at 16 s", outcome.reason)
+        self.assertEqual(r5(events, header()).kind, "pass_direct")
 
-    def test_a_preceding_step_not_observed_leaves_its_order_unchecked(self):
-        events = [*WINDOW_TAGS, ev("shock_delivered_on_screen", 15)]
-        outcome = r5(events, header(), config(["both_paddle_buttons_pressed"]))
-        self.assertEqual((outcome.kind, outcome.flags), ("pass_direct", ("order_not_checked",)))
-        self.assertIn("not observed: both_paddle_buttons_pressed", outcome.reason)
-
-    def test_an_invalid_setting_is_an_engine_error_not_a_learner_result(self):
-        outcome = r5([ev("shock_delivered_on_screen", 15)], header(), config(["shock_given"]))
-        self.assertEqual(outcome.kind, "engine_error")
+    def test_a_leftover_preceding_steps_is_an_engine_error(self):
+        for value in (None, ["both_paddle_buttons_pressed"]):
+            with self.subTest(value=value):
+                outcome = r5([ev("shock_delivered_on_screen", 15)], header(),
+                             config(parameters={"preceding_steps": value}))
+                self.assertEqual(outcome.kind, "engine_error")
 
     def test_multiple_shocks_is_unable_to_verify(self):
         outcome = r5([*WINDOW_TAGS, ev("shock_delivered_on_screen", 14, "s1"), ev("shock_delivered_on_screen", 16, "s2")],

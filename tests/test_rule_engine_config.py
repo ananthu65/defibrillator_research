@@ -35,10 +35,12 @@ class RepositoryConfig(unittest.TestCase):
     def test_every_rule_is_pending_until_supervisor_approval(self):
         self.assertTrue(all(r.status == "pending" for r in self.config.rules))
 
-    def test_a6_reuses_r7_and_a7_depends_on_a1_to_a5(self):
+    def test_a6_reuses_r7_and_a7_has_no_depends_on(self):
+        """D-123 (Increment 26): A7 owns its own relations in procedure_order.yaml; no rule-result dependency."""
         self.assertEqual(self.config.rule("A6").same_as, "R7")
         self.assertIsNone(self.config.rule("A6").implementation)
-        self.assertEqual(self.config.rule("A7").depends_on, ("A1", "A2", "A3", "A4", "A5"))
+        self.assertEqual(self.config.rule("A7").depends_on, ())
+        self.assertEqual(self.config.rule("R5").parameters, {})   # preceding_steps retired
 
     def test_a8_limit_is_approved_by_the_supervisor(self):
         limit = self.config.limit("pre_shock_pause_seconds")

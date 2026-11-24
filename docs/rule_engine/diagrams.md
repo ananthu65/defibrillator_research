@@ -580,3 +580,21 @@ flowchart TD
     L -->|between| U["Unable to Verify<br/>timing_uncertain"]
 ```
 
+## (v) A7 the order of the audio commands (P-045, built in Increment 26; pending until approved)
+
+Only the audio–audio relations A7 owns in `procedure_order.yaml` (D-123); A2 → A4 is A4's.
+
+```mermaid
+flowchart TD
+    N{"Two or more commands<br/>of the order heard?"} -->|no| U0["Unable to Verify"]
+    N -->|yes| M{"Minimum set of misplaced commands<br/>(any occurrence in the right place;<br/>ties and one segment not ordered)"}
+    M -->|none| P{"A command unseen, or<br/>two in one segment?"}
+    P -->|no| OK["Pass"]
+    P -->|yes| OKP["Pass<br/>order_partially_checked"]
+    M -->|some| W{"Could a low-confidence or<br/>unresolved command fix it?"}
+    W -->|yes| U1["Unable to Verify<br/>order_partially_checked"]
+    W -->|no| C{"Audio clear where each reported<br/>command's correct occurrence<br/>would have been? (D-128)"}
+    C -->|no| U2["Unable to Verify<br/>order_partially_checked"]
+    C -->|yes| F["Fail wrong_order<br/>misplaced, or one mistake between them"]
+```
+

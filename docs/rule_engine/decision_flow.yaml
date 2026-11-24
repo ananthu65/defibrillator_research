@@ -175,24 +175,15 @@ decision_points:
     name: R5 shock confirmed on screen
     stage: rule
     status: built
-    decides: R5's result (Increment 13); runs only when R5 is approved in rules.yaml, pending until the supervisor confirms its definition
-    inputs: [shock_delivered_on_screen events, multiple_shocks, R5 preceding_steps (rules.yaml), screen coverage over paddles firmly on chest .. paddles removed]
+    decides: R5's result (Increment 13); runs only when R5 is approved in rules.yaml, pending until the supervisor confirms its definition. Since Increment 26 R5 judges only the shock indication; its preceding_steps is retired (D-123) - each "X before the shock" relation is owned by X's rule
+    inputs: [shock_delivered_on_screen events, multiple_shocks, screen coverage over paddles firmly on chest .. paddles removed]
     branches:
       - condition: Two or more shock indications (preparation anomaly multiple_shocks)
         outcome: Unable to Verify; a single shock cannot be confirmed
         flags: [multiple_shocks]
-      - condition: A shock on screen, preceding_steps unset (OQ-013)
-        outcome: Pass – Direct, presence only; flagged so the overall result cannot be Pass (D-100, like D-062)
-        flags: [order_not_checked]
-      - condition: A shock on screen, preceding_steps set, an observed step starts after the shock
-        outcome: Fail wrong_order
-        failure_codes: [wrong_order]
-      - condition: A shock on screen, preceding_steps set, a step not observed
-        outcome: Pass – Direct for the observed steps; that step's order not checked
-        flags: [order_not_checked]
-      - condition: A shock on screen after every preceding step
-        outcome: Pass – Direct
-      - condition: preceding_steps is not a list of canonical events
+      - condition: A shock on screen
+        outcome: Pass – Direct (no order check; no order_not_checked since Increment 26, D-123)
+      - condition: A leftover preceding_steps parameter (retired)
         outcome: engine_error (a configuration error, never a result about the learner, D-063)
       - condition: No shock on screen, a low-confidence one exists
         outcome: Unable to Verify (D-010)
@@ -202,11 +193,11 @@ decision_points:
         failure_codes: [missing]
       - condition: No shock on screen; the screen not visible throughout that window (partly, never, or unknown)
         outcome: Unable to Verify, never Fail (D-094)
-    config: [configs/rules.yaml R5 parameters.preceding_steps, engine.yaml coverage_policy]
+    config: [engine.yaml coverage_policy]
     code: rules/video_rules.py (shock_confirmed_on_screen)
-    decisions: [D-039, D-093, D-094, D-100, D-101]
+    decisions: [D-039, D-093, D-094, D-101, D-123]
     assumptions: []
-    open_questions: [OQ-013]
+    open_questions: []
 
   - id: P-034
     name: R6 paddles removed after the shock
@@ -1193,9 +1184,12 @@ decision_points:
         next: P-024
       - condition: A shock time; an approved numeric limit before the shock
         outcome: engine_error - no failure code is defined for it, so it is refused loudly, never guessed (D-063)
-      - condition: A shock time; commands only certainly after the shock
+      - condition: A shock time; commands only certainly after the shock, the audio clear from the start of the recording to the shock (D-128)
         outcome: Fail after_shock
         failure_codes: [after_shock]
+      - condition: A shock time; commands only certainly after the shock, the audio not clear from the start to the shock (or a low-confidence command)
+        outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
+        flags: [low_confidence_evidence]
       - condition: A shock time; no command, the audio clear throughout from the start to the shock (stated clear-audio intervals)
         outcome: Fail missing
         failure_codes: [missing]
@@ -1228,7 +1222,7 @@ decision_points:
         outcome: Pass – Direct
       - condition: A2, shock time; no such command but an unresolved continue/resume command (its segment overlaps the shock)
         outcome: Unable to Verify - continue or start can't be told (D-125)
-      - condition: A2, shock time; continue commands only certainly after the shock
+      - condition: A2, shock time; continue commands only certainly after the shock, the audio clear from the start to the shock (D-128)
         outcome: Fail wrong_stage
         failure_codes: [wrong_stage]
       - condition: A2 or A4, shock time; no command, the audio clear from the start to the shock
@@ -1237,12 +1231,15 @@ decision_points:
       - condition: A2 or A4, shock time; no command, low confidence or the audio not clear throughout
         outcome: Unable to Verify, never Fail (D-010, D-122)
         flags: [low_confidence_evidence]
-      - condition: A4, shock time; stop commands only certainly after the shock
+      - condition: A4, shock time; stop commands only certainly after the shock, the audio clear from the first continue (or the recording start) to the shock (D-128)
         outcome: Fail after_shock
         failure_codes: [after_shock]
-      - condition: A4; continue commands only certainly after every stop (with or without a shock time)
+      - condition: A4; continue commands only certainly after every stop (with or without a shock time), the audio clear from the continue to the shock (the recording end without a shock time, D-128)
         outcome: Fail wrong_order - A4's own evidence, no shock time needed (D-027, D-121)
         failure_codes: [wrong_order]
+      - condition: A2 wrong_stage, A4 after_shock or wrong_order, but the audio not clear over that window (or a low-confidence command)
+        outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
+        flags: [low_confidence_evidence]
       - condition: A4, shock time; a stop before the shock but no continue observed, or only unresolved continue/resume commands
         outcome: Not evaluable because of A2, naming the stop as the part still checked (D-121)
         next: P-020
@@ -1281,9 +1278,12 @@ decision_points:
         outcome: Pass – Direct; how long before the shock is unset (shock_command_tolerance_seconds), so timing not checked; an approved no limit passes fully (D-103); an approved number is refused as engine_error
         flags: [timing_not_checked]
         next: P-024
-      - condition: Shock time; commands only certainly after the shock
+      - condition: Shock time; commands only certainly after the shock, the audio clear from the start to the shock (D-128)
         outcome: Fail after_shock - an order mistake on A5's own relation (A5 -> R5), like A1 and A3, not a time-limit question
         failure_codes: [after_shock]
+      - condition: Shock time; commands only certainly after the shock, the audio not clear from the start to the shock (or a low-confidence command)
+        outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
+        flags: [low_confidence_evidence]
       - condition: Shock time; no command, the audio clear throughout the recording
         outcome: Fail missing
         failure_codes: [missing]
@@ -1301,7 +1301,7 @@ decision_points:
         next: P-020
     config: [configs/rules.yaml timing_limits.shock_command_tolerance_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
     code: rules/audio_rules.py (shock_command)
-    decisions: [D-062, D-103, D-121, D-122, D-123, D-125]
+    decisions: [D-062, D-103, D-121, D-122, D-123, D-125, D-128]
     assumptions: []
     open_questions: [OQ-009, OQ-010, OQ-016, OQ-068, OQ-075]
 
@@ -1347,7 +1347,7 @@ decision_points:
         next: P-020
     config: [configs/rules.yaml timing_limits.shock_to_compressions_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
     code: rules/audio_rules.py (restart_compressions)
-    decisions: [D-025, D-044, D-053, D-093, D-103, D-115, D-121, D-122, D-123, D-125]
+    decisions: [D-025, D-044, D-053, D-093, D-103, D-115, D-121, D-122, D-123, D-125, D-128]
     assumptions: []
     open_questions: [OQ-009, OQ-016]
 
@@ -1382,12 +1382,42 @@ decision_points:
     assumptions: []
     open_questions: [OQ-009, OQ-076]
 
+  - id: P-045
+    name: A7 the order of the audio commands
+    stage: rule
+    status: built
+    decides: A7's result (Increment 26). A7 judges only the audio-audio relations it owns in procedure_order.yaml (D-120, D-123; current order oxygen away -> stand clear -> continue -> charging -> applying gel -> stop -> shock command -> start); relations owned by other rules (A2 -> A4 is A4's) are not judged again. No depends_on. Method of plan section 4 - the minimum set of misplaced commands
+    inputs: [the audio commands (Sanjeevan's events, Whisper segments), procedure_order.yaml (A7's relations; optional steps), low-confidence and unresolved commands, the audio region's clear-audio intervals (D-122)]
+    branches:
+      - condition: Fewer than two steps of the order heard
+        outcome: Unable to Verify
+      - condition: No step misplaced (any occurrence in the right place counts; a tie satisfies either order, D-125; missing and optional unsaid steps left out)
+        outcome: Pass - Direct
+        next: P-025
+      - condition: No step misplaced, but a step unseen (a required one not heard while the audio was not clear, a low-confidence or unresolved command), or two related commands in one Whisper segment
+        outcome: Pass - Direct, never clean
+        flags: [order_partially_checked]
+      - condition: Steps misplaced, but a low-confidence or unresolved command could be an occurrence in the right place
+        outcome: Unable to Verify
+        flags: [order_partially_checked]
+      - condition: Steps misplaced, the audio not clear over the window of a reported command - from its latest observed required predecessor to its earliest observed required successor, the recording start or end where none (D-128)
+        outcome: Unable to Verify - a correctly placed occurrence may have been said but not heard
+        flags: [order_partially_checked]
+      - condition: Steps misplaced, the audio clear over every reported command's window
+        outcome: Fail wrong_order - one mistake; a step in every minimum solution is named misplaced, steps in some but not all are one ordering mistake between them (D-119)
+        failure_codes: [wrong_order]
+    config: [configs/rule_engine/procedure_order.yaml (A7's audio scope; optional steps), engine.yaml simultaneous_window_seconds and cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
+    code: rules/audio_rules.py (command_order, _minimum_misplaced, _place)
+    decisions: [D-027, D-119, D-120, D-121, D-122, D-123, D-125, D-126, D-127, D-128]
+    assumptions: []
+    open_questions: [OQ-009, OQ-062, OQ-072, OQ-073, OQ-075, OQ-077]
+
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039
     name: Procedure order (precedence graph)
     stage: configuration
     status: built
-    decides: The expected relative order of every audio and video step, and which rule judges each "X before Y" relation (D-120, D-123); loaded and validated with the catalogue. NOT clinically approved (OQ-062); no rule reads it yet
+    decides: The expected relative order of every audio and video step, and which rule judges each "X before Y" relation (D-120, D-123); loaded and validated with the catalogue. NOT clinically approved (OQ-062); A7 reads it since Increment 26, S1 from Increment 27
     inputs: [configs/rule_engine/procedure_order.yaml (steps, chains, unknown, interchangeable, owners, default_owner), the vocabulary]
     branches:
       - condition: A step's events are not canonical, or mix modalities, or its derived kind is not earliest_take, later_take or earliest_placement

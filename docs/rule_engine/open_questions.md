@@ -26,7 +26,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-005 | E-3a | supervisor | Arnikan | closed | Does an inferred Fail count as Fail? (no longer applicable, D-116) |
 | OQ-010 | E-4a | supervisor | Sanjeevan, Arnikan | open | Confirm the command names, accepted phrases and order |
 | OQ-012 | E-6 | supervisor | Ananth | open | Approve the chest regions; evidence of a paddle outside its zone (R3) |
-| OQ-013 | E-7 | supervisor | Arnikan | open | Which steps must precede the shock indication (R5)? |
+| OQ-013 | E-7 | supervisor | Arnikan | closed | Which steps must precede the shock indication (R5)? |
 | OQ-016 | E-9 | supervisor | Arnikan | open | Missing clinical time limits |
 | OQ-021 | E-14a | supervisor | Ananth, Arnikan | open | Gel applied more than twice |
 | OQ-022 | E-14b | supervisor | Ananth, Arnikan | open | Paddles lifted and placed again before the shock |
@@ -162,7 +162,9 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ### OQ-013 Which steps must come before the shock indication (R5)?
 - **Old no.:** E-7 · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
-  2026-10-10 · **Status:** open
+  2026-10-10 · **Status:** closed (2026-11-24, Increment 26): superseded by D-123. R5 judges only the
+  shock indication; which steps come before the shock is part of the procedure order
+  (`procedure_order.yaml`, OQ-062), and each "X before the shock" relation is judged by X's rule.
 - **Question:** R5 passes when a new shock indication appears "after the preceding steps".
   Which steps: paddle placement only, or placement and pressing both buttons?
 - **Affects:** R5.

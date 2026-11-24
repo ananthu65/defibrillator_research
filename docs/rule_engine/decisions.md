@@ -414,6 +414,30 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ---
 
+### D-128 A wrong-place Fail needs clear evidence over the window of the correct occurrence
+- **Date / by / status:** 2026-11-24 · Arnikan · approved
+- **Decision:** a wrong-order or wrong-time Fail claims two things: the step was observed in a wrong
+  place, **and** it was not done in the right place. The second claim is an absence, so it needs
+  clear evidence (stated clear audio, D-122, for audio; visibility for video) over the window where
+  a correctly placed occurrence would have had to be. Otherwise the result is Unable to Verify: the
+  correct occurrence may have happened but not been observed.
+- **First case:** R7/A6 `before_shock` (the Increment 24 review fix, 2026-11-24): a start heard only
+  before the shock fails only if the audio was clear from the shock to the end of the recording.
+- **Applied (Increment 26 review, 2026-11-24):** the audio rules, through one helper that asks the
+  same question as `missing` over the window (clear audio and no low-confidence command):
+  - A1, A3, A5 `after_shock` and A2 `wrong_stage`: from the start of the recording to the shock;
+  - A4 `after_shock`: from the first continue (or the recording start) to the shock; A4
+    `wrong_order` (stop before continue): from the continue to the shock (the recording end
+    without a shock time);
+  - A7: for each command reported, from its latest observed required predecessor to its earliest
+    observed required successor (the recording start or end where none).
+- **Not yet applied:** the video rules (audited, gaps listed in progress.md, Increment 26 review)
+  and the timing Fails (R7/A6 `too_late`, A8 `pre_shock_pause`, R6 `too_late`, R1
+  `outside_time_period`), pending Arnikan's decision.
+- **Reason:** "Never blame the learner for missing data" applies to the absence inside a
+  wrong-place claim as much as to a missing step.
+- **Affects:** A1–A5, A7, R7/A6; the video rules once their gaps are fixed; P-040 to P-045.
+
 ## Rule definitions
 
 ### D-018 Gel: applied twice within the approved period; order versus placement not checked
@@ -681,6 +705,8 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 
 ### D-100 R5's preceding steps are a setting; unset means order not checked
 - **Date / by / status:** 2026-10-17 · Arnikan · approved
+- **Superseded in part (2026-11-24, Increment 26):** R5's `preceding_steps` is retired (D-123); R5
+  judges only the shock indication. `order_not_checked` stays for other rules (R4).
 - **Decision:**
   - **The setting:** the list of steps that must come before the shock is a config setting,
     `configs/rules.yaml` R5 `parameters.preceding_steps` (canonical events). It is **unset**

@@ -609,20 +609,23 @@ def _press_missing(ctx, placement, shock):
 
 # ---- R5 ---------------------------------------------------------------------------------------------
 
-@rule("R5", requires=(SHOCK, BOTH_PLACED, REMOVAL), description="Shock confirmed on screen after the preceding steps")
+@rule("R5", requires=(SHOCK, BOTH_PLACED, REMOVAL), description="Shock confirmed on screen")
 def shock_confirmed_on_screen(ctx, definition, results):
-    """R5 (P-033): one new shock indication on the screen, after the preceding steps.
+    """R5 (P-033): one new shock indication on the screen.
 
+    R5 judges only the shock indication. Since Increment 26 its `preceding_steps` is retired (D-123): each
+    "X before the shock" relation is owned by X's rule (R3, R4, A1-A5), so R5 no longer checks the order and
+    no longer flags `order_not_checked`. A leftover `preceding_steps` parameter is a configuration error.
     1. Two or more shocks (the preparation anomaly multiple_shocks) -> Unable to Verify.
-    2. A shock on screen:
-       - preceding_steps unset (OQ-013) -> Pass - Direct, presence only, flagged order_not_checked,
-         which keeps the overall result from being Pass (D-100);
-       - set -> any observed step starting after the shock -> Fail `wrong_order`; a step not
-         observed -> its order is not checked (order_not_checked); otherwise Pass - Direct.
+    2. A shock on screen -> Pass - Direct.
     3. No shock on screen -> coverage of the screen over the window from paddles firmly on chest to
        paddles removed (the whole recording when either tag is missing, D-101): visible throughout
        -> Fail `missing`; otherwise Unable to Verify (D-094). Low confidence is never a Fail.
     """
+    if "preceding_steps" in definition.parameters:
+        # a configuration error: recorded as engine_error (D-063), never a result about the learner
+        raise ValueError("R5 preceding_steps is retired (D-123): each relation before the shock is owned by its "
+                         "own rule in procedure_order.yaml")
     if MULTIPLE_SHOCKS in ctx.shock.flags:
         return unable("R5", "more than one shock indication on the screen; a single shock cannot be confirmed "
                       "(timeline anomaly multiple_shocks)", evidence=ctx.shock.candidates, uses=(ctx.shock,))
@@ -630,32 +633,8 @@ def shock_confirmed_on_screen(ctx, definition, results):
     if not shocks:
         return _shock_missing(ctx)
     shock = shocks[0]
-    steps = definition.parameters.get("preceding_steps")
-    if steps is None:
-        return passed("R5", f"shock confirmed on the screen at {shock.start:g} s; order not checked: the steps "
-                      "that must come before it are not set (OQ-013, D-100)", (shock.event_id,),
-                      flags=(checks.ORDER_NOT_CHECKED,), timestamps={SHOCK: shock.start})
-    if not isinstance(steps, list) or [s for s in steps if s not in ctx.config.vocabulary.events]:
-        # a configuration error: recorded as engine_error (D-063), never a result about the learner
-        raise ValueError(f"R5 preceding_steps must be a list of canonical events, got {steps!r}")
-    late, unseen = [], []
-    for step in steps:
-        found = ctx.named(step)
-        if not found:
-            unseen.append(step)
-        elif found[0].start > shock.start:
-            late.append(found[0])
-    timestamps = {SHOCK: shock.start, **{e.event_name: e.start for e in late}}
-    if late:
-        names = ", ".join(f"{e.event_name} at {e.start:g} s" for e in late)
-        return failed("R5", "wrong_order", f"shock on the screen at {shock.start:g} s before the preceding "
-                      f"step(s): {names}", evidence=(shock.event_id, *(e.event_id for e in late)), timestamps=timestamps)
-    if unseen:
-        return passed("R5", f"shock confirmed on the screen at {shock.start:g} s after the observed preceding steps; "
-                      f"order not checked for steps not observed: {', '.join(unseen)}", (shock.event_id,),
-                      flags=(checks.ORDER_NOT_CHECKED,), timestamps=timestamps)
-    return passed("R5", f"shock confirmed on the screen at {shock.start:g} s, after {', '.join(steps)}",
-                  (shock.event_id, *(ctx.named(s)[0].event_id for s in steps)), timestamps=timestamps)
+    return passed("R5", f"shock confirmed on the screen at {shock.start:g} s", (shock.event_id,),
+                  timestamps={SHOCK: shock.start})
 
 
 def _shock_window(ctx):

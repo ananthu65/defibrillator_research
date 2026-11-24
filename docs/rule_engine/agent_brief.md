@@ -117,6 +117,10 @@ Notes:
   that can still be judged is checked (D-119).
 - **Never blame the learner for missing data.** Fail only when evidence clearly shows the
   mistake. Missing or unclear evidence gives Unable to Verify.
+- **A wrong-place Fail needs clear evidence where the right place was.** A wrong-order or
+  wrong-time Fail also claims the step was not done in the right place; that absence needs clear
+  evidence (clear audio, or visibility) over the window where a correctly placed occurrence would
+  have had to be. Otherwise Unable to Verify (D-128).
 - **Overall result:** any Fail → Fail. No Fail but at least one Unable to Verify → a
   configurable outcome (Fail or faculty review), **not decided yet**; make it one setting.
   All counted rules Pass (direct or inferred) → Pass.
