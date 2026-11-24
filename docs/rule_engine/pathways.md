@@ -330,7 +330,8 @@ on the screen. The restart is the same one R7/A6 judge (P-012).
 | No shock time | **Not evaluable because of R5** (never the removal) | — |
 | No stop to start the pause (not heard, only after the shock, or followed by continue) | **Not evaluable because of A4** | — |
 | `end_event: start`; no restart | **Not evaluable because of R7**, naming the stop checked | — |
-| The longest possible pause within 5 s | Pass – Direct, timing checked | — |
+| The longest possible pause within 5 s, the audio clear from the latest continue (or the start) to the stop | Pass – Direct, timing checked | — |
+| The same, the audio not clear before the stop | Unable to Verify: an unheard earlier stop would lengthen the pause (D-130) | `correct_occurrence_unseen` |
 | The shortest possible pause over 5 s | Fail | `pre_shock_pause` |
 | 5 s between the shortest and longest possible pause | Unable to Verify (D-125) | `timing_uncertain` |
 
@@ -358,11 +359,11 @@ otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
 | A1, A3, A5 `after_shock`; A2 `wrong_stage` | recording start → shock |
 | A4 `after_shock` / `wrong_order` | first continue (or start) → shock / continue → shock (or end) |
 | A7 `wrong_order` | latest observed required predecessor → earliest observed required successor |
-| A8 `pre_shock_pause` | stop → end event |
+| A8 `pre_shock_pause` / A8 Pass (D-130) | stop → end event / latest continue (or start) → stop |
 | R7/A6 `before_shock` / `too_late` | shock → recording end / shock → restart |
 | R1 `after_placement` / `outside_time_period` | recording start → first placement / first application → + period (both zones) |
 | R2 `taken_before_first_placed` | first paddle taken → other paddle taken (the first paddle's zone) |
-| R3 `placed_after_shock` | first paddle taken → shock (both zones); with the shock as an inference source: `contradictory` (D-129) |
+| R3 `placed_after_shock` | first paddle taken → shock (both zones; `paddles_firmly_on_chest`, `paddles_removed_after_shock` and `first_paddle_placed` are governed by no region, so both zones must be in view for them); with the shock as an inference source: `contradictory` (D-129) |
 | R4 `before_placement` | placement → shock, or the recording end (both paddles); with the shock as an inference source: `contradictory` (D-129) |
 | R6 `removed_before_shock` (derived) / `too_late` | exit → shock (that zone) / shock → + limit (both zones); the removal-tag case is unchanged |
 | R8 `wrong_order` | start of the placement phase → sternal placement (the apical zone) |

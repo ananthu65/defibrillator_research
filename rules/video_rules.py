@@ -70,6 +70,13 @@ def _wrong_place(rule_id, code, found, window, reason, *, evidence, uses=(), fla
                   timestamps={**(timestamps or {}), "unseen_window_start": window[0], "unseen_window_end": window[1]})
 
 
+def _region_less(ctx, event_name, window):
+    """An event governed by no region (paddles_firmly_on_chest, paddles_removed_after_shock, first_paddle_placed)
+    could be in either placement zone: its absence over the window needs both zones in view and no low-confidence
+    detection of it (D-128)."""
+    return [ctx.coverage.region_missing(region, event_name, window) for region in ("apical_zone", "sternal_zone")]
+
+
 def _gel_seen_absent(ctx, window):
     """R1: gel could have been seen on both zones over the window (the zones' visibility, A-026)."""
     return [ctx.coverage.region_missing(region, name, window)
@@ -335,7 +342,7 @@ def _order(ctx, first, placed, other_taken, first_taken=None):
     # D-128: an earlier firm placement of the first paddle, from its take to the other's take, may have been missed
     start = first_taken.start if first_taken is not None and first_taken.start <= other_taken.start else 0.0
     window = (start, other_taken.start)
-    zone = ([ctx.missing(APICAL, window), ctx.coverage.region_missing("apical_zone", FIRST_PLACED, window)]
+    zone = ([ctx.missing(APICAL, window), *_region_less(ctx, FIRST_PLACED, window)]
             if first == "apical" else [ctx.missing(STERNAL, window)])
     return _wrong_place("R2", "taken_before_first_placed", zone, window, f"the {other} paddle taken at "
                         f"{other_taken.start:g} s, before the {first} paddle (taken first) was placed at "
@@ -433,8 +440,7 @@ def paddles_firmly_on_chest(ctx, definition, results):
                 return contradiction
             taken = ctx.paddle_order.earliest_taken   # D-128: from the first paddle taken (else the start) to the shock
             window = (taken.start if taken is not None and taken.start <= shock.time else 0.0, shock.time)
-            zones = [ctx.coverage.region_missing("apical_zone", BOTH_PLACED, window),   # its low confidence
-                     *(ctx.missing(name, window) for name in PLACEMENTS)]
+            zones = [*_region_less(ctx, BOTH_PLACED, window), *(ctx.missing(name, window) for name in PLACEMENTS)]
             return _wrong_place("R3", "placed_after_shock", zones, window, what,
                                 evidence=(tags[0].event_id, shock.event_id), uses=(shock,),
                                 timestamps={BOTH_PLACED: tags[0].start, SHOCK: shock.time})
@@ -803,8 +809,7 @@ def _removed_at_or_after(ctx, removal, shock):
     if check.checked and not check.within:
         # D-128: a removal within the limit after the shock may have been missed
         window = (shock.time, shock.time + ctx.config.limit("shock_to_removal_seconds").value)
-        zones = [ctx.coverage.region_missing("apical_zone", REMOVAL, window),   # its low confidence
-                 *(ctx.missing(name, window) for name in PLACEMENTS)]
+        zones = [*_region_less(ctx, REMOVAL, window), *(ctx.missing(name, window) for name in PLACEMENTS)]
         result = _wrong_place("R6", "too_late", zones, window, f"paddles removed {seconds:g} s after the shock: "
                               f"{check.note}", evidence=evidence, uses=(shock, check), timestamps=timestamps)
         return replace(result, timing_checked=True) if result.kind == "fail" else result
@@ -947,7 +952,7 @@ def _direct(ctx, apical, sternal):
     phase = _placement_phase(ctx)
     start = phase[0] if phase is not None and phase[0] <= sternal.time else 0.0
     window = (start, sternal.time)
-    zone = [ctx.missing(APICAL, window), ctx.coverage.region_missing("apical_zone", FIRST_PLACED, window)]
+    zone = [ctx.missing(APICAL, window), *_region_less(ctx, FIRST_PLACED, window)]
     return _wrong_place("R8", "wrong_order", zone, window,
                         f"sternal paddle placed at {sternal.time:g} s, before the apical at {apical.time:g} s",
                         evidence=evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)

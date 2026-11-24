@@ -5476,3 +5476,52 @@ Results: full suite **904 tests run, all pass, 1 skipped**; the docs test passes
 ### Next
 Increment 27 (S1 Procedure order) on Arnikan's "continue".
 
+## Before S1: D-130, region-less events, Ananth's visibility (2026-11-24)
+
+D-128 for the video rules and the timing Fails, with D-129, was committed (`59f3380`) and pushed.
+
+### What was built
+- **D-130 (A8 Pass):** a Pass needs clear audio (and no low-confidence stop) from the latest observed
+  continue before the stop (the recording start if none) to the stop; otherwise Unable to Verify,
+  `correct_occurrence_unseen`, naming the window. Tests: the window clear, clear from the continue
+  only, unclear; without a continue, from the recording start.
+- **Region-less events** (`paddles_firmly_on_chest`, `paddles_removed_after_shock`,
+  `first_paddle_placed`): their absence in a D-128 window now needs **both** placement zones in view,
+  not only the apical zone. Events carry no zone, and the low-confidence check was already
+  independent of the zone; the change is the visibility requirement. It is new for R2 and R8 (an
+  apical-first window now also needs the sternal zone in view for the first-placement tag); R3 and R6
+  already needed both zones. Tests: a low-confidence firm placement blocks R3's Fail; R2 with the
+  sternal zone out of view is Unable to Verify.
+- **Upstream (top priority):** Ananth's video pipeline must give visibility intervals for every region
+  (both placement zones, the screen, the paddles, the learner's hand) in the annotation adapter's
+  header format; without them every video wrong-place Fail is Unable to Verify (D-128). Sanjeevan's
+  clear-audio intervals are marked top priority alongside.
+
+### Audit: Passes that depend on an absence (report only, no code change)
+| Pass | The absence it also claims | Could it be missed? | Checked now? |
+|---|---|---|---|
+| R1 (gel before the first placement) | no earlier placement of the paddle seen first | yes, its zone out of view before the observed placement | **No** (D-118 covers only the other paddle's unknown placement) |
+| R2 (first paddle placed before the other was taken) | the other paddle was not taken earlier | yes, the other paddle out of view before its observed take | **No** |
+| R3 Direct (firm placement at or before the shock) | none: a placement before the shock is positive evidence | — | not needed |
+| R3/R4 Inferred (from the shock) | none beyond the approved inference | — | not needed |
+| R4 Direct (a press after the placement, before the shock) | none: any valid press counts | — | not needed |
+| R5 (one shock on the screen) | no second shock | yes, the screen out of view | **No** (`multiple_shocks` only for shocks seen) |
+| R6 (removed after the shock) | the paddles were not removed before the shock | yes, the zones out of view between placement and shock | **No** (only derived exits, past the gate) |
+| R7/A6 (restart after the shock) | none: any restart after the shock counts; a within-limit Pass is positive | — | not needed |
+| R8 (apical placed before sternal) | the sternal paddle was not placed earlier | yes, the sternal zone out of view before the apical placement | **No** |
+| A1–A5 (command before the shock, in order) | none: any occurrence in the right place counts | — | not needed |
+| A7 (commands in order) | none: any occurrence in the right place counts; unseen steps are flagged | — | flagged `order_partially_checked` |
+| A8 (pause within 5 s) | compressions did not stop earlier | yes, unclear audio before the stop | **Yes** (D-130) |
+
+Proposed fixes (not made):
+- **R1:** the first-placed paddle's zone in view from the last counted gel application to its
+  observed placement.
+- **R2:** the other paddle (its paddle region) in view from the first take to the first placement.
+- **R6:** both placement zones in view from the firm placement (or the first placement) to the shock.
+- **R8:** the sternal zone in view from the start of the placement phase to the apical placement.
+- **R5:** the screen in view over the D-101 window (placement to removal), or a flag that a second
+  shock could not be ruled out.
+Each would give Unable to Verify (`correct_occurrence_unseen`) when its window is not in view.
+
+Results: full suite **908 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+

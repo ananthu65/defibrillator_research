@@ -489,7 +489,9 @@ def pre_shock_pause(ctx, definition, results):
     - Pause end: the restart is the context's start anchor (D-025, D-125), the same command R7/A6 judge.
     - Duration on the shortest and longest possible gap (D-125): both within the limit -> Pass; both over ->
       Fail `pre_shock_pause`, only with clear audio over the pause (D-128: an unheard earlier restart or later
-      stop would shorten it); in between -> Unable to Verify (`timing_uncertain`).
+      stop would shorten it); in between -> Unable to Verify (`timing_uncertain`). A Pass also needs clear audio
+      from the latest observed continue (or the recording start) to the stop (D-130: an unheard earlier stop
+      would lengthen the pause); otherwise Unable to Verify, `correct_occurrence_unseen`.
     Missing references (D-121): no shock time (needed to find the restart, or as the end event) -> Not
     evaluable because of R5; no stop -> because of A4; no restart -> because of R7. A8 never fails for them.
     """
@@ -522,7 +524,31 @@ def pre_shock_pause(ctx, definition, results):
     # D-128: an unheard earlier restart, or an unheard later stop, inside the pause would make it shorter
     window = (checks.time_bounds(stop)[0], max(checks.time_bounds(stop)[0], checks.time_bounds(end)[1]))
     names = (STOP, START) if end_event == "start" else (STOP,)
-    return _timing_needs_clear_audio(ctx, result, names, window, "a command inside the pause")
+    result = _timing_needs_clear_audio(ctx, result, names, window, "a command inside the pause")
+    return _pass_needs_clear_audio_before(ctx, result, stop)
+
+
+def _pass_needs_clear_audio_before(ctx, result, stop):
+    """D-130: an A8 Pass claims compressions did not stop earlier than the observed stop. That is an absence, so
+    it needs clear audio (and no low-confidence stop) from the latest observed continue before the stop (the
+    recording start if none) to the stop; otherwise Unable to Verify, flagged correct_occurrence_unseen. An
+    uncertain result never becomes a Pass."""
+    if result.kind != "pass_direct":
+        return result
+    stop_first = checks.time_bounds(stop)[0]
+    before = [c for c in ctx.named(CONTINUE) if checks.relation_between(ctx, c, stop) != checks.AFTER]
+    start = checks.time_bounds(before[-1])[0] if before else 0.0
+    window = (min(start, stop_first), stop_first)
+    found = ctx.missing(STOP, window)
+    if found.outcome == "fail":
+        return result
+    where = f"from {window[0]:g} s to {window[1]:g} s"
+    why = ("a stop may have been heard with low confidence" if LOW_CONFIDENCE_FLAG in found.flags else
+           f"the audio was not clear {where} ({found.coverage.status}: {found.coverage.basis})")
+    return unable("A8", f"{result.reason}; but compressions may have stopped earlier, unheard, making the pause longer: "
+                  f"{why} (D-130)", evidence=result.evidence + found.low_confidence_event_ids, uses=(found,),
+                  flags=(checks.CORRECT_UNSEEN,),
+                  timestamps={**result.timestamps, "unseen_window_start": window[0], "unseen_window_end": window[1]})
 
 
 def _pause_start(ctx, stops, screen):

@@ -1400,9 +1400,12 @@ decision_points:
         outcome: Not evaluable because of A4 (A4 judges the stop itself); a missing restart is named too
       - condition: end_event start; no restart (none heard, start only before the shock, or a continue/resume unresolved near the shock)
         outcome: Not evaluable because of R7, naming the stop that was checked and the likely cause for an unresolved command
-      - condition: Both events; the longest possible pause within the limit
+      - condition: Both events; the longest possible pause within the limit, the audio clear from the latest observed continue (or the recording start) to the stop (D-130)
         outcome: Pass - Direct, timing checked
         next: P-024
+      - condition: Both events; the pause within the limit, but the audio not clear before the stop (an unheard earlier stop would lengthen the pause)
+        outcome: Unable to Verify (D-130) - an uncertain result never becomes a Pass
+        flags: [correct_occurrence_unseen]
       - condition: Both events; the shortest possible pause over the limit, the audio clear over the pause (D-128)
         outcome: Fail pre_shock_pause (mistake label "Pre-Shock Pause")
         failure_codes: [pre_shock_pause]
@@ -1414,7 +1417,7 @@ decision_points:
         flags: [timing_uncertain]
     config: [configs/rules.yaml timing_limits.pre_shock_pause_seconds, configs/rules.yaml A8 parameters.end_event, engine.yaml cross_modal_tolerance_seconds]
     code: rules/audio_rules.py (pre_shock_pause, _pause_start, _restart)
-    decisions: [D-016, D-025, D-063, D-093, D-121, D-125, D-128]
+    decisions: [D-016, D-025, D-063, D-093, D-121, D-125, D-128, D-130]
     assumptions: []
     open_questions: [OQ-009, OQ-076]
 

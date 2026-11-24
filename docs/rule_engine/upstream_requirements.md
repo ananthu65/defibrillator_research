@@ -80,6 +80,18 @@ agree; it can be a small wrapper around the event list, so the `Event` schema do
 
 ## From video postprocessing (Ananth)
 
+### Top priority: visibility intervals for every region (2026-11-24, D-128)
+The video pipeline must provide **visibility intervals for each region**: both placement zones
+(`region:apical_zone`, `region:sternal_zone`), the defibrillator screen (`region:screen`), each paddle
+(`region:apical_paddle`, `region:sternal_paddle`) and the learner's hand (`region:hand`, proposed
+name). Use the same header format the annotation adapter uses: `"visibility": {"region:apical_zone":
+[[start, end], ...]}` in seconds, sorted and not overlapping (see "Timeline header" above).
+- **Why:** a "wrong place" Fail also claims the step was not done in the right place, so it needs
+  the region in view over the window where the correct occurrence would have been (D-128). Without
+  visibility intervals, **every video wrong-place Fail (R1, R2, R3, R4, R6, R8) becomes Unable to
+  Verify**, and every missing-step Fail too (D-092).
+- **Priority:** top, alongside Sanjeevan's clear-audio intervals (the same requirement for audio).
+
 ### Action events
 
 | Canonical name | Meaning | Used by | Priority |
@@ -195,7 +207,9 @@ it is final, OQ-067). The phrase list in `configs/pipeline.yaml` is the single l
      one segment.
 2. **Detect the other missing commands:** stop compressions and the shock command (OQ-009). Until
    they are detected, **A4, A5 and A8 give Unable to Verify**.
-3. **Clear-audio intervals** (OQ-068): details below.
+3. **Top priority, alongside Ananth's region visibility: clear-audio intervals** (OQ-068; details
+   below). Without them every missing command and every audio "wrong place" Fail (D-128) is Unable
+   to Verify.
 4. **Single-word phrases** (such as "shock", "discharge"): match whole words only, with a guard
    against phrases such as "no shock" or "shock advised". Phrases such as **"shock delivered"** and
    **"no shock advised"** (often read from or spoken by the defibrillator) must not be detected as the

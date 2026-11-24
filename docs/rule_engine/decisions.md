@@ -464,6 +464,18 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   codes (Increments 15 and 16).
 - **Affects:** R3 (P-035), R4 (P-036).
 
+### D-130 An A8 Pass needs clear audio before the stop
+- **Date / by / status:** 2026-11-24 · Arnikan · approved
+- **Decision:** an A8 Pass claims compressions did not stop earlier than the observed stop. That is
+  an absence, so a Pass requires clear audio (and no low-confidence stop) from the latest observed
+  continue before the stop (the recording start if none) to the observed stop. Otherwise Unable to
+  Verify, flagged `correct_occurrence_unseen`, with the window in the reason and timestamps.
+- **Reason:** an uncertain result never becomes a Pass. An unheard earlier stop would make the real
+  pause longer than the one measured. D-128 covers the Fail side (an unheard earlier restart or later
+  stop would make it shorter).
+- **Affects:** A8 (P-044). Other Passes that rest on an absence were audited (progress.md, 2026-11-24);
+  their gaps are not fixed yet.
+
 ## Rule definitions
 
 ### D-018 Gel: applied twice within the approved period; order versus placement not checked

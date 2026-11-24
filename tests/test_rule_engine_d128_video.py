@@ -208,5 +208,46 @@ class AudioTiming(Check):
         self.unseen(outcome("A6", events, header(audio=((0.0, 18.0),)), cfg))
 
 
+class A8PassNeedsClearAudioBefore(Check):
+    """D-130: an A8 Pass claims compressions did not stop earlier than the observed stop, so the audio must be
+    clear from the latest observed continue (the recording start if none) to the stop."""
+
+    CFG = config("A8")
+    REST = [said("stop_compressions_command", 10, 11, "stop"), tag("shock_delivered_on_screen", 12, "shock"),
+            said("start_compressions_command", 13, 14, "start")]   # a 2 to 4 s pause
+
+    def test_from_the_latest_continue_to_the_stop(self):
+        events = [said("continue_compressions_command", 2, 3, "cont"), *self.REST]
+        self.assertEqual(outcome("A8", events, header(audio=((0.0, 30.0),)), self.CFG).kind, "pass_direct")
+        self.assertEqual(outcome("A8", events, header(audio=((2.0, 30.0),)), self.CFG).kind, "pass_direct")
+        result = outcome("A8", events, header(audio=((5.0, 30.0),)), self.CFG)
+        self.unseen(result)
+        self.assertIn("D-130", result.reason)
+        self.assertEqual((result.timestamps["unseen_window_start"], result.timestamps["unseen_window_end"]), (2.0, 10.0))
+
+    def test_without_a_continue_from_the_recording_start(self):
+        self.assertEqual(outcome("A8", self.REST, header(audio=((0.0, 30.0),)), self.CFG).kind, "pass_direct")
+        self.unseen(outcome("A8", self.REST, header(audio=((1.0, 30.0),)), self.CFG))
+
+
+class RegionLessEvents(Check):
+    """paddles_firmly_on_chest, paddles_removed_after_shock and first_paddle_placed are governed by no region: they
+    could be in either placement zone, so their absence needs both zones in view and no low-confidence detection."""
+
+    def test_a_low_confidence_firm_placement_in_the_sternal_zone_blocks_the_fail(self):
+        """Events carry no zone, so the low-confidence check holds wherever it was seen (here: meant as the sternal
+        zone, with the apical zone also in view); both zones must be in view for the absence."""
+        cfg = config("R3", parameters={"R3": {"inference_sources": []}})
+        weak = Event("paddles_firmly_on_chest", 12, 12, "video", 0.2, event_id="weak", camera_angle="LS")
+        result = outcome("R3", [*R3FirmPlacement.EVENTS, weak], header(apical_zone=ALL, sternal_zone=ALL), cfg)
+        self.unseen(result)
+        self.assertIn("weak", result.evidence)
+
+    def test_the_first_placement_tag_needs_both_zones_in_view(self):
+        """R2, apical taken first: first_paddle_placed could be in either zone."""
+        self.unseen(outcome("R2", R2Order.EVENTS, header(apical_zone=ALL, sternal_zone=((8.0, 30.0),)),
+                            config("R2")))
+
+
 if __name__ == "__main__":
     unittest.main()
