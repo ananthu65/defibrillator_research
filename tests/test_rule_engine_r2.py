@@ -53,8 +53,12 @@ class Order(unittest.TestCase):
         self.assertEqual(outcome.timestamps, {"first_paddle_placed": 7, "second_paddle_taken": 9})
 
     def test_second_taken_before_the_first_is_placed(self):
-        outcome = r2([TAKEN, ev("second_paddle_taken", 7), ev("first_paddle_firmly_on_the_chest", 9)])
+        events = [TAKEN, ev("second_paddle_taken", 7), ev("first_paddle_firmly_on_the_chest", 9)]
+        outcome = r2(events, header())   # the apical zone in view from its take (5 s) to the other take (7 s)
         self.assertEqual((outcome.kind, outcome.failure_code), ("fail", "taken_before_first_placed"))
+        unseen = r2(events)              # no header: an earlier placement may have been missed (D-128)
+        self.assertEqual(unseen.kind, "unable_to_verify")
+        self.assertIn("correct_occurrence_unseen", unseen.flags)
 
     def test_at_the_same_time_is_simultaneous(self):
         outcome = r2([TAKEN, ev("first_paddle_firmly_on_the_chest", 7), ev("second_paddle_taken", 7.3)])

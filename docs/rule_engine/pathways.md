@@ -349,6 +349,24 @@ commands are left out; optional steps (charging, "applying gel") are checked onl
 | Misplaced, the audio not clear where a correct occurrence would have been (from its latest observed required predecessor to its earliest observed required successor) | Unable to Verify (D-128) | `order_partially_checked` |
 | Misplaced, the audio clear over each reported command's window | Fail: the misplaced commands, or one ordering mistake between them | `wrong_order` |
 
+#### D-128 and D-129 across the rules (2026-11-24)
+A wrong-place or wrong-time Fail needs clear evidence over the window of the correct occurrence;
+otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
+
+| Rule and code | Window that must be clear (audio) or in view (video) |
+|---|---|
+| A1, A3, A5 `after_shock`; A2 `wrong_stage` | recording start → shock |
+| A4 `after_shock` / `wrong_order` | first continue (or start) → shock / continue → shock (or end) |
+| A7 `wrong_order` | latest observed required predecessor → earliest observed required successor |
+| A8 `pre_shock_pause` | stop → end event |
+| R7/A6 `before_shock` / `too_late` | shock → recording end / shock → restart |
+| R1 `after_placement` / `outside_time_period` | recording start → first placement / first application → + period (both zones) |
+| R2 `taken_before_first_placed` | first paddle taken → other paddle taken (the first paddle's zone) |
+| R3 `placed_after_shock` | first paddle taken → shock (both zones); with the shock as an inference source: `contradictory` (D-129) |
+| R4 `before_placement` | placement → shock, or the recording end (both paddles); with the shock as an inference source: `contradictory` (D-129) |
+| R6 `removed_before_shock` (derived) / `too_late` | exit → shock (that zone) / shock → + limit (both zones); the removal-tag case is unchanged |
+| R8 `wrong_order` | start of the placement phase → sternal placement (the apical zone) |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
@@ -473,7 +491,9 @@ the chest regions (OQ-012, D-106).
 |---|---|---|
 | Shock time; a `paddles_firmly_on_chest` tag at or before the shock (within `simultaneous_window_seconds` after it counts as at it) | Pass – Direct | — |
 | Shock time; past the gate, both derived placements at or before the shock | Pass – Direct | `derived_placement` |
-| Shock time; only tags clearly after the shock | Fail; comes before the inference | `placed_after_shock` |
+| Shock time; only tags clearly after the shock, the shock an inference source | Unable to Verify: the tag contradicts the shock (D-129) | `contradictory` |
+| The same, the shock not an inference source, both zones in view from the first take to the shock | Fail | `placed_after_shock` |
+| The same, the zones not clearly in view there | Unable to Verify (D-128) | `correct_occurrence_unseen` |
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (D-057, D-115) | — |
 | No inference and no shock time; a firm placement seen | **Not evaluable because of R5**, naming the placement as checked (D-121) | — |
 | No inference and no shock time; no placement, both zones visible from the earliest take to the end of the recording | Fail, on R3's own evidence (D-121) | `missing` |
@@ -515,7 +535,9 @@ one counts; the count stays undecided (OQ-023).
 |---|---|---|
 | Shock time; a press after the placement (within `w` before it counts) and at or before the shock (within `w` after it counts) | Pass – Direct | `derived_placement` if the placement is derived |
 | Shock time; a valid press, no placement observed | Pass – Direct, order not checked; the overall result can't be Pass | `order_not_checked` |
-| A press clearly before the placement, none valid (without a shock time: only if no press came after the placement) | Fail; comes before the inference | `before_placement` |
+| A press clearly before the placement, none valid, the shock on the screen an inference source | Unable to Verify: the press contradicts the shock (D-129) | `contradictory` |
+| The same without that (without a shock time: only if no press came after the placement), both paddles in view from the placement to the shock or the end | Fail | `before_placement` |
+| The same, the paddles not clearly in view there | Unable to Verify (D-128) | `correct_occurrence_unseen` |
 | Shock time; presses only clearly after the shock | Unable to Verify | `contradictory` |
 | No direct evidence (or no shock time to judge it against); the shock on screen confirmed | Pass – Inferred (P-016) | — |
 | No inference and no shock time; a press after the placement | **Not evaluable because of R5**, naming the press and its order as checked (D-121) | — |
@@ -1403,4 +1425,20 @@ shock is judged by its own rule.
    correct oxygen away (0–3 s) and stand clear (4–7 s) would have been were clear. With the audio
    clear only from 10 s → **Unable to Verify**, `order_partially_checked`: a correctly placed one may
    have been said but not heard.
+
+### W-96 A wrong place needs clear evidence where the right place was (D-128, D-129)
+*(Built 2026-11-24.)*
+1. R2: the second paddle taken at 7 s, the first paddle (taken at 5 s) placed at 9 s, its zone in view
+   throughout → **Fail `taken_before_first_placed`**. Its zone in view only from 6 s → **Unable to
+   Verify, `correct_occurrence_unseen`**: an earlier placement between 5 and 6 s may have been missed.
+2. R3: paddles tagged firmly on the chest at 17 s, the shock on the screen at 15 s → **Unable to Verify,
+   `contradictory`**: the shock shows the paddles were on the chest (D-129).
+3. R4: a press at 8 s, the placement at 10 s, no shock → **Fail `before_placement`** if both paddles
+   were in view from 10 s to the end; otherwise **Unable to Verify**. With the shock on the screen →
+   **`contradictory`** (D-129).
+4. R8: sternal placed at 7 s, apical at 12 s, the apical zone in view only from 6 s (the takes start at
+   5 s) → **Unable to Verify**: an earlier apical placement may have been missed.
+5. A8: stop 10–11 s, start 17–18 s, the audio clear only to 15 s → **Unable to Verify**: an unheard
+   earlier restart would have shortened the pause. With the audio clear throughout → **Fail
+   `pre_shock_pause`** (6 to 8 s).
 

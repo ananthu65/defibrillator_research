@@ -5419,3 +5419,60 @@ Not yet applied in the audio rules either (timing Fails): R7/A6 `too_late` (an e
 heard between the shock and the restart; limit unset now) and A8 `pre_shock_pause` (an earlier
 restart, or an unheard continue and later stop, inside the pause; the 5 s limit is approved).
 
+## D-128 for the video rules and the timing Fails; D-129 (2026-11-24)
+
+Increment 26 with D-128 for A1–A5 and A7 was committed (`e7de2d7`) and pushed. This step is not
+committed yet.
+
+### What was built
+- **Video rules (D-128)**, one helper `_wrong_place` in `rules/video_rules.py`: the Fail stands only
+  if every missing-event check over the window is covered and failing (the region in view throughout,
+  nothing seen with low confidence there). The windows:
+  - R1 `after_placement`: both zones, recording start → first placement; R1 `outside_time_period`:
+    both zones, first application → + the period;
+  - R2 `taken_before_first_placed`: the first paddle's zone, its take → the other take;
+  - R3 `placed_after_shock`: both placement zones, first paddle taken → shock;
+  - R4 `before_placement`: both paddles, placement → shock (the recording end without a shock);
+  - R6 `removed_before_shock` (derived exit only): that zone, exit → shock; R6 `too_late`: both zones,
+    shock → + limit. The removal-tag case is unchanged;
+  - R8 `wrong_order`: the apical zone, start of the placement phase → sternal placement.
+  Events governed by no region (`paddles_firmly_on_chest`, `paddles_removed_after_shock`,
+  `first_paddle_placed`) are checked against the apical zone for their low confidence only.
+- **D-129:** R3 `placed_after_shock` and R4 `before_placement`, with the shock on the screen and in the
+  rule's `inference_sources`, are Unable to Verify, `contradictory`. With the current `rules.yaml`
+  (the shock is an inference source for both), these two Fails are now reached only without a shock
+  time (R4) or with the shock removed from the sources.
+- **A8 and R7 `too_late` (D-128):** a Fail needs clear audio (and no low-confidence command) over the
+  pause (stop → end event; STOP and START checked, START only with `end_event: start`) or from the
+  shock to the restart.
+- **One flag, `correct_occurrence_unseen`** (shared, `checks.py`), on every D-128 Unable to Verify,
+  audio and video, with `unseen_window_start` and `unseen_window_end` in the timestamps. Report
+  version 15.
+
+### Demo scenarios, before and after
+Identical output (diff empty). Scenario 3's R1 `after_placement` still fails: both zones are in view
+from the start to the placement. Scenario 6's R6 `removed_before_shock` is the removal-tag case
+(unchanged). Scenario 2's R2/R8 `simultaneous` is direct evidence (not a wrong-place claim). No
+scenario has R3 or R4 against the shock.
+
+### Tests (890 → 904)
+- New `tests/test_rule_engine_d128_video.py` (14 tests, full `rules.yaml`): each video Fail × window
+  in view or not; R3 and R4 with the shock as an inference source (contradictory) and without it; R4
+  without a shock; R6's removal-tag case unchanged; R6 and R1 timing; A8 under both end events; R7
+  and A6 `too_late`.
+- Updated: R2 (needs the header), R3 and R4 (contradictory with the shock), the A7 and D-128 audio
+  tests (the new flag).
+
+Results: full suite **904 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decisions.md` (D-128 extended, D-129), `agent_brief.md`;
+- `decision_flow.yaml` (P-015, P-032, P-034, P-035, P-036, P-038, P-043, P-044 and the D-128 audio
+  branches), `pathways.md` (the D-128/D-129 table, W-96), `diagrams.md` ((w));
+- `output_contract.md` (version 15: `correct_occurrence_unseen`, `contradictory` for R3),
+  `anomalies.md`, `rules_status.md`;
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 27 (S1 Procedure order) on Arnikan's "continue".
+

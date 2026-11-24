@@ -598,3 +598,16 @@ flowchart TD
     C -->|yes| F["Fail wrong_order<br/>misplaced, or one mistake between them"]
 ```
 
+## (w) A wrong place needs clear evidence where the right place was (D-128, D-129)
+
+Every wrong-order or wrong-time Fail (audio and video) goes through this check.
+
+```mermaid
+flowchart TD
+    W["A step seen only in a wrong place or time"] --> C{"R3/R4: the shock confirmed on the<br/>screen as an inference source?"}
+    C -->|yes| U1["Unable to Verify<br/>contradictory (D-129)"]
+    C -->|"no, or another rule"| V{"Window of the correct occurrence<br/>clear (audio) or in view (video),<br/>no low-confidence event there?"}
+    V -->|yes| F["Fail with the rule's code"]
+    V -->|no| U2["Unable to Verify<br/>correct_occurrence_unseen<br/>(the window named)"]
+```
+

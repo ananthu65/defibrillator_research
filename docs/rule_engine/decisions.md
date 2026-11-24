@@ -431,12 +431,38 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
     without a shock time);
   - A7: for each command reported, from its latest observed required predecessor to its earliest
     observed required successor (the recording start or end where none).
-- **Not yet applied:** the video rules (audited, gaps listed in progress.md, Increment 26 review)
-  and the timing Fails (R7/A6 `too_late`, A8 `pre_shock_pause`, R6 `too_late`, R1
-  `outside_time_period`), pending Arnikan's decision.
+- **Extended (2026-11-24, Arnikan, after the agent's audit):** the video rules and the timing Fails,
+  with the windows below. Every withheld Fail is Unable to Verify, flagged
+  `correct_occurrence_unseen`, with the window in the reason and the timestamps:
+  - R1 `after_placement`: gel absent with clear evidence (both zones in view) from the recording start
+    to the first placement; R1 `outside_time_period`: from the first application up to the period;
+  - R2 `taken_before_first_placed`: the first paddle's zone in view from its take to the other take;
+  - R3 `placed_after_shock`: both placement zones in view from the first paddle taken to the shock;
+  - R4 `before_placement`: both paddles in view from the placement to the shock (the recording end
+    without a shock time);
+  - R6 `removed_before_shock`, derived placement only: that paddle's zone in view from its exit to the
+    shock (the removal-tag case is unchanged: nothing absent is claimed); R6 `too_late`: both zones in
+    view from the shock up to the limit;
+  - R8 `wrong_order`: the apical zone in view from the start of the placement phase to the sternal
+    placement;
+  - A8 `pre_shock_pause`: clear audio over the pause (stop to the end event), since an unheard earlier
+    restart or later stop would shorten it; R7/A6 `too_late`: clear audio from the shock to the restart.
 - **Reason:** "Never blame the learner for missing data" applies to the absence inside a
   wrong-place claim as much as to a missing step.
 - **Affects:** A1–A5, A7, R7/A6; the video rules once their gaps are fixed; P-040 to P-045.
+
+### D-129 R3 and R4 against the shock inference: contradictory, not Fail
+- **Date / by / status:** 2026-11-24 · Arnikan · approved
+- **Decision:** the proposal fails R3 and R4 only when "the approved inference conditions are not
+  satisfied". With the shock confirmed on the screen, an inference source for both (D-102):
+  - R3 `placed_after_shock` → Unable to Verify, flagged `contradictory`;
+  - R4 `before_placement` → Unable to Verify, flagged `contradictory` (as R4 already does for a press
+    only after the shock).
+  The tag and the shock contradict each other, so neither is taken as the truth. Without a confirmed
+  shock as an inference source, the Fails stay, subject to D-128.
+- **Replaces:** the earlier "direct evidence of the mistake comes before the inference" for these two
+  codes (Increments 15 and 16).
+- **Affects:** R3 (P-035), R4 (P-036).
 
 ## Rule definitions
 

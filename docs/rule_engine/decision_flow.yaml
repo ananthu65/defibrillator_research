@@ -214,17 +214,23 @@ decision_points:
       - condition: A removal clearly before the shock (more than removal_before_screen_tolerance_seconds, D-105)
         outcome: Fail removed_before_shock
         failure_codes: [removed_before_shock]
-      - condition: Past the gate, a derived placement episode ended by a real exit clearly before the shock, with no placement of that paddle on at the shock
+      - condition: Past the gate, a derived placement episode ended by a real exit clearly before the shock, with no placement of that paddle on at the shock, and that paddle's zone in view from the exit to the shock (D-128)
         outcome: Fail removed_before_shock
         flags: [derived_placement]
         failure_codes: [removed_before_shock]
+      - condition: That derived exit, but the zone from the exit to the shock not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: A removal after the shock, or before it but within removal_before_screen_tolerance_seconds (the screen may show the shock after the discharge; treated as at the shock)
         outcome: Pass – Direct; the time limit is checked (P-024); unset, so flagged timing_not_checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
         flags: [timing_not_checked]
         next: P-024
-      - condition: A removal later than an approved shock_to_removal_seconds
+      - condition: A removal later than an approved shock_to_removal_seconds, both zones in view from the shock up to the limit (D-128)
         outcome: Fail too_late
         failure_codes: [too_late]
+      - condition: A removal later than the limit, but the zones from the shock up to the limit not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: No removal, a low-confidence one exists
         outcome: Unable to Verify (D-010)
         flags: [low_confidence_evidence]
@@ -235,7 +241,7 @@ decision_points:
         outcome: Unable to Verify, never Fail
     config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml removal_before_screen_tolerance_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_removed_after_shock)
-    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105, D-121]
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105, D-121, D-128]
     assumptions: [A-022]
     open_questions: [OQ-016, OQ-057]
 
@@ -263,9 +269,12 @@ decision_points:
       - condition: Its placement and the other paddle taken within simultaneous_window_seconds
         outcome: Fail simultaneous
         failure_codes: [simultaneous]
-      - condition: The other paddle taken before the first-taken paddle was placed
+      - condition: The other paddle taken before the first-taken paddle was placed, the first paddle's zone in view from its take to the other take (D-128)
         outcome: Fail taken_before_first_placed
         failure_codes: [taken_before_first_placed]
+      - condition: The other paddle taken first, but the first paddle's zone from its take to the other take not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: The sternal paddle taken first and its placement unknown (no tag marks the sternal placement; derived ones only past the gate)
         outcome: Unable to Verify, never Fail (D-118)
         flags: [placement_time_unknown]
@@ -279,7 +288,7 @@ decision_points:
         outcome: Unable to Verify
     config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
     code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order), rules/paddle_timing.py (paddle_timing)
-    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118]
+    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118, D-128]
     assumptions: [A-019, A-027]
     open_questions: [OQ-059]
 
@@ -682,9 +691,12 @@ decision_points:
         failure_codes: [simultaneous]
         flags: [possible_parallel_placement, derived_placement]
       - condition: Both placements observed
-        outcome: Compare the placement times; apical first → Pass – Direct; within the simultaneous window → Fail simultaneous; sternal first → Fail wrong_order; derived placements carry derived_placement
+        outcome: Compare the placement times; apical first → Pass – Direct; within the simultaneous window → Fail simultaneous; sternal first → Fail wrong_order, only with the apical zone in view from the start of the placement phase to the sternal placement (D-128); derived placements carry derived_placement
         failure_codes: [wrong_order, simultaneous]
         flags: [derived_placement]
+      - condition: Sternal first, but the apical zone from the start of the placement phase to the sternal placement not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: A paddle's zone was visible throughout the placement phase but its placement is missing (both zones visible with one or both missing, or the one visible zone without its placement) (D-058)
         outcome: Unable to Verify, not wrong_order; R3 reports the missing placement
         flags: [placement_missing]
@@ -699,7 +711,7 @@ decision_points:
         outcome: Unable to Verify; the fallback doesn't apply (D-118)
     config: [engine.yaml simultaneous_window_seconds, engine.yaml assume_first_taken_is_apical]
     code: rules/video_rules.py (apical_before_sternal)
-    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118]
+    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118, D-128]
     assumptions: [A-009, A-027]
     open_questions: [OQ-004, OQ-006, OQ-059]
 
@@ -736,9 +748,15 @@ decision_points:
       - condition: Shock time; past the gate, both derived placements at or before the shock
         outcome: Pass – Direct
         flags: [derived_placement]
-      - condition: Shock time; only tags clearly after the shock
-        outcome: Fail placed_after_shock (direct evidence of the mistake comes before the inference)
+      - condition: Shock time; only tags clearly after the shock, and the shock is an inference source (rules.yaml)
+        outcome: Unable to Verify - the tag contradicts the confirmed shock (D-129)
+        flags: [contradictory]
+      - condition: Shock time; only tags clearly after the shock, the shock not an inference source, both placement zones in view from the first paddle taken to the shock (D-128)
+        outcome: Fail placed_after_shock
         failure_codes: [placed_after_shock]
+      - condition: Only tags after the shock, but the placement zones from the first paddle taken to the shock not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: No direct evidence (or no shock time to judge it against); an event in inference_sources confirmed
         outcome: Pass – Inferred, naming the shock on screen (D-057, D-115)
         next: P-016
@@ -766,7 +784,7 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R3 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_firmly_on_chest)
-    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118, D-121]
+    decisions: [D-010, D-057, D-088, D-092, D-093, D-106, D-115, D-118, D-121, D-128, D-129]
     assumptions: [A-019]
     open_questions: [OQ-012, OQ-022, OQ-061]
 
@@ -783,9 +801,15 @@ decision_points:
       - condition: Shock time; a valid press but no placement observed
         outcome: Pass – Direct, order against the placement not checked; the overall result cannot be Pass (D-100)
         flags: [order_not_checked]
-      - condition: A press clearly before the placement and none valid (without a shock time, only when no press came after the placement)
-        outcome: Fail before_placement (comes before the inference)
+      - condition: A press clearly before the placement and none valid, the shock confirmed on the screen as an inference source
+        outcome: Unable to Verify - the press contradicts the confirmed shock (D-129)
+        flags: [contradictory]
+      - condition: A press clearly before the placement and none valid (without a shock time, only when no press came after the placement), both paddles in view from the placement to the shock (the recording end without one, D-128)
+        outcome: Fail before_placement
         failure_codes: [before_placement]
+      - condition: A press before the placement, but the paddles from the placement to the shock not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: Shock time; presses only clearly after the shock
         outcome: Unable to Verify; the screen showed the shock before any press
         flags: [contradictory]
@@ -818,7 +842,7 @@ decision_points:
         outcome: engine_error (a configuration error, D-063)
     config: [configs/rules.yaml R4 parameters.inference_sources, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_paddle, sternal_paddle)]
     code: rules/video_rules.py (both_buttons_pressed); rules/coverage.py (region_missing)
-    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115, D-121]
+    decisions: [D-010, D-012, D-057, D-088, D-092, D-093, D-100, D-108, D-115, D-121, D-128, D-129]
     assumptions: []
     open_questions: [OQ-023, OQ-061]
 
@@ -829,12 +853,15 @@ decision_points:
     decides: R1's result (Increment 17); runs only when R1 is approved in rules.yaml, pending until the supervisor confirms its definition
     inputs: [gel_applied tags, apical_gel_applied / sternal_gel_applied (past the 9d gate), regions apical_gel and sternal_gel (their gel status), paddle_order (the earliest firm placement of either paddle and whether it is certain; else the earliest take, D-118), placement zone visibility in the gel phase, rules.yaml gel_application_period_seconds]
     branches:
-      - condition: Gel only after the first placement (no gel before it, a gel tag or per-zone application after it beyond simultaneous_window_seconds)
+      - condition: Gel only after the first placement (no gel before it, a gel tag or per-zone application after it beyond simultaneous_window_seconds), both zones in view from the recording start to the placement (D-128)
         outcome: Fail after_placement (D-109)
+        failure_codes: [after_placement]
+      - condition: Gel only after the placement, but both zones from the recording start to the placement not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: A pass, but the other paddle's placement is unknown and could have been earlier than the known one, and a counted gel event falls after the earliest time that placement could be
         outcome: Unable to Verify, never Pass (D-118)
         flags: [placement_time_unknown]
-        failure_codes: [after_placement]
       - condition: Past the 9d gate; both zones gelled before the placement
         outcome: Pass – Direct, then the period check
         flags: [derived_gel_application]
@@ -864,14 +891,17 @@ decision_points:
       - condition: A pass, gel_application_period_seconds unset
         outcome: Pass, timing not checked; the overall result cannot be Pass (D-062)
         flags: [timing_not_checked]
-      - condition: A pass, an approved period exceeded by the two applications
+      - condition: A pass, an approved period exceeded by the two applications, both zones in view from the first application up to the period (D-128)
         outcome: Fail outside_time_period
         failure_codes: [outside_time_period]
+      - condition: The period exceeded, but the zones from the first application up to the period not clearly in view (or seen with low confidence)
+        outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
+        flags: [correct_occurrence_unseen]
       - condition: The order between the zones; more than two applications
         outcome: Not checked (D-110, OQ-021)
     config: [configs/rules.yaml timing_limits.gel_application_period_seconds, engine.yaml gel_minimum_gap_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_gel, sternal_gel, apical_zone, sternal_zone)]
     code: rules/video_rules.py (gel_applied_twice)
-    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118]
+    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118, D-128]
     assumptions: [A-023, A-026]
     open_questions: [OQ-016, OQ-021]
 
@@ -1189,7 +1219,7 @@ decision_points:
         failure_codes: [after_shock]
       - condition: A shock time; commands only certainly after the shock, the audio not clear from the start to the shock (or a low-confidence command)
         outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
-        flags: [low_confidence_evidence]
+        flags: [correct_occurrence_unseen, low_confidence_evidence]
       - condition: A shock time; no command, the audio clear throughout from the start to the shock (stated clear-audio intervals)
         outcome: Fail missing
         failure_codes: [missing]
@@ -1239,7 +1269,7 @@ decision_points:
         failure_codes: [wrong_order]
       - condition: A2 wrong_stage, A4 after_shock or wrong_order, but the audio not clear over that window (or a low-confidence command)
         outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
-        flags: [low_confidence_evidence]
+        flags: [correct_occurrence_unseen, low_confidence_evidence]
       - condition: A4, shock time; a stop before the shock but no continue observed, or only unresolved continue/resume commands
         outcome: Not evaluable because of A2, naming the stop as the part still checked (D-121)
         next: P-020
@@ -1283,7 +1313,7 @@ decision_points:
         failure_codes: [after_shock]
       - condition: Shock time; commands only certainly after the shock, the audio not clear from the start to the shock (or a low-confidence command)
         outcome: Unable to Verify - a correctly placed one may have been said but not heard (D-128)
-        flags: [low_confidence_evidence]
+        flags: [correct_occurrence_unseen, low_confidence_evidence]
       - condition: Shock time; no command, the audio clear throughout the recording
         outcome: Fail missing
         failure_codes: [missing]
@@ -1316,9 +1346,12 @@ decision_points:
         outcome: Pass - Direct, timed from the shock on the shortest and longest possible durations (D-125); the limit is unset, so timing not checked; an approved no limit passes fully (D-103)
         flags: [timing_not_checked]
         next: P-024
-      - condition: Shock time; that start, with an approved limit exceeded even by the shortest possible duration
+      - condition: Shock time; that start, with an approved limit exceeded even by the shortest possible duration, the audio clear from the shock to the restart (D-128)
         outcome: Fail too_late
         failure_codes: [too_late]
+      - condition: Shock time; the limit exceeded, but the audio not clear from the shock to the restart (an earlier restart may have been said and not heard)
+        outcome: Unable to Verify (D-128)
+        flags: [correct_occurrence_unseen]
       - condition: Shock time; that start, with an approved limit straddled by the possible durations
         outcome: Unable to Verify (D-125)
         flags: [timing_uncertain]
@@ -1370,15 +1403,18 @@ decision_points:
       - condition: Both events; the longest possible pause within the limit
         outcome: Pass - Direct, timing checked
         next: P-024
-      - condition: Both events; the shortest possible pause over the limit
+      - condition: Both events; the shortest possible pause over the limit, the audio clear over the pause (D-128)
         outcome: Fail pre_shock_pause (mistake label "Pre-Shock Pause")
         failure_codes: [pre_shock_pause]
+      - condition: Both events; the pause over the limit, but the audio not clear over it (an unheard earlier restart or later stop would shorten it)
+        outcome: Unable to Verify (D-128)
+        flags: [correct_occurrence_unseen]
       - condition: Both events; the limit between the shortest and longest possible pause
         outcome: Unable to Verify (D-125)
         flags: [timing_uncertain]
     config: [configs/rules.yaml timing_limits.pre_shock_pause_seconds, configs/rules.yaml A8 parameters.end_event, engine.yaml cross_modal_tolerance_seconds]
     code: rules/audio_rules.py (pre_shock_pause, _pause_start, _restart)
-    decisions: [D-016, D-025, D-063, D-093, D-121, D-125]
+    decisions: [D-016, D-025, D-063, D-093, D-121, D-125, D-128]
     assumptions: []
     open_questions: [OQ-009, OQ-076]
 
@@ -1402,7 +1438,7 @@ decision_points:
         flags: [order_partially_checked]
       - condition: Steps misplaced, the audio not clear over the window of a reported command - from its latest observed required predecessor to its earliest observed required successor, the recording start or end where none (D-128)
         outcome: Unable to Verify - a correctly placed occurrence may have been said but not heard
-        flags: [order_partially_checked]
+        flags: [order_partially_checked, correct_occurrence_unseen]
       - condition: Steps misplaced, the audio clear over every reported command's window
         outcome: Fail wrong_order - one mistake; a step in every minimum solution is named misplaced, steps in some but not all are one ordering mistake between them (D-119)
         failure_codes: [wrong_order]

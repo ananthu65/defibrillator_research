@@ -24,7 +24,10 @@ LIMIT_NOT_APPROVED = "limit_not_approved"
 ORDER_NOT_CHECKED = "order_not_checked"   # an order requirement is not set, or a step it needs unseen (R4; D-100)
 ORDER_PARTIALLY_CHECKED = "order_partially_checked"   # some steps' order couldn't be checked (unseen, one segment)
 TIMING_UNCERTAIN = "timing_uncertain"   # a limit can't be judged: segment-timed events straddle it (D-125)
-FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, ORDER_PARTIALLY_CHECKED, TIMING_UNCERTAIN)
+CORRECT_UNSEEN = "correct_occurrence_unseen"   # D-128: a wrong-place Fail withheld: the window of the correct
+#                                               occurrence was not clearly observed (named in the reason)
+FLAGS = (TIMING_NOT_CHECKED, LIMIT_NOT_APPROVED, ORDER_NOT_CHECKED, ORDER_PARTIALLY_CHECKED, TIMING_UNCERTAIN,
+         CORRECT_UNSEEN)
 
 BEFORE, SIMULTANEOUS, AFTER = "before", "simultaneous", "after"
 

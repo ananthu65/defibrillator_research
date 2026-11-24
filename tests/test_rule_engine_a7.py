@@ -159,7 +159,7 @@ class PartialEvidence(unittest.TestCase):
         clear_there = a7(swapped, header(clear=((0.0, 20.0),)))
         self.assertEqual((clear_there.kind, clear_there.failure_code), ("fail", "wrong_order"))
         unclear_there = a7(swapped, header(clear=((10.0, 60.0),)))
-        self.assertEqual((unclear_there.kind, unclear_there.flags), ("unable_to_verify", ("order_partially_checked",)))
+        self.assertEqual((unclear_there.kind, unclear_there.flags), ("unable_to_verify", ("order_partially_checked", "correct_occurrence_unseen")))
         self.assertIn("said and not heard", unclear_there.reason)
 
     def test_a_low_confidence_command_in_the_right_place_blocks_the_fail(self):

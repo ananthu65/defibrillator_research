@@ -72,19 +72,20 @@ class DirectEvidence(unittest.TestCase):
     def test_firm_placement_within_the_window_after_the_shock_counts_as_at_it(self):
         self.assertEqual(r3([ev("paddles_firmly_on_chest", 15 + WINDOW), SHOCK]).kind, "pass_direct")
 
-    def test_firm_placement_only_after_the_shock_is_placed_after_shock(self):
+    def test_firm_placement_only_after_the_shock_contradicts_the_shock(self):
+        """D-129: the shock on the screen (an inference source) shows the paddles were on the chest."""
         outcome = r3([ev("paddles_firmly_on_chest", 17, "firm"), SHOCK])
-        self.assertEqual((outcome.kind, outcome.failure_code, outcome.evidence), ("fail", "placed_after_shock",
-                                                                                ("firm", "shock")))
+        self.assertEqual((outcome.kind, outcome.flags, outcome.evidence), ("unable_to_verify", ("contradictory",),
+                                                                         ("firm", "shock")))
 
     def test_a_placement_before_the_shock_satisfies_the_rule_even_if_repeated_after(self):
         outcome = r3([ev("paddles_firmly_on_chest", 12, "early"), SHOCK, ev("paddles_firmly_on_chest", 18)])
         self.assertEqual((outcome.kind, outcome.evidence), ("pass_direct", ("early", "shock")))
 
-    def test_placed_after_shock_beats_the_inference(self):
-        """Direct evidence of the mistake is not overridden by the shock on screen."""
+    def test_placed_after_shock_against_the_inference_is_contradictory(self):
+        """D-129 (replaces "beats the inference"): the tag and the shock contradict each other."""
         outcome = r3([ev("paddles_firmly_on_chest", 17), SHOCK, ev("paddles_removed_after_shock", 20)])
-        self.assertEqual(outcome.failure_code, "placed_after_shock")
+        self.assertEqual((outcome.kind, outcome.failure_code), ("unable_to_verify", None))
 
     def test_not_in_zone_is_never_produced(self):
         """OQ-012: the chest regions are not approved, so only timing and presence are checked."""

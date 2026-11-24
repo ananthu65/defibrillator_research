@@ -81,13 +81,14 @@ class DirectEvidence(unittest.TestCase):
     def test_press_within_the_window_before_the_placement_counts_as_after_it(self):
         self.assertEqual(r4([press(10 - WINDOW), PLACED, SHOCK]).kind, "pass_direct")
 
-    def test_press_before_the_placement_is_before_placement(self):
+    def test_press_before_the_placement_contradicts_the_shock(self):
+        """D-129: the shock on the screen (an inference source) shows the buttons were pressed."""
         outcome = r4([press(8), PLACED, SHOCK])
-        self.assertEqual((outcome.kind, outcome.failure_code, outcome.evidence),
-                         ("fail", "before_placement", ("press", "placed")))
+        self.assertEqual((outcome.kind, outcome.flags, outcome.evidence),
+                         ("unable_to_verify", ("contradictory",), ("press", "shock")))
 
-    def test_before_placement_beats_the_inference(self):
-        self.assertEqual(r4([press(8), PLACED, SHOCK, REMOVED]).failure_code, "before_placement")
+    def test_before_placement_against_the_inference_is_contradictory(self):
+        self.assertEqual(r4([press(8), PLACED, SHOCK, REMOVED]).flags, ("contradictory",))
 
     def test_a_valid_press_satisfies_the_rule_even_after_an_early_one(self):
         """Repeated presses stay the supervisor's question (OQ-023); any valid one counts (D-012)."""
@@ -247,7 +248,7 @@ class DerivedPlacementsAndPaddleVisibility(unittest.TestCase):
 
     def test_approved_gate_press_between_the_two_placements_is_before_placement(self):
         outcome = self.outcome([("both_paddle_buttons_pressed", 250), ("shock_delivered_on_screen", 375)])
-        self.assertEqual(outcome.failure_code, "before_placement")              # 10 s, before the sternal at 12 s
+        self.assertIn("contradictory", outcome.flags)   # 10 s, before the sternal at 12 s; the shock (D-129)
 
     def test_gate_not_approved_no_placement_is_known(self):
         outcome = self.outcome([("both_paddle_buttons_pressed", 250), ("shock_delivered_on_screen", 375)], EXPORT)

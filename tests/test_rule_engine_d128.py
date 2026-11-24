@@ -130,7 +130,7 @@ class CommandOrder(unittest.TestCase):
         for clear in ((1.0, 60.0), (0.0, 5.0)):   # A1's window, then A3's, partly unclear
             with self.subTest(clear=clear):
                 result = outcome("A7", self.SWAPPED, clear)
-                self.assertEqual((result.kind, result.flags), ("unable_to_verify", ("order_partially_checked",)))
+                self.assertEqual((result.kind, result.flags), ("unable_to_verify", ("order_partially_checked", "correct_occurrence_unseen")))
                 self.assertIn("D-128", result.reason)
 
     def test_a_misplaced_command_with_no_successor_runs_to_the_recording_end(self):

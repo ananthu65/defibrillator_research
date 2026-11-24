@@ -27,7 +27,7 @@ GEL_ZONES = (("apical", "apical_gel_applied", "apical_gel", "apical_zone"),
 DERIVED = "derived_placement"              # the result rests on a placement derived from the boxes (D-081, D-088)
 PARALLEL = "possible_parallel_placement"   # cause flag: one parallel placement fails R2 and R8 (D-091, D-098)
 PLACEMENT_MISSING = "placement_missing"    # R8: a placement is missing while its zone was in view (D-058)
-CONTRADICTORY = "contradictory"            # R4: a press only after the shock on the screen
+CONTRADICTORY = "contradictory"            # R3/R4: the tags contradict the shock on the screen (D-129)
 ONE_ZONE = "one_zone_in_view"              # R8: one placement seen, the other paddle's zone not in view (D-116)
 DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
 PLACEMENT_TIME_UNKNOWN = "placement_time_unknown"   # R2, R1: a paddle placement needed to judge the order is unknown (D-118)
@@ -47,6 +47,44 @@ def _evidence_flags(events):
         if PARALLEL in event.metadata.get("flags", ()):
             flags.append(PARALLEL)
     return tuple(dict.fromkeys(flags))
+
+
+def _wrong_place(rule_id, code, found, window, reason, *, evidence, uses=(), flags=(), timestamps=None):
+    """D-128: a wrong-place (or wrong-time) Fail also claims the step was not done in the right place. That
+    absence needs clear evidence over `window`, where a correctly placed occurrence would have had to be: every
+    outcome in `found` (a missing-event check over the window) covered and failing, so the region was visible
+    throughout and nothing was seen with low confidence. Otherwise Unable to Verify, flagged
+    correct_occurrence_unseen, naming the window."""
+    where = f"from {window[0]:g} s to {window[1]:g} s"
+    unseen = [m for m in found if not (m.coverage.status == COVERED and m.outcome == "fail")]
+    if not unseen:
+        return failed(rule_id, code, f"{reason}; none in the right place, although it was in view {where} (D-128)",
+                      evidence=evidence, uses=(*uses, *found), flags=flags, timestamps=timestamps)
+    why = ", ".join(f"{m.coverage.scope or m.event_name}: "
+                    f"{'seen with low confidence' if LOW_CONFIDENCE_FLAG in m.flags else m.coverage.status}"
+                    for m in unseen)
+    low = tuple(dict.fromkeys(i for m in found for i in m.low_confidence_event_ids))
+    return unable(rule_id, f"{reason}, but a correctly placed one may have been missed: not clearly in view {where} "
+                  f"({why}) (D-128)", evidence=tuple(evidence) + low, uses=(*uses, *found),
+                  flags=(*flags, checks.CORRECT_UNSEEN),
+                  timestamps={**(timestamps or {}), "unseen_window_start": window[0], "unseen_window_end": window[1]})
+
+
+def _gel_seen_absent(ctx, window):
+    """R1: gel could have been seen on both zones over the window (the zones' visibility, A-026)."""
+    return [ctx.coverage.region_missing(region, name, window)
+            for _, event, _, region in GEL_ZONES for name in (GEL, event)]
+
+
+def _shock_contradicts(ctx, definition, rule_id, what, tag, shock):
+    """D-129: the proposal fails R3 and R4 only when "the approved inference conditions are not satisfied". With
+    the shock confirmed on the screen (an inference source, D-102), a tag placing the step after it, or before
+    the placement, contradicts the shock: Unable to Verify, flagged contradictory."""
+    if not shock.present or SHOCK not in _inference_sources(ctx, definition, rule_id):
+        return None
+    return unable(rule_id, f"{what}; but the shock on the screen at {shock.time:g} s shows the step was done "
+                  "correctly (D-102): the evidence contradicts itself (D-129)", evidence=(tag.event_id, shock.event_id),
+                  flags=(CONTRADICTORY,), uses=(shock,), timestamps={tag.event_name: tag.start, SHOCK: shock.time})
 
 
 def _parallel(ctx, rule_id):
@@ -100,10 +138,12 @@ def gel_applied_twice(ctx, definition, results):
             if placement is not None and e.start > placement.start + window]
     if placement is not None and late and not early:
         first = min(late, key=lambda e: (e.start, e.event_id))
-        return failed("R1", "after_placement", f"gel applied only at {first.start:g} s, after the first paddle was "
-                      f"placed ({placement.start:g} s); gel must come before the paddles (D-109)",
-                      evidence=(first.event_id, placement.event_id), flags=_evidence_flags([first, placement]),
-                      timestamps={first.event_name: first.start, "placement": placement.start})
+        window = (0.0, max(0.0, placement.start))   # D-128: a correct application would have come before it
+        return _wrong_place("R1", "after_placement", _gel_seen_absent(ctx, window), window,
+                            f"gel applied only at {first.start:g} s, after the first paddle was placed "
+                            f"({placement.start:g} s); gel must come before the paddles (D-109)",
+                            evidence=(first.event_id, placement.event_id), flags=_evidence_flags([first, placement]),
+                            timestamps={first.event_name: first.start, "placement": placement.start})
     where = (f"before the first placement ({end:g} s)" if placement is not None else
              f"before the first paddle was taken ({end:g} s)" if end is not None else "in the recording")
     if all(ctx.coverage.region_status(region).scope is not None for _, _, region, _ in GEL_ZONES):
@@ -204,8 +244,12 @@ def _gel_passed(ctx, applications, reason, flags, uses):
     timestamps = {**{e.event_name if e.event_name != GEL else f"{GEL}_{i}": e.start
                      for i, e in enumerate(applications, start=1)}, "seconds": seconds}
     if check.checked and not check.within:
-        return failed("R1", "outside_time_period", f"{reason}, but {seconds:g} s apart: {check.note}", evidence=evidence,
-                      uses=(*uses, check), flags=flags, timestamps=timestamps, timing_checked=True)
+        first = times[0]   # D-128: an application within the period, from the first one, may have been missed
+        window = (first, first + ctx.config.limit("gel_application_period_seconds").value)
+        result = _wrong_place("R1", "outside_time_period", _gel_seen_absent(ctx, window), window,
+                              f"{reason}, but {seconds:g} s apart: {check.note}", evidence=evidence,
+                              uses=(*uses, check), flags=flags, timestamps=timestamps)
+        return replace(result, timing_checked=True) if result.kind == "fail" else result
     return passed("R1", f"{reason}: {check.note}", evidence, uses=(*uses, check), flags=flags, timestamps=timestamps,
                   timing_checked=check.checked)
 
@@ -253,7 +297,7 @@ def second_paddle_after_first_placed(ctx, definition, results):
     other = "sternal" if first == "apical" else "apical"
     placed = order.placed[first]
     if placed is not None:
-        result = _order(ctx, first, placed, order.taken[other])
+        result = _order(ctx, first, placed, order.taken[other], order.taken[first])
     else:
         result = _first_placement_missing(ctx, first, order.taken[first], order.taken[other])
     if order.take_deduced:   # the report shows that the paddle taken first was deduced, not tagged
@@ -275,7 +319,7 @@ def _taken_together(ctx, order):
                   timestamps={apical.event_name: apical.start, sternal.event_name: sternal.start})
 
 
-def _order(ctx, first, placed, other_taken):
+def _order(ctx, first, placed, other_taken, first_taken=None):
     relation = checks.relation(placed.start, other_taken.start, checks.simultaneous_window(ctx))
     evidence = (placed.event_id, other_taken.event_id)
     timestamps = {placed.event_name: placed.start, other_taken.event_name: other_taken.start}
@@ -288,9 +332,14 @@ def _order(ctx, first, placed, other_taken):
         return failed("R2", "simultaneous", f"the {other} paddle taken at {other_taken.start:g} s, at the same time as "
                       f"the {first} paddle (taken first) was placed ({placed.start:g} s)", evidence=evidence,
                       flags=flags, timestamps=timestamps)
-    return failed("R2", "taken_before_first_placed", f"the {other} paddle taken at {other_taken.start:g} s, before the "
-                  f"{first} paddle (taken first) was placed at {placed.start:g} s", evidence=evidence, flags=flags,
-                  timestamps=timestamps)
+    # D-128: an earlier firm placement of the first paddle, from its take to the other's take, may have been missed
+    start = first_taken.start if first_taken is not None and first_taken.start <= other_taken.start else 0.0
+    window = (start, other_taken.start)
+    zone = ([ctx.missing(APICAL, window), ctx.coverage.region_missing("apical_zone", FIRST_PLACED, window)]
+            if first == "apical" else [ctx.missing(STERNAL, window)])
+    return _wrong_place("R2", "taken_before_first_placed", zone, window, f"the {other} paddle taken at "
+                        f"{other_taken.start:g} s, before the {first} paddle (taken first) was placed at "
+                        f"{placed.start:g} s", evidence=evidence, flags=flags, timestamps=timestamps)
 
 
 def _first_placement_missing(ctx, first, first_taken, other_taken):
@@ -346,7 +395,9 @@ def paddles_firmly_on_chest(ctx, definition, results):
          after it: annotation timing) -> Pass - Direct;
        - past the gate, both derived placements at or before the shock -> Pass - Direct, flagged
          `derived_placement`;
-       - only tags clearly after the shock -> Fail `placed_after_shock`.
+       - only tags clearly after the shock -> with the shock an inference source, Unable to Verify,
+         `contradictory` (D-129); otherwise Fail `placed_after_shock`, only with both zones in view from
+         the first paddle taken to the shock (D-128).
     2. Otherwise (no direct evidence, or no shock time to judge it against): the inference first, the
        first confirmed event in inference_sources (D-057, D-115): the shock on screen -> Pass -
        Inferred. A paddle removal is never an inference source (D-115).
@@ -376,9 +427,17 @@ def paddles_firmly_on_chest(ctx, definition, results):
                           flags=_evidence_flags(derived), timestamps={**{e.event_name: e.start for e in derived},
                                                                       SHOCK: shock.time})
         if tags:
-            return failed("R3", "placed_after_shock", f"paddles firmly on the chest only at {tags[0].start:g} s, after "
-                          f"the shock at {shock.time:g} s", evidence=(tags[0].event_id, shock.event_id), uses=(shock,),
-                          timestamps={BOTH_PLACED: tags[0].start, SHOCK: shock.time})
+            what = f"paddles firmly on the chest only at {tags[0].start:g} s, after the shock at {shock.time:g} s"
+            contradiction = _shock_contradicts(ctx, definition, "R3", what, tags[0], shock)
+            if contradiction is not None:
+                return contradiction
+            taken = ctx.paddle_order.earliest_taken   # D-128: from the first paddle taken (else the start) to the shock
+            window = (taken.start if taken is not None and taken.start <= shock.time else 0.0, shock.time)
+            zones = [ctx.coverage.region_missing("apical_zone", BOTH_PLACED, window),   # its low confidence
+                     *(ctx.missing(name, window) for name in PLACEMENTS)]
+            return _wrong_place("R3", "placed_after_shock", zones, window, what,
+                                evidence=(tags[0].event_id, shock.event_id), uses=(shock,),
+                                timestamps={BOTH_PLACED: tags[0].start, SHOCK: shock.time})
     support = _inferred(ctx, "R3", sources, "paddles firmly on the chest")
     if support is not None:
         return support
@@ -486,7 +545,9 @@ def both_buttons_pressed(ctx, definition, results):
     The placement is paddles_firmly_on_chest, or (past the gate) the later of the two derived
     placements. A press within simultaneous_window_seconds of the placement or after the shock
     counts as at it (annotation timing, as R3). Repeated presses stay undecided (OQ-023).
-    1. A press clearly before the placement, and none valid -> Fail `before_placement`. Without a
+    1. A press clearly before the placement, and none valid -> with the shock on the screen as an inference
+       source, Unable to Verify, `contradictory` (D-129); otherwise Fail `before_placement`, only with both
+       paddles in view from the placement to the shock or the recording end (D-128). Without a
        shock time, only when no press came after the placement (that one may have been valid).
     2. With a shock time: a valid press -> Pass - Direct (no placement observed: its order is not
        checked, `order_not_checked`); only presses clearly after the shock -> Unable to Verify,
@@ -515,9 +576,17 @@ def both_buttons_pressed(ctx, definition, results):
             return _pressed(valid, placement, shock)
     if early and (shock.present or not later):   # without a shock time a later press may be the valid one
         press = early[0]
-        return failed("R4", "before_placement", f"buttons pressed at {press.start:g} s, before the paddles were placed "
-                      f"({placement.start:g} s)", evidence=(press.event_id, placement.event_id),
-                      flags=_evidence_flags([placement]), timestamps={BUTTONS: press.start, "placement": placement.start})
+        what = f"buttons pressed at {press.start:g} s, before the paddles were placed ({placement.start:g} s)"
+        contradiction = _shock_contradicts(ctx, definition, "R4", what, press, shock)
+        if contradiction is not None:
+            return contradiction
+        # D-128: a valid press from the placement to the shock (the recording end without one) may have been missed
+        end = shock.time if shock.present else _recording_end(ctx)
+        window = (placement.start, max(placement.start, end if end is not None else placement.start))
+        paddles = [ctx.coverage.region_missing(region, BUTTONS, window) for region in PADDLE_REGIONS]
+        return _wrong_place("R4", "before_placement", paddles, window, what,
+                            evidence=(press.event_id, placement.event_id), flags=_evidence_flags([placement]),
+                            timestamps={BUTTONS: press.start, "placement": placement.start})
     if shock.present and later:
         press = later[0]
         return unable("R4", f"buttons pressed only at {press.start:g} s, after the shock on the screen at "
@@ -696,11 +765,15 @@ def paddles_removed_after_shock(ctx, definition, results):
                       timestamps={REMOVAL: removal.start, SHOCK: shock.time})
     early = _placements_ended_before(ctx, shock.time, window)
     if early:
+        # D-128: "no placement on at the shock" is an absence: the zone must be in view from the exit to the shock
         names = ", ".join(f"{e.event_name.split('_')[0]} paddle off its zone at {e.metadata['end_seconds']:g} s"
                           for e in early)
-        return failed("R6", "removed_before_shock", f"a paddle was removed before the shock at {shock.time:g} s "
-                      f"(derived placements: {names})", evidence=(*(e.event_id for e in early), shock.event_id),
-                      uses=(shock,), flags=_evidence_flags(early), timestamps={SHOCK: shock.time})
+        start = min(e.metadata["end_seconds"] for e in early)
+        found = [ctx.missing(e.event_name, (min(e.metadata["end_seconds"], shock.time), shock.time)) for e in early]
+        return _wrong_place("R6", "removed_before_shock", found, (min(start, shock.time), shock.time),
+                            f"a paddle was removed before the shock at {shock.time:g} s (derived placements: {names})",
+                            evidence=(*(e.event_id for e in early), shock.event_id), uses=(shock,),
+                            flags=_evidence_flags(early), timestamps={SHOCK: shock.time})
     if removals:
         return _removed_at_or_after(ctx, removals[0], shock)
     return _removal_missing(ctx, shock)
@@ -728,8 +801,13 @@ def _removed_at_or_after(ctx, removal, shock):
     evidence = (removal.event_id, shock.event_id)
     timestamps = {REMOVAL: removal.start, SHOCK: shock.time, "seconds": seconds}
     if check.checked and not check.within:
-        return failed("R6", "too_late", f"paddles removed {seconds:g} s after the shock: {check.note}", evidence=evidence,
-                      uses=(shock, check), timestamps=timestamps, timing_checked=True)
+        # D-128: a removal within the limit after the shock may have been missed
+        window = (shock.time, shock.time + ctx.config.limit("shock_to_removal_seconds").value)
+        zones = [ctx.coverage.region_missing("apical_zone", REMOVAL, window),   # its low confidence
+                 *(ctx.missing(name, window) for name in PLACEMENTS)]
+        result = _wrong_place("R6", "too_late", zones, window, f"paddles removed {seconds:g} s after the shock: "
+                              f"{check.note}", evidence=evidence, uses=(shock, check), timestamps=timestamps)
+        return replace(result, timing_checked=True) if result.kind == "fail" else result
     return passed("R6", f"paddles removed at {removal.start:g} s, after the shock at {shock.time:g} s: {check.note}",
                   evidence, uses=(shock, check), timestamps=timestamps, timing_checked=check.checked)
 
@@ -865,8 +943,14 @@ def _direct(ctx, apical, sternal):
         return failed("R8", "simultaneous", f"apical ({apical.time:g} s) and sternal ({sternal.time:g} s) paddles "
                       "placed at the same time", evidence=evidence, uses=(apical, sternal), flags=flags,
                       timestamps=timestamps)
-    return failed("R8", "wrong_order", f"sternal paddle placed at {sternal.time:g} s, before the apical at "
-                  f"{apical.time:g} s", evidence=evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)
+    # D-128: an earlier apical placement, from the start of the placement phase to the sternal one, may have been missed
+    phase = _placement_phase(ctx)
+    start = phase[0] if phase is not None and phase[0] <= sternal.time else 0.0
+    window = (start, sternal.time)
+    zone = [ctx.missing(APICAL, window), ctx.coverage.region_missing("apical_zone", FIRST_PLACED, window)]
+    return _wrong_place("R8", "wrong_order", zone, window,
+                        f"sternal paddle placed at {sternal.time:g} s, before the apical at {apical.time:g} s",
+                        evidence=evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)
 
 
 def _one_zone(ctx, name, seen):

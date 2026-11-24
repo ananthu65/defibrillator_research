@@ -30,7 +30,26 @@ def _wrong_place(ctx, rule_id, code, event_name, window, reason, *, evidence, us
     why = ("a command may have been heard with low confidence" if LOW_CONFIDENCE_FLAG in found.flags else
            f"the audio was not clear {where} ({found.coverage.status}: {found.coverage.basis})")
     return unable(rule_id, f"{reason}, but a correctly placed one may have been said and not heard: {why} (D-128)",
-                  evidence=evidence + found.low_confidence_event_ids, uses=(*uses, found), timestamps=timestamps)
+                  evidence=evidence + found.low_confidence_event_ids, uses=(*uses, found), flags=(checks.CORRECT_UNSEEN,),
+                  timestamps={**(timestamps or {}), "unseen_window_start": window[0], "unseen_window_end": window[1]})
+
+
+def _timing_needs_clear_audio(ctx, result, names, window, what):
+    """D-128 for a wrong-time Fail (A8, R7/A6 too_late): an unheard command inside `window` would change the time,
+    so the Fail needs clear audio there (and no low-confidence command); otherwise Unable to Verify."""
+    if result.kind != "fail":
+        return result
+    found = [ctx.missing(name, window) for name in names]
+    if all(f.outcome == "fail" for f in found):
+        return result
+    where = f"from {window[0]:g} s to {window[1]:g} s"
+    weak = next((f for f in found if LOW_CONFIDENCE_FLAG in f.flags), None)
+    why = ("a command may have been heard with low confidence" if weak is not None else
+           f"the audio was not clear {where} ({found[0].coverage.status}: {found[0].coverage.basis})")
+    low = tuple(dict.fromkeys(i for f in found for i in f.low_confidence_event_ids))
+    return unable(result.rule_id, f"{result.reason}; but {what} may have been said and not heard: {why} (D-128)",
+                  evidence=result.evidence + low, uses=tuple(found), flags=(checks.CORRECT_UNSEEN,),
+                  timestamps={**result.timestamps, "unseen_window_start": window[0], "unseen_window_end": window[1]})
 
 
 # ---- A1, A3: a command given before the shock -------------------------------------------------------
@@ -384,7 +403,8 @@ def restart_compressions(ctx, definition, results):
     With a shock time:
     1. A start command not certainly before the shock (after it, or a tie) -> Pass, timed from the shock with
        shock_to_compressions_seconds on the shortest and longest possible durations (D-125): unset -> timing not
-       checked; approved and exceeded -> Fail `too_late`; straddled -> Unable to Verify, `timing_uncertain`.
+       checked; approved and exceeded -> Fail `too_late` (only with clear audio from the shock to the restart,
+       D-128); straddled -> Unable to Verify, `timing_uncertain`.
     2. Else an unresolved continue/resume command (near the shock) -> Unable to Verify, naming the likely cause.
     3. Else no restart: judged on the audio from the shock to the end of the recording (D-122). Clear -> Fail
        `before_shock` if start was said only certainly before the shock (D-053: ineligible starts), else Fail
@@ -404,10 +424,13 @@ def restart_compressions(ctx, definition, results):
         return _missing_without_shock(ctx, "R7", START, "the restart command", shock)
     screen, command = _screen(ctx), _restart(ctx)
     if command is not None:
-        return checks.timed_between("R7", screen, command, ctx.config.limit("shock_to_compressions_seconds"),
-                                    code="too_late", what=f"restart said at {command.start:g} s, after the shock on "
-                                    f"the screen at {shock.time:g} s", evidence=(command.event_id, shock.event_id),
-                                    uses=(shock,))
+        result = checks.timed_between("R7", screen, command, ctx.config.limit("shock_to_compressions_seconds"),
+                                      code="too_late", what=f"restart said at {command.start:g} s, after the shock on "
+                                      f"the screen at {shock.time:g} s", evidence=(command.event_id, shock.event_id),
+                                      uses=(shock,))
+        # D-128: an earlier restart, from the shock to this one, may have been said and not heard
+        window = (shock.time, max(shock.time, checks.time_bounds(command)[0]))
+        return _timing_needs_clear_audio(ctx, result, (START,), window, "an earlier restart")
     if unsure:
         command = unsure[0]
         return unable("R7", f"a continue/resume command at {command.start:g} s is within the cross-modal tolerance of "
@@ -465,7 +488,8 @@ def pre_shock_pause(ctx, definition, results):
       shock, by a continue command (compressions resumed). A4 judges the stop itself.
     - Pause end: the restart is the context's start anchor (D-025, D-125), the same command R7/A6 judge.
     - Duration on the shortest and longest possible gap (D-125): both within the limit -> Pass; both over ->
-      Fail `pre_shock_pause`; in between -> Unable to Verify (`timing_uncertain`).
+      Fail `pre_shock_pause`, only with clear audio over the pause (D-128: an unheard earlier restart or later
+      stop would shorten it); in between -> Unable to Verify (`timing_uncertain`).
     Missing references (D-121): no shock time (needed to find the restart, or as the end event) -> Not
     evaluable because of R5; no stop -> because of A4; no restart -> because of R7. A8 never fails for them.
     """
@@ -492,9 +516,13 @@ def pre_shock_pause(ctx, definition, results):
         return not_evaluable("A8", "R7", f"not evaluable because of R7: {_why_no_restart(ctx)}, so the pause has no "
                              f"end; checked: stop said at {stop.start:g} s", uses=(shock,), evidence=(stop.event_id,),
                              timestamps={STOP: stop.start})
-    return checks.timed_between("A8", stop, end, limit, code="pre_shock_pause",
-                                what=f"pause from stop ({stop.start:g} s) to {end_name} ({end.start:g} s)",
-                                evidence=(stop.event_id, end.event_id), uses=(shock,))
+    result = checks.timed_between("A8", stop, end, limit, code="pre_shock_pause",
+                                  what=f"pause from stop ({stop.start:g} s) to {end_name} ({end.start:g} s)",
+                                  evidence=(stop.event_id, end.event_id), uses=(shock,))
+    # D-128: an unheard earlier restart, or an unheard later stop, inside the pause would make it shorter
+    window = (checks.time_bounds(stop)[0], max(checks.time_bounds(stop)[0], checks.time_bounds(end)[1]))
+    names = (STOP, START) if end_event == "start" else (STOP,)
+    return _timing_needs_clear_audio(ctx, result, names, window, "a command inside the pause")
 
 
 def _pause_start(ctx, stops, screen):
@@ -587,7 +615,7 @@ def command_order(ctx, definition, results):
         return unable("A7", f"{_describe(possible, real)}, but a correctly placed occurrence may have been said and not "
                       f"heard: the audio was not clear where it would have been ({where}) (D-128){note}",
                       evidence=_evidence(possible, real, ids), timestamps=_times(possible, real),
-                      flags=(checks.ORDER_PARTIALLY_CHECKED,))
+                      flags=(checks.ORDER_PARTIALLY_CHECKED, checks.CORRECT_UNSEEN))
     return failed("A7", "wrong_order", f"{_describe(possible, real)}{note}", evidence=_evidence(possible, real, ids),
                   timestamps=_times(possible, real), flags=partial_flag)
 

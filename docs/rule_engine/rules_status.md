@@ -43,9 +43,11 @@ Unable to Verify.
   (`upstream_requirements.md`).
 
 **Wrong-place Fails (D-128, 2026-11-24):** a wrong-order or wrong-time Fail also claims the step
-was not done in the right place, so it needs clear evidence where the right place was. Applied to
-A1–A5, A7 and R7/A6 `before_shock`; otherwise Unable to Verify. The video rules are audited, not
-changed yet (progress.md, Increment 26 review).
+was not done in the right place, so it needs clear evidence where the right place was; otherwise
+Unable to Verify, `correct_occurrence_unseen`. Applied to every audio rule (A1–A5, A7, A8, R7/A6)
+and every video rule (R1, R2, R3, R4, R6, R8); the windows are in pathways.md ("D-128 and D-129
+across the rules"). **D-129:** R3 `placed_after_shock` and R4 `before_placement` with the shock
+confirmed on the screen as an inference source are Unable to Verify, `contradictory`.
 
 | Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
 |---|---|---|---|---|---|---|---|

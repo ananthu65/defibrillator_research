@@ -1,6 +1,6 @@
 # Rule engine output contract
 
-**Report version:** 14
+**Report version:** 15
 **Contract date:** 2026-10-14 · **Owner:** Arnikan · **For:** Sanjeevan (feedback module and app)
 
 This is what the rule engine hands over: the structure of its JSON report, every possible overall
@@ -38,6 +38,7 @@ examples), [open_questions.md](open_questions.md) (undecided items).
 | 10 | 2026-10-17 | **Field added:** `demo_notice` (string or null). A report made with a demo config says "DEMO ONLY: rules not approved by the supervisor"; otherwise it is null. **Overall flag added:** `demo_only`, on every overall result from a demo config (D-114). Feedback must never treat a demo report as an assessment |
 | 11 | 2026-10-19 | **Three flags removed** (D-115): `shock_time_from_removal` and `command_before_removal` (the shock time is never taken from the paddle removal; the `shock_time_fallback` setting is gone) and `inferred_from_removal` (R3 and R4 no longer infer from the removal: it doesn't show that a shock was delivered). R3 and R4 infer only from the shock on the screen; without a shock time they are Not evaluable because of R5 |
 | 12 | 2026-10-19 | **Rule flag removed:** `inferred_fail_policy_undecided`. **Rule flag added:** `one_zone_in_view` (R8). R8 has no one-zone inference any more: with only one zone in view it is Unable to Verify, never Pass – Inferred, because the first-placement tag is the apical placement under the team's working definition (A-027, D-116). **Meaning changed:** `contradictory` now comes from R4 only; R8's `wrong_order` only from two observed placements. The settings `inferred_fail_outcome` and `placement_match_window_seconds` no longer appear in `configuration` |
+| 15 | 2026-11-24 | **Rule flag added:** `correct_occurrence_unseen` (shared, D-128): a wrong-place or wrong-time Fail is withheld because the window where a correctly placed occurrence would have had to be was not clearly observed (audio not clear, a region not in view, or a low-confidence event there); the result is Unable to Verify, the window is named in the reason and in the timestamps `unseen_window_start` and `unseen_window_end`. **`contradictory` extended to R3** and to R4 `before_placement` with the shock confirmed on the screen (D-129) |
 | 14 | 2026-11-09 | **Rule flags added:** `timing_uncertain` (a limit straddled by segment-timed audio, D-125) and `order_partially_checked` (some steps' order not checked, D-123); both are shared and used by the audio rules. **New region:** `audio` (where a spoken command would have been recognised, the clear-audio intervals, D-122) appears in `context.zone_visibility`, `context.header.coverage` and `context.header.visibility`. Without a stated audio coverage, a missing command is `unknown`, never `covered`, even when `analyses_run.audio` is true. **Meaning changed (D-121):** without a shock time, R3, R4 and R6 still judge the part that needs none. `missing` (R3) and `not_pressed` (R4, when the paddles were placed) can now come without a shock time; R6 never fails without one. With no firm placement observed and R3 not passing by inference, R4 and R6 are `not_evaluable` with `blocked_by` R3, never `not_pressed` or `missing` (D-119); when R3 is Pass – Inferred (D-102) they are judged normally. A `not_evaluable` result may cite the evidence of the parts that were checked |
 | 13 | 2026-10-19 | **Rule flags added:** `placement_time_unknown` (R2, R1) and `take_order_from_placement` (R2). Both paddles taken within `simultaneous_window_seconds` fail R2 `simultaneous`, whichever is named first. Paddle order now comes from event times, never from the tag names (A-027, D-118). **Meaning changed:** R2 judges the paddle taken first, whichever it is (a sternal-first learner handling one paddle at a time passes R2); R1's gel phase ends at the earliest firm placement of either paddle. R3's missing-placement window and R8's placement phase start at the earliest take of either paddle; R8's off-by-default fallback applies only when the apical paddle was taken first |
 
@@ -101,7 +102,7 @@ the restart command at 33 s, and there was no "oxygen away" command.
 
 ```json
 {
-  "report_version": 14,
+  "report_version": 15,
   "kind": "rule_engine_report",
   "development_data": false,
   "demo_notice": null,
@@ -210,7 +211,8 @@ Under the team's working definition (A-027), `first_paddle_*` means the apical p
 | `unresolved_commands` | built | An ambiguous command could not be classified, so the continue or restart time may be incomplete |
 | `start_command_before_shock` | built | "Start compressions" was said before a confirmed shock; it does not count as the restart (D-025) |
 | `placement_missing` | built (R8) | R8: a paddle's zone was in view during the placement phase but its placement was not observed, so the order cannot be judged; R3 reports the missing placement (D-058) |
-| `contradictory` | built (R4) | The evidence contradicts itself, so Unable to Verify: the buttons were pressed only after the shock on the screen. (R8 no longer raises it, v12) |
+| `contradictory` | built (R3, R4) | The evidence contradicts itself, so Unable to Verify: R4's buttons pressed only after the shock on the screen; or, with the shock confirmed on the screen as an inference source, R3's paddles tagged firmly on the chest only after it, or R4's press only before the placement (D-129, v15). (R8 no longer raises it, v12) |
+| `correct_occurrence_unseen` | built (v15) | A wrong-place or wrong-time Fail was withheld: the step was seen in a wrong place (or time), but the window where a correct occurrence would have had to be was not clearly observed (D-128). Unable to Verify; the window is in the reason and in the timestamps `unseen_window_start` and `unseen_window_end`. Raised by A1–A5, A7, A8, R7/A6, R1, R2, R3, R4, R6 and R8 |
 | `derived_gel_application` | built (v9) | R1: the result rests on a per-zone gel application derived from the annotated hand and zone boxes (only past the 9d gate, D-112), not on a tag |
 | `one_zone_in_view` | built (v12) | R8: only one placement zone was in view, so which paddle went first can't be established; Unable to Verify (D-116) |
 | `placement_time_unknown` | built (v13) | R2 or R1 could not be judged because a paddle's placement time is unknown: for R2 the sternal paddle was taken first and nothing shows when it was placed; for R1 the gel may have come after a placement whose time is unknown. Unable to Verify, never a Fail or a Pass (D-118) |
@@ -245,7 +247,9 @@ Under the team's working definition (A-027), `first_paddle_*` means the apical p
 ### Failure codes (`rules[].failure_code`, `overall.mistakes[].failure_code`)
 
 All are **planned**: they appear once the rule that raises them is built (Increments 11 to 23,
-[rules_status.md](rules_status.md)).
+[rules_status.md](rules_status.md)). **D-128 (v15):** every wrong-place or wrong-time code below
+also needs clear evidence over the window where a correct occurrence would have had to be;
+otherwise the result is Unable to Verify, `correct_occurrence_unseen`.
 
 | Code | Status | Rules | Meaning for feedback |
 |---|---|---|---|
@@ -258,7 +262,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `first_placement_not_observed` | built (R2, v4) | R2 | The apical paddle was taken first, and no placement of it was seen between the two takes, although both placement zones were in view throughout. **Either the paddles were placed in parallel, or the second paddle was taken before the first was placed** (A-019, D-097). Once the derived-placement gate is approved, a parallel placement is reported as `simultaneous` instead (D-091) |
 | `wrong_order` | built (R8, A4, A7) | R8, A4, A7 | Steps or commands in the wrong order (R5 no longer raises it: its `preceding_steps` is retired, D-123). For R8: the sternal paddle was placed before the apical, with both placements observed (D-116) For A4: stop said before every continue, with clear audio from the continue to the shock (D-027, D-128). For A7: the commands heard break A7's own relations in the procedure order; the minimum set of misplaced commands is named, as one mistake (plan section 4), with clear audio where each would have been correct (D-128) |
 | `not_in_zone` | planned | R3 | A paddle was outside its approved zone. Not produced until the supervisor approves the chest regions (OQ-012); until then R3 checks placement timing and presence only (D-106) |
-| `placed_after_shock` | built (R3) | R3 | Paddles placed firmly on the chest only after the shock on the screen (D-106) |
+| `placed_after_shock` | built (R3) | R3 | Paddles placed firmly on the chest only after the shock on the screen (D-106), with both zones in view from the first paddle taken to the shock (D-128). Only when the shock is not an inference source: otherwise `contradictory` (D-129) |
 | `before_placement` | built (R4) | R4 | Buttons pressed before the paddles were placed (D-108) |
 | `not_pressed` | built (R4) | R4 | Buttons not pressed, although both paddles were visible from the placement to the shock (D-108). Not produced while either inference source is listed (D-107, OQ-061) |
 | `removed_before_shock` | built (R6) | R6 | Paddles removed before the shock on the screen: a removal tagged more than `removal_before_screen_tolerance_seconds` before it (the screen may lag the discharge, D-105), or (once the gate is approved) a derived placement that ended before it, flagged `derived_placement` (D-104) |
