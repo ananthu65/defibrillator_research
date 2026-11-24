@@ -283,7 +283,9 @@ The expected order of every audio and video step, as "X before Y" chains
 | A pair marked unknown (the proposal is silent) | Not ordered, not checked; ordered by the chains anyway → configuration error |
 | A relation claimed by a rule | That rule owns it; claimed twice or not a relation → configuration error (D-123) |
 | An unclaimed audio–audio relation | A7 |
-| Any other unclaimed relation | S1 "Procedure order" (planned) |
+| Any other unclaimed relation, with no intermediate step | S1 "Procedure order" (planned) |
+| An unclaimed relation implied by other relations | No owner: judged through the relations that imply it (D-126) |
+| An optional step (charging, "applying gel") | Present → its position is checked; absent → nothing is missing (D-127) |
 
 ### Stage: rule — shared checks (built, Increment 6)
 
@@ -1222,20 +1224,20 @@ today.
 3. With the start in 14–15 s (3–5 s) → Pass; in 17–18 s (6–8 s) → Fail `pre_shock_pause`.
 4. "Stop compressions, all stand clear" in one segment: the two commands are not ordered.
 
-### W-89 The procedure order from the proposal
-*(Built in Increment 20; D-120, D-123.)*
-1. The chains give 14 steps and 60 relations:
-   - video: gel → paddle placement → firm placement → buttons → shock on screen → removal → restart;
-   - audio: O₂ away → continue → stand clear → stop → shock command → shock → restart;
-   - the shock command before the button press, marked `confirm`.
-2. Owners:
-   - R4 owns firm placement → buttons and buttons → shock;
-   - A4 owns continue → stop and stop → shock;
-   - A7 owns the other audio pairs (14);
-   - S1 owns the rest (31), such as removal → restart and shock command → button press.
-3. O₂ away and gel are unordered (unknown, OQ-062): no rule checks their order.
-4. A chain making the restart come before O₂ away creates a cycle, so the catalogue doesn't load:
-   "circular order: … R7 -> A1".
+### W-89 The interim procedure order (the lecturer's ground-truth video)
+*(Built in Increment 20; the order replaced on 2026-11-24, D-126, D-127.)*
+1. The chains give 16 steps and 115 relations: A1 oxygen away → A3 stand clear → A2 continue →
+   charging → the gel phase → A4 stop → the paddle taken first → the first firm placement → the
+   paddle taken second → R3 → R4 → R5 → R6 → R7. Also A4 → A5 → R4, with A5 → R4 marked `confirm`.
+2. The gel phase: gel (R1) and the spoken "applying gel" are interchangeable, so neither is checked
+   against the other. Charging and "applying gel" are optional.
+3. Owners:
+   - R4 owns firm placement → buttons and buttons → shock; A4 owns continue → stop and stop → shock;
+   - A7 owns the audio pairs (27), now including stand clear → continue;
+   - S1 keeps only the 6 relations nothing else implies, such as removal → restart;
+   - 67 implied relations have no owner (D-126).
+4. A5 against the paddles and firm placement is unknown (OQ-075): no rule checks it.
+5. A chain making the restart come before O₂ away creates a cycle, so the catalogue doesn't load.
 
 ### W-90 Oxygen away and stand clear around the shock
 *(Built in Increment 21; P-040.)*

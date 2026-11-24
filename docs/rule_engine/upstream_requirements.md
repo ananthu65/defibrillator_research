@@ -197,6 +197,24 @@ it is final, OQ-067). The phrase list in `configs/pipeline.yaml` is the single l
 6. **Confirm the input format** is final (OQ-067). Strict or lenient phrasing is an open question
    about your matching (OQ-066).
 
+### Phrases from the lecturer's ground-truth video (2026-11-24; proposed, for supervisor approval)
+The rule engine keeps no phrase list (D-125): these are for `configs/pipeline.yaml`. Everything below
+is **proposed** until the supervisor approves the phrases (OQ-010, OQ-065). Single words ("stop",
+"start", "shock") need exact, whole-word matching; prefer the longer forms. Charging and "applying
+gel" are new, optional commands (`charging_command`, `gel_announcement_command`, placeholder names
+until you confirm them, D-127).
+
+| Command | Lecturer said | Candidate variants |
+|---|---|---|
+| Oxygen away | "free flowing oxygen away" | oxygen away, O2 away, move the oxygen away, remove the oxygen, oxygen off |
+| All stand clear | "all stand clear" | stand clear, everyone clear, everybody clear, all clear, everyone stand back, everybody away |
+| Continue compressions | "continue chest compressions" | continue compressions, continue CPR, keep going with compressions, carry on compressions |
+| Charging | "charging" | charging the defibrillator, charging now, charging to [N] joules |
+| Applying gel | "applying gel" | gel applied, putting gel, applying the gel |
+| Stop CPR | "stop" / "stop CPR" | stop compressions, hands off, stop chest compressions, pause compressions |
+| Shock command | (not said) | shocking, shock now, delivering shock, shocking now, discharge |
+| Start CPR | "start" / "start CPR" | start compressions, resume compressions, resume CPR, restart CPR, continue CPR (after the shock) |
+
 - **Clear-audio intervals (requested, OQ-068; format to agree):** the intervals where a spoken
   command would have been recognised, for example from Whisper's per-segment confidence
   (`avg_logprob`) and `no_speech_prob`, plus noise or silence handling; the thresholds are your

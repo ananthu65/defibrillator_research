@@ -54,7 +54,7 @@ coverage_policy:
     # The audio: where a spoken command would have been recognised (clear-audio intervals, D-122,
     # OQ-068). It governs every command event.
     audio: [oxygen_away_command, continue_compressions_command, stand_clear_command, stop_compressions_command,
-            shock_command, start_compressions_command]
+            shock_command, start_compressions_command, charging_command, gel_announcement_command]
   # Regions whose coverage must be stated in the header (D-122). Not stated -> unknown, never covered
   # (a missing command is then Unable to Verify, never Fail); the modality not run -> not covered.
   stated_only_regions: [audio]
@@ -94,3 +94,5 @@ expected_counts:
   stop_compressions_command:     {value: unlimited, placeholder: true}
   shock_command:                 {value: unlimited, placeholder: true}
   start_compressions_command:    {value: unlimited, placeholder: true}
+  charging_command:              {value: unlimited, placeholder: true}
+  gel_announcement_command:      {value: unlimited, placeholder: true}

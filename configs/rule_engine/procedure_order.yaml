@@ -3,56 +3,60 @@ schema_version: 1
 # rules/procedure.py with the catalogue. Used by S1 "Procedure order" and A7 (planned, Increments
 # 26-27); no rule reads it yet.
 #
-# NOT CLINICALLY APPROVED: a draft from the ARTS proposal (Figure 2 and the audio command sequence in
-# section 5.2.2), for the supervisor to confirm (OQ-062). Grouping steps as interchangeable is a
-# config change only (OQ-063).
+# NOT CLINICALLY APPROVED: the interim order from the lecturer's ground-truth video (D-127), pending
+# the supervisor's confirmation (OQ-062). Grouping steps as interchangeable is a config change only
+# (OQ-063, OQ-077). To apply the approved order, see audio_integration_plan.md section 11.
 approval:
   approved_by: null
   approved_on: null
-  source: "ARTS proposal (Figure 2, section 5.2.2); A5 before R4 proposed by Arnikan"
-  note: "NOT clinically approved (OQ-062)"
+  source: "the lecturer's ground-truth video, reported by Arnikan on 2026-11-24 (D-127); A4 -> A5 -> R4 from the proposal and Arnikan, pending"
+  note: "NOT clinically approved: pending the supervisor's confirmation (OQ-062)"
 
 # Steps: each with the canonical event(s) it is observed as. A `derived` step comes from the paddle
 # order (D-118), computed from event times, never from the tag names (A-027):
 #   earliest_take       the paddle taken first          later_take   the paddle taken second
 #   earliest_placement  the earliest firm placement of either paddle
+# An `optional` step, if present, must be in the right place; if absent, nothing is reported missing.
 steps:
-  R1:    {events: [gel_applied, apical_gel_applied, sternal_gel_applied], description: gel applied}
-  R2A:   {events: [first_paddle_taken, second_paddle_taken], derived: earliest_take, description: the paddle taken first}
-  PLACE: {events: [first_paddle_placed, apical_paddle_placed, sternal_paddle_placed], derived: earliest_placement,
-          description: "the first firm placement (R2, R8)"}
-  R2B:   {events: [first_paddle_taken, second_paddle_taken], derived: later_take, description: the paddle taken second}
-  R3:    {events: [paddles_firmly_on_chest], description: both paddles firmly on the chest}
-  R4:    {events: [both_paddle_buttons_pressed], description: both buttons pressed}
-  R5:    {events: [shock_delivered_on_screen], description: the shock on the screen}
-  R6:    {events: [paddles_removed_after_shock], description: paddles removed}
-  A1:    {events: [oxygen_away_command], description: oxygen away}
-  A2:    {events: [continue_compressions_command], description: continue compressions (before the shock)}
-  A3:    {events: [stand_clear_command], description: all stand clear}
-  A4:    {events: [stop_compressions_command], description: stop compressions}
-  A5:    {events: [shock_command], description: the shock command}
-  R7:    {events: [start_compressions_command], description: start compressions (after the shock)}
+  A1:     {events: [oxygen_away_command], description: oxygen away}
+  A3:     {events: [stand_clear_command], description: all stand clear}
+  A2:     {events: [continue_compressions_command], description: continue compressions (before the shock)}
+  CHARGE: {events: [charging_command], optional: true, description: "charging (spoken; compulsory? OQ-072)"}
+  R1:     {events: [gel_applied, apical_gel_applied, sternal_gel_applied], description: "gel applied to both zones (the gel phase)"}
+  GELCMD: {events: [gel_announcement_command], optional: true, description: "\"applying gel\", said during the gel phase (compulsory? OQ-073)"}
+  A4:     {events: [stop_compressions_command], description: stop compressions}
+  R2A:    {events: [first_paddle_taken, second_paddle_taken], derived: earliest_take, description: the paddle taken first}
+  PLACE:  {events: [first_paddle_placed, apical_paddle_placed, sternal_paddle_placed], derived: earliest_placement,
+           description: "the first firm placement (R2, R8)"}
+  R2B:    {events: [first_paddle_taken, second_paddle_taken], derived: later_take, description: the paddle taken second}
+  R3:     {events: [paddles_firmly_on_chest], description: both paddles firmly on the chest}
+  A5:     {events: [shock_command], description: "the shock command (not said by the lecturer; required? OQ-075)"}
+  R4:     {events: [both_paddle_buttons_pressed], description: both buttons pressed}
+  R5:     {events: [shock_delivered_on_screen], description: the shock on the screen}
+  R6:     {events: [paddles_removed_after_shock], description: paddles removed}
+  R7:     {events: [start_compressions_command], description: start compressions (after the shock)}
 
 # "X before Y": each chain gives consecutive pairs; the engine uses their transitive closure.
 chains:
-  - {chain: [R1, PLACE], source: "proposal R1: gel before paddle placement"}
-  - {chain: [R2A, PLACE, R2B], source: "proposal Figure 2; one paddle at a time (D-051, D-118)"}
-  - {chain: [PLACE, R3, R4, R5, R6, R7], source: "proposal Figure 2; R4 after placement, before the shock; R6; R7"}
-  - {chain: [A1, A2, A3, A4, A5, R5, R7], source: "proposal A7 sequence; A1-A5 before the shock; A6/R7 after it"}
+  - chain: [A1, A3, A2, CHARGE, R1, A4, R2A, PLACE, R2B, R3, R4, R5, R6, R7]
+    source: "the lecturer's ground-truth video (2026-11-24): oxygen away, stand clear, continue, charging, the gel phase, stop, the paddles, shock, removal, start"
+  - chain: [CHARGE, GELCMD, A4]
+    source: "the lecturer's ground-truth video: \"applying gel\" is said during the gel phase"
+  - {chain: [A4, A5], source: "proposal A7 sequence: stop before the shock command"}
   - {chain: [A5, R4], source: "Arnikan: the shock command before the button press", confirm: true}
 
-# Pairs the proposal is silent on. They must stay unordered (not checked) until the supervisor
-# places them (OQ-062). Either {steps, relative_to, question} or {pairs: [[a, b], ...], question};
-# to apply the complete order, see audio_integration_plan.md section 11.
+# Pairs not ordered yet; they stay unordered (not checked) until the supervisor places them.
+# Either {steps, relative_to, question} or {pairs: [[a, b], ...], question}.
 unknown:
-  - {steps: [A1, A2, A3, A4, A5], relative_to: [R1, R2A, PLACE, R2B, R3], question: OQ-062}
+  - {steps: [A5], relative_to: [R2A, PLACE, R2B, R3], question: OQ-075}
 
-# Groups whose mutual order is free (OQ-063). None yet.
-interchangeable: []
+# Groups whose mutual order is free. The gel and the spoken "applying gel" happen together (D-127).
+interchangeable:
+  - [R1, GELCMD]
 
 # One owner per relation (D-123). Explicit pairs for the rules that already check them; A7 owns the
-# remaining audio-audio pairs; the default owner (S1, planned) owns every other pair.
-# R8's apical-before-sternal is inside PLACE, so it is not a pair here.
+# remaining audio-audio pairs; the default owner (S1, planned) owns every other relation that no other
+# relation implies (D-126). R8's apical-before-sternal is inside PLACE, so it is not a pair here.
 owners:
   R1: [[R1, PLACE]]
   R2: [[R2A, PLACE], [PLACE, R2B], [R2A, R2B]]

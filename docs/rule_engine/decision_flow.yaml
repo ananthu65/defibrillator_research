@@ -1239,10 +1239,14 @@ decision_points:
         outcome: That rule owns it (R1, R2, R3, R4, R6, A1-A5, R7 - the relations they already check); claimed twice, or not a relation, is a configuration error (one owner per relation, D-123)
       - condition: An unclaimed relation between two audio steps
         outcome: Owned by A7 (scope audio)
-      - condition: Any other unclaimed relation
+      - condition: Any other unclaimed relation with no intermediate step
         outcome: Owned by the default owner, S1 "Procedure order" (planned, Increment 27)
+      - condition: Any other unclaimed relation implied by other relations (an intermediate step)
+        outcome: No owner - judged through the relations that imply it, so each mistake is judged by exactly one rule (D-126)
+      - condition: An optional step (charging, the spoken "applying gel")
+        outcome: If present, its relations are checked by their owners; if absent, nothing is reported missing (D-127)
     config: [configs/rule_engine/procedure_order.yaml, configs/rules.yaml procedure_order]
     code: rules/procedure.py (load_procedure_order, ProcedureOrder), rules/config.py (RuleEngineConfig.procedure_order)
-    decisions: [D-118, D-120, D-123]
+    decisions: [D-118, D-120, D-123, D-126, D-127]
     assumptions: [A-027]
-    open_questions: [OQ-062, OQ-063, OQ-064]
+    open_questions: [OQ-062, OQ-063, OQ-064, OQ-075, OQ-077]

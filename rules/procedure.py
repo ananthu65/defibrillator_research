@@ -6,8 +6,11 @@ is silent on (unknown), interchangeable groups and the owner of each relation. T
   - takes the transitive closure of the chains and refuses a cycle, naming it;
   - drops the pairs inside an interchangeable group;
   - refuses an "unknown" pair the chains order anyway;
-  - gives every pair exactly one owner: explicit pairs first, then A7's audio scope, then the default
-    owner (S1). A pair claimed twice, or an owned pair the chains don't give, is an error.
+  - gives every pair at most one owner: explicit pairs first, then A7's audio scope, then the default
+    owner (S1). A pair claimed twice, or an owned pair the chains don't give, is an error;
+  - the default owner (S1) keeps only relations not implied by any other relation (D-126): a relation
+    with an intermediate step is judged through the relations that imply it, so each mistake is judged
+    by exactly one rule. Such a relation has no owner (`implied`).
 No rule reads it yet: S1 and A7 do (Increments 26-27). Not clinically approved (OQ-062).
 """
 from dataclasses import dataclass
@@ -28,6 +31,7 @@ class Step:
     modality: str
     description: str
     derived: str | None = None
+    optional: bool = False   # if present it must be in the right place; if absent nothing is missing
 
 
 @dataclass(frozen=True)
@@ -35,10 +39,14 @@ class Relation:
     """X (before) must come before Y (after); owner judges it (D-123)."""
     before: str
     after: str
-    owner: str
+    owner: str | None     # None: implied by other relations, judged through them (D-126)
     direct: bool          # given by a chain, not only by transitivity
     source: str = ""
     confirm: bool = False   # proposed, waiting for the supervisor's confirmation
+
+    @property
+    def implied(self):
+        return self.owner is None
 
 
 @dataclass(frozen=True)
@@ -103,8 +111,10 @@ def _steps(raw, vocabulary, where):
     for step_id, entry in raw.items():
         at = f"{where} steps.{step_id}"
         if not isinstance(entry, dict) or not {"events", "description"} <= set(entry) \
-                or set(entry) - {"events", "description", "derived"}:
-            raise ConfigError(f"{at}: expected events, description and optionally derived")
+                or set(entry) - {"events", "description", "derived", "optional"}:
+            raise ConfigError(f"{at}: expected events, description and optionally derived and optional")
+        if not isinstance(entry.get("optional", False), bool):
+            raise ConfigError(f"{at}.optional: expected true or false")
         events = entry["events"]
         if not isinstance(events, list) or not events or [e for e in events if e not in vocabulary.events]:
             raise ConfigError(f"{at}.events: expected canonical events from the vocabulary, got {events!r}")
@@ -114,7 +124,8 @@ def _steps(raw, vocabulary, where):
         derived = entry.get("derived")
         if derived is not None and derived not in DERIVED:
             raise ConfigError(f"{at}.derived: expected one of {list(DERIVED)}")
-        steps[step_id] = Step(step_id, tuple(events), modalities.pop(), str(entry["description"]), derived)
+        steps[step_id] = Step(step_id, tuple(events), modalities.pop(), str(entry["description"]), derived,
+                              entry.get("optional", False))
     return steps
 
 
@@ -233,4 +244,7 @@ def _owners(raw, steps, pairs, default, where):
                 owners[pair] = rule_id
     for pair in pairs:
         owners.setdefault(pair, default)
+    for a, b in pairs:   # D-126: the default owner keeps only relations with no intermediate step
+        if owners[(a, b)] == default and any((a, c) in pairs and (c, b) in pairs for c in steps):
+            owners[(a, b)] = None
     return owners

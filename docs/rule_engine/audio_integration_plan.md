@@ -76,6 +76,14 @@ It contains:
 | A1 → A2 → A3 → A4 → A5 → R5 → R7 | proposal A7 sequence; A1–A5 "before shock"; A6/R7 "after shock" |
 | **A5 → R4** (the shock command before the button press) | Arnikan, **for supervisor confirmation** (OQ-062) |
 
+**[2026-11-24] Current order (D-127):** the interim order now comes from the lecturer's ground-truth
+video, replacing the proposal draft described below (kept for history):
+A1 oxygen away → A3 stand clear → A2 continue → charging (optional) → the gel phase (R1 and the
+spoken "applying gel", optional, interchangeable) → A4 stop → the paddle taken first → the first
+firm placement → the paddle taken second → R3 → R4 → R5 → R6 → R7/A6. A4 → A5 → R4 is kept (A5 → R4
+pending); A5 against the paddles and firm placement is unknown (OQ-075). It is still NOT clinically
+approved (OQ-062). It was applied by config only (section 11).
+
 **Status of the order (2026-11-10):** Arnikan has asked the medical supervisor for the complete
 order (OQ-062). Until it arrives, the config holds only what the proposal states: the visual
 sequence, the audio command sequence, their before/after-the-shock links, and A5 before R4 (pending
@@ -99,6 +107,10 @@ config only.
 - every pair in the transitive closure, apart from the unknown pairs, has exactly one owner.
 
 ## 3. One owner per order relation (D-123)
+**[2026-11-24] D-126:** S1 owns only relations no other relation implies; an implied relation has
+no owner and is judged through the relations that imply it. On the interim order S1 keeps 6:
+charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), shock command → buttons (A5→R4, pending confirmation), removal → restart (R6→R7).
+
 | Relation | Owner | Built? |
 |---|---|---|
 | R2A → PLACE → R2B | R2 | yes |
@@ -161,7 +173,7 @@ interval, otherwise Unable to Verify.
 | A5 Shock command | `shock_command` (audio) | shock time (video) | Not evaluable because of R5 (timing) | presence | `missing`; `after_shock` once `shock_command_tolerance_seconds` is approved. Its failure never affects R5 (proposal; D-119) |
 | R7/A6 Restart (one check, two IDs, D-044) | `start_compressions_command`, or a resume phrase resolved after the shock (audio) | shock time (video, screen only, D-115; the proposal's removal fallback is withdrawn) | Not evaluable because of R5 (timing); no start command at all → judged by coverage | presence; `before_shock` | `missing`, `before_shock`, `too_late`; limit null → `timing_not_checked` |
 | A7 Command order | all commands (audio) | — | missing or unseen commands left out (section 4) | the order of the commands present, on its own pairs | `wrong_order` (each Ax owns its own `missing`) |
-| A8 Pre-shock pause (5 s, approved) | stop (A4) and restart (R7) (audio) | shock time, to find the restart (video) | Not evaluable because of A4, R7 or R5 | — | `pre_shock_pause` ("Pre-Shock Pause") |
+| A8 Pre-shock pause (5 s, approved) | stop (A4) and restart (R7) (audio) | shock time, to find the restart (video) | Not evaluable because of A4, R7 or R5 | — | `pre_shock_pause` ("Pre-Shock Pause"). **[2026-11-24]** Its end event is a config value (start, as approved, or the shock), so a change needs no code (OQ-076) |
 | S1 Procedure order (new) | every step (both modalities) | — | section 4 | section 4 | `wrong_order`; flag `order_partially_checked` |
 
 **Also under D-121:** R3, R4 and R6 will judge the part that needs no shock time:
@@ -275,7 +287,7 @@ adapter is only a fallback.
 | 22 | A2, A4 | same | stage; stop before continue; continue missing | A4 limit (null is fine) |
 | 23 | A5 | same | presence; R5 unaffected | A5 tolerance (null is fine) |
 | 24 | R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
-| 25 | A8 | same | 4.9, 5.0 and 5.1 s; stop or restart missing | the approval date |
+| 25 | A8, with its end event as a config value (start or shock, OQ-076) | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
 | 26 | A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
 | 27 | S1 Procedure order | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix | the checklist mapping (OQ-064) |
 | 28 | Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |

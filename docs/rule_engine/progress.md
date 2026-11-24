@@ -4932,3 +4932,72 @@ Full suite: **780 tests run, all pass, 1 skipped**; the docs test passes (its fa
 
 ### Next
 Increment 22 (A2, A4) on Arnikan's "continue".
+
+## The lecturer's ground-truth order; S1 option B (2026-11-24)
+
+Increment 21 was committed (`31c4fd5`) and pushed. This change is not committed.
+
+### Decisions (Arnikan)
+- **D-126** (answers OQ-071, option B): S1 owns only relations no other relation implies.
+- **D-127** (answers OQ-070): the interim order from the lecturer's ground-truth video. It adds two
+  optional steps and makes the gel phase interchangeable. It is NOT clinically approved (OQ-062).
+
+### What changed
+- **Loader (`rules/procedure.py`), the only code change:**
+  - a default-owned relation with an intermediate step gets no owner (`Relation.implied`);
+  - steps accept `optional: true`.
+- **The order (`procedure_order.yaml`), config only, following plan section 11:**
+  - **Chains:** A1 → A3 → A2 → CHARGE → R1 → A4 → R2A → PLACE → R2B → R3 → R4 → R5 → R6 → R7;
+    CHARGE → GELCMD → A4; A4 → A5; A5 → R4 (`confirm`).
+  - **Interchangeable:** [R1, GELCMD].
+  - **Unknown:** A5 against R2A, PLACE, R2B and R3 (OQ-075).
+  - **Approval:** stays null; the source is recorded.
+- **Vocabulary (additive, existing entries unchanged):** `charging_command` and
+  `gel_announcement_command` (audio, provisional, placeholder labels). `engine.yaml` adds them to the
+  audio region and to the expected counts (unlimited, placeholder).
+
+### Relation changes (old proposal order → interim order)
+- **The reversal:** A2→A3 (A7) is gone, and A3→A2 (A7) replaces it.
+- **Changed owner: 29 relations, all from S1 to no owner (implied, D-126):**
+  - A1→R4, A1→R6, A3→R4, A3→R6, A2→R4, A2→R6;
+  - R1→R2B, R1→R3, R1→R4, R1→R5, R1→R6, R1→R7;
+  - A4→R4, A4→R6, A5→R6;
+  - R2A→R3, R2A→R4, R2A→R5, R2A→R6, R2A→R7;
+  - PLACE→R3, PLACE→R4, PLACE→R5, PLACE→R6, PLACE→R7;
+  - R3→R6, R3→R7, R4→R6, R4→R7.
+- **New relations (56):** the old unknown pairs, now ordered, and the two optional steps.
+  - A7: 14 (the pairs with CHARGE or GELCMD, plus A3→A2);
+  - S1: 4 (CHARGE→R1, R1→A4, A4→R2A, R2B→R3);
+  - no owner: 38.
+- **Unchanged:** the explicit owners (R1, R2, R3, R4, R6, A1–A5, R7) keep exactly their relations.
+- **Totals:** 115 relations. A7 owns 27 and S1 owns 6; the rules that already check them own 15;
+  67 are implied and have no owner.
+- **S1's 6:** charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), shock command → buttons (A5→R4, pending confirmation), removal → restart (R6→R7).
+- **No code change was needed for the order itself.**
+
+### Open questions
+- **Added:** OQ-072 (is charging compulsory: A9?), OQ-073 (is "applying gel" compulsory?), OQ-074
+  (`charging_sound` as evidence), OQ-075 (A5 required, and where?), OQ-076 (A8's end event: start or
+  shock), OQ-077 (strictness of the opening order).
+- **Answered:** OQ-070, OQ-071.
+- **Updated:** OQ-062 (the order's status).
+
+### Upstream
+The lecturer's phrases and candidate variants are in `upstream_requirements.md`, marked proposed for
+supervisor approval. Single words need exact matching.
+
+### Tests (780 → 785)
+- `tests/test_rule_engine_procedure_order.py` was rewritten for the interim order and D-126:
+  - the lecturer's sequence; the interchangeable gel phase; the optional steps; A5's kept and
+    unknown pairs;
+  - S1's 6, with no S1 relation having an intermediate step, and implied relations with no owner;
+  - the config-only path, adapted to the new unknown pairs.
+- The vocabulary and coverage tests list the two new commands.
+
+Results: full suite **785 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decisions.md` (D-126, D-127), `open_questions.md`, `upstream_requirements.md`;
+- `audio_integration_plan.md` (sections 2 and 3, A8 row, Increment 25);
+- `decision_flow.yaml` (P-039), `pathways.md` (P-039, W-89), `rules_status.md`, `methods.md`;
+- `progress.md`, `ai_usage_log.md`.

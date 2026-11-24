@@ -27,7 +27,10 @@ D-118). Untested on reversed-order recordings.
 
 **Procedure order (D-120, D-123):** `configs/rule_engine/procedure_order.yaml` gives every step's
 expected position and the owner of each order relation (validated at load; Increment 20). It is
-NOT clinically approved (OQ-062). S1 "Procedure order" (planned) and A7 will read it.
+NOT clinically approved (OQ-062). Since 2026-11-24 it is the interim order from the lecturer's
+ground-truth video (D-127), with charging and the spoken "applying gel" as optional steps. S1
+"Procedure order" (planned) owns only relations nothing else implies (D-126); A7 owns the audio
+pairs.
 
 **Audio (D-122, D-125):** the audio rules read Sanjeevan's command events. A missing command can
 fail only inside stated clear-audio intervals; otherwise it is Unable to Verify. Until stop,

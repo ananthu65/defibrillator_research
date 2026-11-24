@@ -168,6 +168,40 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
     A4, A5, A8 and R7/A6 give Unable to Verify.
 - **Affects:** every audio rule, S1; the audio input path. **Related:** D-120 to D-124.
 
+### D-126 S1 owns only relations no other relation implies
+- **Date / by / status:** 2026-11-24 · Arnikan · approved. **Answers OQ-071** (option B).
+- **Decision:** at load time, S1 "Procedure order" owns only relations that are not implied by any
+  other relation (the closure of every other relation: other rules' and S1's own). A relation with an
+  intermediate step has no owner. It is judged through the relations that imply it, so each mistake
+  is judged by exactly one rule, and S1 never reads rule results. Only the default owner is reduced:
+  explicit owners keep their relations, and A7 keeps its audio pairs.
+- **On the interim order (D-127):** S1 keeps 6 relations: charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → first paddle taken (A4→R2A), second paddle taken → both firmly on the chest (R2B→R3), shock command → buttons (A5→R4, pending confirmation), removal → restart (R6→R7). 67 relations are
+  implied and have no owner.
+- **Affects:** S1 (Increment 27), `rules/procedure.py`, P-039. **Related:** D-123.
+
+### D-127 Interim procedure order from the lecturer's ground-truth video
+- **Date / by / status:** 2026-11-24 · Arnikan · approved as the interim order; **NOT clinically
+  approved** (`approved_by: null`), pending the supervisor's confirmation (OQ-062). **Answers OQ-070**
+  (charging is a step, optional).
+- **Decision:** the order in `procedure_order.yaml` comes from the lecturer's ground-truth video,
+  reported by Arnikan on 2026-11-24:
+  - A1 oxygen away → A3 all stand clear → A2 continue compressions → charging → the gel phase → A4
+    stop CPR → the paddle taken first → the first firm placement → the paddle taken second → R3 both
+    firmly on the chest → R4 buttons → R5 shock on the screen → R6 removal → R7/A6 start CPR.
+  - **The gel phase:** R1 (gel on both zones, as R1 defines) and the spoken "applying gel", which is
+    said while the gel is applied. They are an interchangeable group with no order between them,
+    after charging and before stop.
+  - **Opening order:** it reverses the proposal's "continue → stand clear"; A7 follows the config.
+  - **The shock command (A5):** the lecturer said none. Only A4 → A5 → R4 is kept (A5 → R4 pending
+    confirmation); A5 against the paddles and firm placement stays unknown (OQ-075).
+  - **Two optional steps:** new vocabulary entries `charging_command` and `gel_announcement_command`
+    (additive; placeholder names until Sanjeevan confirms them). If present, a step must be in the
+    right place (A7 or S1 checks it); if absent, nothing is reported missing. There is no presence
+    rule yet (OQ-072, OQ-073).
+- **Applied by config only** (plan section 11), apart from the S1 change of D-126.
+- **Affects:** `procedure_order.yaml`, the vocabulary, `engine.yaml` (audio region, expected counts),
+  A7, S1. **Open questions:** OQ-062, OQ-072 to OQ-077.
+
 ### D-004 Never blame the learner for missing data
 - **Date / by / status:** 2026-10-10 · Arnikan · approved
 - **Decision:** A rule fails only when the evidence clearly shows the mistake. Missing or

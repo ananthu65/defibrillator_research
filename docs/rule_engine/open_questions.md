@@ -39,7 +39,13 @@ first, so that section can be printed for supervisor meetings.
 | OQ-063 | new (2026-10-20) | supervisor | Arnikan | open | Which steps, if any, may swap? |
 | OQ-064 | new (2026-10-20) | supervisor | Arnikan | open | Is the procedure-order rule (S1) its own checklist item? |
 | OQ-065 | new (2026-10-20) | supervisor | Sanjeevan, Arnikan | open | The accepted phrases per command |
-| OQ-070 | new (2026-11-09) | supervisor | Sanjeevan, Arnikan | open | Should charging be a step in the procedure order? |
+| OQ-070 | new (2026-11-09) | supervisor | Sanjeevan, Arnikan | answered | Should charging be a step in the procedure order? |
+| OQ-072 | new (2026-11-24) | supervisor | Arnikan | open | Is the spoken "charging" a compulsory command? |
+| OQ-073 | new (2026-11-24) | supervisor | Arnikan | open | Is the spoken "applying gel" compulsory? |
+| OQ-074 | new (2026-11-24) | supervisor | Sanjeevan, Arnikan | open | Does the `charging_sound` event count as evidence for charging? |
+| OQ-075 | new (2026-11-24) | supervisor | Arnikan | open | Is the shock command (A5) required, and where does it go? |
+| OQ-076 | new (2026-11-24) | supervisor | Arnikan | open | A8 pre-shock pause: stop to start, or stop to the shock? |
+| OQ-077 | new (2026-11-24) | supervisor | Arnikan | open | Must oxygen away, stand clear and continue be in exactly this order? |
 | OQ-001 | E-1 | team | supervisor | open | Final policy when coverage is unknown |
 | OQ-006 | E-3b | team | supervisor | open | Is the apical-first fallback clinically acceptable? (the R8 window part no longer applies, D-116) |
 | OQ-036 | Brief §9 | team | supervisor | open | Evaluator checklist format and its mapping to rules |
@@ -61,7 +67,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
-| OQ-071 | new (2026-11-10) | Arnikan | — | open | Should S1 own relations already implied by other rules' relations? |
+| OQ-071 | new (2026-11-10) | Arnikan | — | answered | Should S1 own relations already implied by other rules' relations? |
 | OQ-007 | E-3c | Arnikan | — | answered | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | answered | Annotation label lists that drop the first-placement tag |
 | OQ-046 | new (2026-10-14) | Arnikan | — | answered | Do count anomalies block an overall Pass? Zero found = missing? |
@@ -364,6 +370,11 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   Every pair the proposal doesn't order stays "unknown" and unchecked. Applying the complete order
   is a change to `procedure_order.yaml` only ([audio_integration_plan.md](audio_integration_plan.md),
   section 11).
+- **Status (2026-11-24, D-127):** the interim order now comes from the lecturer's ground-truth video
+  (reported by Arnikan): A1 → A3 → A2 → charging → the gel phase (gel and the spoken "applying gel",
+  interchangeable) → A4 → the paddles → R3 → R4 → R5 → R6 → R7/A6. It is still NOT clinically
+  approved: `approved_by` stays null until the supervisor confirms it. Only A5 against the paddles
+  and firm placement stays unknown (OQ-075).
 
 ### OQ-063 Which steps, if any, may swap?
 - **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Arnikan ·
@@ -396,7 +407,64 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   Should charging be a step in the order (for example, continue before or during charging), and
   can its detection be relied on?
 - **Affects:** A2, S1, the procedure order (D-120); the vocabulary (charging is listed as unused).
-- **Interim behaviour:** charging is not a step; no rule uses it.
+- **Answered:** 2026-11-24 → **D-127**: charging is a step of the interim order (from the
+  lecturer's ground-truth video), placed after "continue" and before the gel phase. It is optional:
+  checked for its position when present, never reported missing. Whether it is compulsory is
+  OQ-072; whether `charging_sound` counts as evidence is OQ-074.
+
+### OQ-072 Is the spoken "charging" a compulsory command?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-11-24 · **Status:** open
+- **Question:** the lecturer said "charging". Must every learner say it? If yes, a presence rule (A9)
+  will be added.
+- **Affects:** the optional step charging (D-127); a possible A9.
+- **Interim behaviour:** optional: checked for its position when said, never reported missing.
+
+### OQ-073 Is the spoken "applying gel" compulsory?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-11-24 · **Status:** open
+- **Question:** the lecturer said "applying gel" while applying it. Must every learner say it? The gel
+  itself stays judged visually by R1.
+- **Affects:** the optional step "applying gel" (D-127).
+- **Interim behaviour:** optional, as charging.
+
+### OQ-074 Does the `charging_sound` event count as evidence for charging?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Sanjeevan, Arnikan ·
+  **Raised:** 2026-11-24 · **Status:** open
+- **Question:** Sanjeevan's audio branch detects the defibrillator's charging sound. Does that sound
+  count as the charging step, or only the spoken command?
+- **Affects:** the charging step (D-127); the vocabulary (`charging_sound` is listed as unused).
+- **Interim behaviour:** only the spoken command (`charging_command`) is the step.
+
+### OQ-075 Is the shock command (A5) required, and where does it go?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-11-24 · **Status:** open
+- **Question:** the lecturer gave no shock command. Is A5 required, and where does it go in the
+  shocking process (against taking the paddles, the placements and the firm placement)?
+- **Affects:** A5, A7, S1; `procedure_order.yaml`.
+- **Interim behaviour:** only stop → shock command → buttons (pending confirmation) is kept; A5
+  against the paddles and firm placement is unknown and unchecked.
+
+### OQ-076 A8 pre-shock pause: stop to start, or stop to the shock?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-11-24 · **Status:** open
+- **Question:** in the lecturer's order the whole shocking process (the paddles, placement, buttons,
+  shock and removal) lies between "stop" and "start". "Stop to start within 5 s" may then fail every
+  correct learner. The pre-shock pause is usually measured from stopping compressions to the shock.
+  Which end event is meant?
+- **Affects:** A8 (Increment 25).
+- **Interim behaviour:** the approved definition stays (stop → start, 5 s, D-016). A8 is planned with
+  its end event as a config value (start or shock), so a change needs no code. Arnikan may measure
+  stop → shock and stop → start in the lecturer's video.
+
+### OQ-077 Must oxygen away, stand clear and continue be in exactly this order?
+- **Old no.:** new (2026-11-24) · **Owner:** supervisor · **Also involves:** Arnikan · **Raised:**
+  2026-11-24 · **Status:** open
+- **Question:** one demonstration shows one correct order, not necessarily the only one; the COACHED
+  sequence, for example, puts "continue" first. Must the opening commands be in exactly this order?
+- **Affects:** A7, S1; `procedure_order.yaml`.
+- **Interim behaviour:** strict (A1 → A3 → A2). If not, they become an interchangeable group (config
+  only).
 
 ## For Ananth (video and pipeline)
 
@@ -608,7 +676,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ### OQ-071 Should S1 own relations already implied by other rules' relations?
 - **Old no.:** new (2026-11-10) · **Owner:** Arnikan · **Raised:** 2026-11-10 · **Status:** open
-  (to settle before Increment 27, S1)
+  (to settle before Increment 27, S1); **answered**
 - **Question:** with the transitive closure, S1 owns long-range relations that other rules' relations
   already imply. For example, "O₂ away before removal" follows from A1's "O₂ away before the shock"
   and R6's "shock before removal". A late command would then fail both its own rule and S1, for the
@@ -626,7 +694,8 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   - Those 3 together with the other rules' relations already imply all 31. A step misplaced
     against another rule's relation is then judged once, by that rule.
 - **Affects:** S1 (Increment 27), the loader (`rules/procedure.py`), D-123.
-- **Interim behaviour:** the loader is unchanged: S1 owns all 31; no rule reads them yet.
+- **Answered:** 2026-11-24 → **D-126**: option B. S1 owns only relations no other relation implies;
+  on the interim order (D-127) it keeps 6.
 
 
 

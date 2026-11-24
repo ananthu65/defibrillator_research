@@ -309,7 +309,8 @@ class RepositoryPolicy(unittest.TestCase):
                                           "apical_gel": (), "sternal_gel": (),   # visibility only (D-111)
                                           "audio": ("oxygen_away_command", "continue_compressions_command",
                                                     "stand_clear_command", "stop_compressions_command",
-                                                    "shock_command", "start_compressions_command")})   # D-122
+                                                    "shock_command", "start_compressions_command",
+                                                    "charging_command", "gel_announcement_command")})   # D-122, D-127
         self.assertEqual(engine.stated_only_regions, ("audio",))
         self.assertEqual(engine.value("cross_modal_tolerance_seconds"), 1.0)
         self.assertTrue(engine.settings["cross_modal_tolerance_seconds"].placeholder)

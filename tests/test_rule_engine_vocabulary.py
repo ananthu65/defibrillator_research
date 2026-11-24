@@ -12,7 +12,8 @@ from schemas.event import Event
 # The current CVAT project has 8 tag labels; the audit list still has 7 (Arnikan updates it).
 CVAT_TAG_LABELS = set(EVENT_LABELS) | {"first_paddle_firmly_on_the_chest"}
 COMMANDS = ["oxygen_away_command", "continue_compressions_command", "stand_clear_command",
-            "stop_compressions_command", "shock_command", "start_compressions_command"]
+            "stop_compressions_command", "shock_command", "start_compressions_command",
+            "charging_command", "gel_announcement_command"]   # the last two: optional order steps (D-127)
 
 MINIMAL = {"schema_version": 1,
            "events": {"gel_applied": {"modality": "video"}, "stand_clear_command": {"modality": "audio"},
@@ -65,7 +66,8 @@ class RepositoryVocabulary(unittest.TestCase):
         # The annotation placement labels are no longer placeholders: the exporter derives them (D-081).
         self.assertEqual(self.vocabulary.placeholder_labels, {
             ("audio", "continue_compressions_command"), ("audio", "stop_compressions_command"),
-            ("audio", "shock_command"), ("audio", "start_compressions_command")})
+            ("audio", "shock_command"), ("audio", "start_compressions_command"),
+            ("audio", "charging_command"), ("audio", "gel_announcement_command")})   # optional steps (D-127)
 
     def test_derived_placement_labels_map_to_the_canonical_events(self):
         self.assertEqual(self.vocabulary.canonical("annotation", "apical_paddle_placed"), "apical_paddle_placed")

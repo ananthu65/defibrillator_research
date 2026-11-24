@@ -38,6 +38,9 @@ events:
   stop_compressions_command:     {modality: audio, provisional: true, description: "A4: stop chest compressions / hands off"}
   shock_command:                 {modality: audio, provisional: true, description: "A5: DC shock or discharge"}
   start_compressions_command:    {modality: audio, provisional: true, description: "A6: start or resume chest compressions (after the shock)"}
+  # Optional order steps from the lecturer's ground-truth order (D-127): placeholder names until Sanjeevan confirms them.
+  charging_command:              {modality: audio, provisional: true, description: "Charging the defibrillator (optional step)"}
+  gel_announcement_command:      {modality: audio, provisional: true, description: "Applying gel, said while gel is applied (optional step)"}
 labels:
   annotation:
     - {label: Gel applied,                      event: gel_applied}
@@ -66,6 +69,8 @@ labels:
     - {label: stop_compressions_command,     event: stop_compressions_command,     placeholder: true}
     - {label: shock_command,                 event: shock_command,                 placeholder: true}
     - {label: start_compressions_command,    event: start_compressions_command,    placeholder: true}
+    - {label: charging_command,              event: charging_command,              placeholder: true}
+    - {label: gel_announcement_command,      event: gel_announcement_command,      placeholder: true}
   video:
     # Video postprocessing emits the agreed canonical names directly (D-020, upstream_requirements.md),
     # so they map to themselves. Raw object presence (object_visible:*) is not evidence.
