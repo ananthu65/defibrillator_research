@@ -5187,3 +5187,67 @@ Increment 24 (R7/A6) on Arnikan's "continue".
 - **Upstream:** "shock delivered" and "no shock advised" must not be detected as the shock command.
 
 - **Results:** full suite **832 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+## Increment 24: R7/A6 restart compressions after the shock (2026-11-24)
+
+The Increment 23 review fix was committed (`55b0a90`) and pushed. This increment is not committed.
+
+### What was built
+`rules/audio_rules.py` (P-043): one check, reported under R7 and again under A6 (A6 is `same_as`
+R7, D-044).
+- **Ownership:** R7 owns only "shock before the restart" (R5 → R7, D-123). "Removal before the
+  restart" (R6 → R7) stays with S1.
+- **Shock time:** from the screen only (D-093), with no removal fallback (D-115).
+- **Restart after the shock** (a start, or a resume resolved after the shock, not certainly before
+  it) → Pass. It is timed from the shock on the shortest and longest possible durations (D-125).
+  With `shock_to_compressions_seconds` null, the timing is not checked; `too_late` comes only once a
+  limit is approved; a straddled limit gives `timing_uncertain`.
+- **Start only before the shock** → `before_shock` (D-053, ineligible starts).
+- **A continue/resume unresolved near the shock** → Unable to Verify. The reason names the likely
+  cause: the detector merges continue, resume and start into one command, and a command carries
+  its whole Whisper segment, not its word time. With such a command, an early start never gives
+  `before_shock`: the unresolved command may have been the restart.
+- **Missing:** `missing` only with clear audio from the shock to the end of the recording
+  (D-122). Without a shock time, Not evaluable because of R5 naming what was seen, or `missing`
+  with clear audio throughout (D-121).
+- **Fix in `checks.bounded_time_limit`:** an approved `no_limit` (value null) is returned as
+  checked instead of being compared with None.
+- **Demo:** R7 and A6 are approved in the demo config. The demo test now treats a `same_as` entry
+  as following its target. The scenarios have no audio, so R7/A6 give Unable to Verify (Not
+  evaluable because of R5 without a shock); all seven still match.
+- **Docs test:** it also finds failure codes passed to a shared check (`code="too_late"`).
+
+### Tests (832 → 848)
+New `tests/test_rule_engine_r7.py` (16 tests, full `rules.yaml`):
+- after the shock under both IDs with the same reason; a resolved resume; a tie at the shock;
+- an unresolved resume naming the likely cause; `before_shock`; an early plus a late start; an
+  early start plus an unresolved resume (Unable, never `before_shock`);
+- missing (clear audio, partly clear, no intervals, not analysed); low confidence;
+- a 5 s limit: within, `too_late`, `timing_uncertain`; an approved no limit;
+- no shock time (start or resume seen; a removal is never the shock time; missing with clear audio);
+- ownership (R5 → R7 only; R6 → R7 is S1's); pending in `rules.yaml`.
+
+Results: full suite **848 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-043), `pathways.md` (P-043, W-93), `diagrams.md` ((t));
+- `anomalies.md`, `output_contract.md` (`before_shock` built; `missing` and `too_late` built for
+  R7/A6; version unchanged), `rules_status.md`;
+- `demo_walkthrough.md`, `audio_integration_plan.md` (Increment 24 built; R5 → R7 owned; a note on
+  row 25 to move the context's restart anchor to segment bounds);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 25 (A8) on Arnikan's "continue".
+
+### Review fix (Arnikan, 2026-11-24): `before_shock` needs clear post-shock audio
+- **The fix:** `before_shock` now needs the same condition as `missing`: the audio clear from the
+  shock to the end of the recording (D-122). A start heard only before the shock, with the audio
+  after it unclear (or a low-confidence command), is Unable to Verify: the restart may have been
+  said but not heard. Before, R7 failed `before_shock` without looking at the post-shock audio.
+  The proposal also fails only when the restart is absent "from a sufficiently clear post-shock
+  audio segment".
+- **Tests (848 → 850):** start before the shock × post-shock audio clear / clear only to the shock /
+  partly clear / no intervals; an early start with a low-confidence restart.
+- **Docs:** P-043, W-93, diagram (t), anomalies, the output contract, rules_status.
+

@@ -1305,6 +1305,52 @@ decision_points:
     assumptions: []
     open_questions: [OQ-009, OQ-010, OQ-016, OQ-068, OQ-075]
 
+  - id: P-043
+    name: R7/A6 restart compressions after the shock
+    stage: rule
+    status: built
+    decides: R7's result, reported again under A6 (one check, two IDs, D-044; Increment 24). R7 owns only "shock before the restart" (R5 -> R7, D-123); "removal before the restart" (R6 -> R7) is S1's. The shock time comes only from the screen (D-093); there is no removal fallback (D-115)
+    inputs: [start_compressions_command (audio, Whisper segment), resume_compressions_command resolved after the shock (P-011), unresolved continue/resume commands, shock anchor (the screen only), the audio region's clear-audio intervals (D-122), rules.yaml shock_to_compressions_seconds]
+    branches:
+      - condition: Shock time; a start command not certainly before the shock (after it, or within the cross-modal tie); the earliest is used
+        outcome: Pass - Direct, timed from the shock on the shortest and longest possible durations (D-125); the limit is unset, so timing not checked; an approved no limit passes fully (D-103)
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: Shock time; that start, with an approved limit exceeded even by the shortest possible duration
+        outcome: Fail too_late
+        failure_codes: [too_late]
+      - condition: Shock time; that start, with an approved limit straddled by the possible durations
+        outcome: Unable to Verify (D-125)
+        flags: [timing_uncertain]
+      - condition: Shock time; no valid start, but a continue/resume command left unresolved near the shock
+        outcome: Unable to Verify, naming the likely cause (the detector merges continue, resume and start; a command carries its whole Whisper segment, not its word time); never before_shock, since it may have been the restart
+      - condition: Shock time; start commands only certainly before the shock, the audio clear from the shock to the end of the recording
+        outcome: Fail before_shock (D-053, ineligible starts; D-025; D-122)
+        failure_codes: [before_shock]
+      - condition: Shock time; start commands only certainly before the shock, low confidence or the audio after the shock not clear throughout
+        outcome: Unable to Verify, never before_shock - the restart may have been said but not heard (D-122; corrected 2026-11-24)
+        flags: [low_confidence_evidence]
+      - condition: Shock time; no command, the audio clear from the shock to the end of the recording
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: Shock time; no command, low confidence or the audio not clear throughout
+        outcome: Unable to Verify, never Fail (D-010, D-122)
+        flags: [low_confidence_evidence]
+      - condition: No shock time; a start (or unresolved continue/resume) command seen
+        outcome: Not evaluable because of R5, naming it (D-121)
+        next: P-020
+      - condition: No shock time; no command while the audio was clear throughout
+        outcome: Fail missing (D-121)
+        failure_codes: [missing]
+      - condition: No shock time; otherwise
+        outcome: Not evaluable because of R5
+        next: P-020
+    config: [configs/rules.yaml timing_limits.shock_to_compressions_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
+    code: rules/audio_rules.py (restart_compressions)
+    decisions: [D-025, D-044, D-053, D-093, D-103, D-115, D-121, D-122, D-123, D-125]
+    assumptions: []
+    open_questions: [OQ-009, OQ-016]
+
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039
     name: Procedure order (precedence graph)

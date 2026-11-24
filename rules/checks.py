@@ -231,7 +231,7 @@ def bounded_time_limit(shortest, longest, limit):
     if shortest == longest:
         return time_limit(shortest, limit)
     check = time_limit(longest, limit)
-    if not check.checked:   # no usable limit: as time_limit
+    if not check.checked or limit.value is None:   # no usable numeric limit (unset, unapproved, or no limit): as time_limit
         return check
     if longest <= limit.value:
         return TimingCheck(True, True, longest, limit.value,

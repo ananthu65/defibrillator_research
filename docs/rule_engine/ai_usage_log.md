@@ -130,6 +130,8 @@ falls within Level 3 for this project.*
 | 2026-11-24: confirmed A4's after_shock without a continue (test added), recorded the restart-near-the-shock consequence of the resolution change and reprioritised the requests to Sanjeevan | Approved the resolution change and asked for the case check and the upstream priority |
 | 2026-11-24: Increment 23: built A5 (presence with a cross-modal tie, timing not checked with the tolerance unset, numeric tolerance refused), kept it pending and held back in the demo, a test that R5 is unaffected, 15 tests on the full rules.yaml, docs | Set A5's scope (A5 -> R5 only), kept it pending because of OQ-075, and the null tolerance |
 | 2026-11-24: made a shock command certainly after the shock fail `after_shock`, updated the tests and docs, added the "shock delivered" / "no shock advised" guard upstream | Corrected the plan's treatment of a post-shock command as a timing question: it is an order mistake on A5's own relation |
+| 2026-11-24: Increment 24: built R7/A6 as one check under both IDs (shock from the screen only, before_shock, too_late on segment bounds, an unresolved resume as Unable to Verify naming the likely cause), fixed bounded_time_limit for an approved no limit, approved R7/A6 in the demo, wrote the tests and docs | Specified the behaviour (no removal fallback, removal-before-restart stays with S1, the likely-cause wording); reviewed the result |
+| 2026-11-24: made R7's `before_shock` require clear audio from the shock to the end of the recording (as `missing`), with tests and docs | Found that before_shock could fail a learner whose restart was not heard |
 
 ## How I evaluated the AI's work
 

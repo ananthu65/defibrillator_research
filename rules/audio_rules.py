@@ -332,3 +332,82 @@ def shock_command(ctx, definition, results):
     return passed("A5", f"shock command said at {command.start:g} s, before the shock on the screen at {shock.time:g} s; "
                   f"how long before: {check.note}", (command.event_id, shock.event_id), uses=(shock, check),
                   timestamps={SHOCK_COMMAND: command.start, SHOCK: shock.time}, timing_checked=check.checked)
+
+
+# ---- R7/A6: restart compressions after the shock (one check, two IDs, D-044) -------------------------
+
+START = "start_compressions_command"
+MERGED_CAUSE = ("likely cause: the detector merges continue, resume and start into one command "
+                "(resume_compressions_command), and a command carries its whole Whisper segment, not its word time "
+                "(requested from Sanjeevan: a separate start command and word timestamps)")
+
+
+@rule("R7", requires=(START, SHOCK), description="Compressions restarted promptly after the shock")
+def restart_compressions(ctx, definition, results):
+    """R7/A6 (P-043): the start/resume compressions command after the shock. Implemented once; A6 is same_as R7
+    and reported under its own ID (D-044).
+
+    R7 owns only "shock before the restart" (R5 -> R7, D-123); "removal before the restart" is S1's. The shock time
+    comes only from the screen (D-093); no removal fallback (D-115). A resume phrase is resolved by its segment's
+    position relative to the shock (P-011, D-125).
+    With a shock time:
+    1. A start command not certainly before the shock (after it, or a tie) -> Pass, timed from the shock with
+       shock_to_compressions_seconds on the shortest and longest possible durations (D-125): unset -> timing not
+       checked; approved and exceeded -> Fail `too_late`; straddled -> Unable to Verify, `timing_uncertain`.
+    2. Else an unresolved continue/resume command (near the shock) -> Unable to Verify, naming the likely cause.
+    3. Else no restart: judged on the audio from the shock to the end of the recording (D-122). Clear -> Fail
+       `before_shock` if start was said only certainly before the shock (D-053: ineligible starts), else Fail
+       `missing`. Not clear, or low confidence -> Unable to Verify: the restart may have been said but not heard.
+    Without a shock time (D-121): a start (or unresolved continue/resume) command seen -> Not evaluable because of
+    R5, naming it; none while the audio was clear throughout -> Fail `missing`; otherwise Not evaluable because
+    of R5.
+    """
+    starts, unsure, shock = ctx.named(START), _possibly(ctx, START), ctx.shock
+    if not shock.present:
+        seen = starts or unsure
+        if seen:
+            what = "start said" if starts else "a continue/resume command (continue or start: no shock time)"
+            return checks.partly_evaluable("R7", shock, "R5", f"{what} at {seen[0].start:g} s; whether after the shock "
+                                           "can't be judged", evidence=(seen[0].event_id,),
+                                           timestamps={seen[0].event_name: seen[0].start})
+        return _missing_without_shock(ctx, "R7", START, "the restart command", shock)
+    screen = _screen(ctx)
+    valid = [c for c in starts if checks.relation_between(ctx, c, screen) != checks.BEFORE]
+    if valid:
+        command = valid[0]
+        return checks.timed_between("R7", screen, command, ctx.config.limit("shock_to_compressions_seconds"),
+                                    code="too_late", what=f"restart said at {command.start:g} s, after the shock on "
+                                    f"the screen at {shock.time:g} s", evidence=(command.event_id, shock.event_id),
+                                    uses=(shock,))
+    if unsure:
+        command = unsure[0]
+        return unable("R7", f"a continue/resume command at {command.start:g} s is within the cross-modal tolerance of "
+                      f"the shock ({shock.time:g} s): whether it was the restart can't be told (D-125); {MERGED_CAUSE}",
+                      evidence=(command.event_id,), uses=(shock,), timestamps={"command": command.start, SHOCK: shock.time})
+    end = _recording_end(ctx)
+    found = ctx.missing(START, (shock.time, end) if end is not None and end > shock.time else None)
+    where = f"after the shock ({shock.time:g} s)"
+    early = starts[0] if starts else None
+    if found.outcome == "fail":   # the audio was clear from the shock to the end: no restart was said (D-122)
+        if early is not None:
+            return failed("R7", "before_shock", f"start said only at {early.start:g} s, before the shock on the "
+                          f"screen at {shock.time:g} s, and none {where} although the audio was clear to the end of "
+                          "the recording; a start before the shock is not the restart (D-025, D-053, D-122)",
+                          evidence=(early.event_id, shock.event_id), uses=(shock, found),
+                          timestamps={START: early.start, SHOCK: shock.time})
+        return failed("R7", "missing", f"no restart command {where}, although the audio was clear to the end of the "
+                      "recording (D-122)", evidence=(shock.event_id,), uses=(shock, found))
+    reason = ("a command may have been heard with low confidence" if LOW_CONFIDENCE_FLAG in found.flags else
+              f"the audio was not clear throughout ({found.coverage.status}: {found.coverage.basis})")
+    if early is not None:
+        return unable("R7", f"start said only at {early.start:g} s, before the shock on the screen at {shock.time:g} "
+                      f"s; a restart may have been said {where} but not heard: {reason} (D-122)",
+                      evidence=(early.event_id,) + found.low_confidence_event_ids, uses=(shock, found),
+                      timestamps={START: early.start, SHOCK: shock.time})
+    return unable("R7", f"no restart command heard {where}, but {reason}", evidence=found.low_confidence_event_ids,
+                  uses=(shock, found))
+
+def _recording_end(ctx):
+    header = ctx.coverage.header
+    ends = [e.end for e in ctx.prepared.events]
+    return header.duration_seconds if header is not None and header.duration_seconds else (max(ends) if ends else None)

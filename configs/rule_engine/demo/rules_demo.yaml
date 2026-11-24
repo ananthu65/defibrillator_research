@@ -74,7 +74,7 @@ rules:
   - {id: A3, title: All stand clear, status: approved, implementation: null, parameters: {}}
   - {id: A4, title: Stop compressions, status: approved, implementation: null, parameters: {}}
   - {id: A5, title: Shock command, status: pending, enabled: false, implementation: null, parameters: {}}
-  - {id: R7, title: Compressions restarted promptly after shock, status: pending, enabled: false, implementation: null, parameters: {}}
-  - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: pending, enabled: false}
+  - {id: R7, title: Compressions restarted promptly after shock, status: approved, implementation: null, parameters: {}}
+  - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: approved}
   - {id: A7, title: Correct sequence of audio commands, status: pending, enabled: false, implementation: null, depends_on: [A1, A2, A3, A4, A5], parameters: {}}
   - {id: A8, title: Pre-shock pause, status: pending, enabled: false, implementation: null, parameters: {}}

@@ -221,7 +221,7 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | A3 All stand clear (**built**, Increment 21, P-040; reported pending until approved) | `missing`, `after_shock` (as A1) |
 | A4 Stop compressions (**built**, Increment 22, P-041; reported pending until approved) | `missing`, `after_shock`, `wrong_order` (stop before every continue, D-027) |
 | A5 Shock command (**built**, Increment 23, P-042; pending and held back in the demo, OQ-075) | `missing` (no command while the audio was clear throughout), `after_shock` (said only certainly after the shock on the screen) |
-| R7 / A6 Restart compressions promptly | `missing`, `before_shock`, `too_late` |
+| R7 / A6 Restart compressions promptly (**built**, Increment 24, P-043; one check reported under both IDs; reported pending until approved) | `missing` (no restart command while the audio was clear from the shock to the end), `before_shock` (start said only certainly before the shock on the screen, and none after it while the audio was clear from the shock to the end), `too_late` (only once an approved restart time limit is exceeded; the limit is unset now) |
 | A7 Command sequence | `wrong_order` (a missing command is "not evaluable because of Ax", D-027) |
 | A8 Pre-shock pause | `pre_shock_pause` (mistake label "Pre-Shock Pause") |
 

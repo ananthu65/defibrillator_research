@@ -534,3 +534,24 @@ flowchart TD
     S -->|no| N["Not evaluable because of R5<br/>(Fail missing with clear audio and no command)"]
     R5["R5 shock on screen"] -.-|"never affected by A5"| S
 ```
+
+## (t) R7/A6 restart compressions after the shock (P-043, built in Increment 24; pending until approved)
+
+One check, reported under both IDs (D-044). R7 owns only shock → restart; removal → restart is S1's.
+
+```mermaid
+flowchart TD
+    S{"Shock on the screen?<br/>(never the removal, D-093)"} -->|yes| V{"A start not certainly<br/>before the shock?"}
+    V -->|yes| T{"Limit approved?"}
+    T -->|"no (null)"| P["Pass<br/>timing not checked"]
+    T -->|yes| L["shortest/longest time:<br/>within → Pass; over → Fail too_late;<br/>straddled → Unable (timing_uncertain)"]
+    V -->|no| U1{"A continue/resume<br/>unresolved near the shock?"}
+    U1 -->|yes| U["Unable to Verify<br/>names the likely cause"]
+    U1 -->|no| M{"Audio clear from the shock to the end?"}
+    M -->|yes| B{"Start only before<br/>the shock?"}
+    B -->|yes| FB["Fail before_shock"]
+    B -->|no| FM["Fail missing"]
+    M -->|"no (or low confidence)"| UM["Unable to Verify<br/>(the restart may not have been heard)"]
+    S -->|no| N["Not evaluable because of R5<br/>(Fail missing with clear audio and no command)"]
+```
+

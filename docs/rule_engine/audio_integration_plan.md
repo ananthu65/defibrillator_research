@@ -125,7 +125,7 @@ charging → gel phase (CHARGE→R1), gel phase → stop (R1→A4), stop → fir
 | A2 → R5 | A2 (`wrong_stage`) | planned |
 | A2 → A4, A4 → R5 | A4 (`wrong_order`, D-027; `after_shock`) | planned |
 | A5 → R5 | A5 (with the tolerance once approved) | planned |
-| R5 → R7 | R7/A6 (`before_shock`) | planned |
+| R5 → R7 | R7/A6 (`before_shock`) | yes (Increment 24) |
 | The other audio–audio pairs (A1…A5, R7) | **A7** (`wrong_order`) | planned |
 | Every remaining pair: PLACE → R3, R6 → R7, A5 → R4, and the transitive video and cross-modal pairs | **S1 "Procedure order"** (new, `wrong_order`) | new |
 
@@ -288,8 +288,8 @@ adapter is only a fallback.
 | 21 | **Built 2026-11-10.** A1, A3 | `audio_rules.py`, `rules.yaml` | present/missing × shock/no shock × audio clear/unknown/not run | — |
 | 22 | **Built 2026-11-24.** A2, A4 | same | stage; stop before continue; continue missing | A4 limit (null is fine) |
 | 23 | **Built 2026-11-24.** A5 (pending; held back in the demo, OQ-075) | same | presence; R5 unaffected | A5 tolerance (null is fine) |
-| 24 | R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
-| 25 | A8, with its end event as a config value (start or shock, OQ-076) | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
+| 24 | **Built 2026-11-24.** R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
+| 25 | A8, with its end event as a config value (start or shock, OQ-076). **[2026-11-24]** Also move the context's restart anchor (`_start_anchor`, a point comparison with the shock) to segment bounds (D-125), so A8 and R7 pick the same restart | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
 | 26 | A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
 | 27 | S1 Procedure order. **[2026-11-24] Open (OQ-078):** derive S1's relations per recording from the observed steps (the transitive reduction of the order restricted to them, minus other rules' relations), so a relation bridging a missing or unseen step is still checked once | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix, including scenario 14 | the checklist mapping (OQ-064); OQ-078 |
 | 28 | Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |

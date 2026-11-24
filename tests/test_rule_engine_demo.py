@@ -62,7 +62,7 @@ class DemoConfig(unittest.TestCase):
         built = set(discover()) - set(self.HELD_BACK)
         for entry in self.demo["rules"]:
             with self.subTest(entry["id"]):
-                if entry["id"] in built:
+                if entry["id"] in built or entry.get("same_as") in built:   # A6 follows R7 (D-044)
                     self.assertEqual((entry["status"], entry.get("enabled", True)), ("approved", True))
                 else:
                     self.assertEqual((entry["status"], entry["enabled"]), ("pending", False))

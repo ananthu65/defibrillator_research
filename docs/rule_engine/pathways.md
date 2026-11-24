@@ -299,6 +299,23 @@ A5 owns only "shock command before or at the shock" (D-123). Its result never af
 | No command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
 | No shock time; a command seen | **Not evaluable because of R5**, naming it | — |
 
+#### P-043 R7/A6 restart compressions after the shock (built, Increment 24; pending until approved)
+One check, reported under R7 and again under A6 (D-044). R7 owns only "shock before the restart"
+(R5 → R7); "removal before the restart" (R6 → R7) is S1's. The shock time comes only from the
+screen (D-093), never from the removal.
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Shock time; a start (or a resume resolved after the shock) not certainly before it | Pass – Direct, timed from the shock; the limit is unset, so timing not checked | `timing_not_checked` |
+| That start, beyond an approved limit even at its shortest possible time | Fail | `too_late` |
+| That start, an approved limit between its shortest and longest possible times | Unable to Verify (D-125) | `timing_uncertain` |
+| No valid start; a continue/resume unresolved near the shock | Unable to Verify, naming the likely cause (merged command, segment timing) | — |
+| Start said only certainly before the shock, the audio clear from the shock to the end | Fail: a start before the shock is not the restart (D-053) | `before_shock` |
+| Start said only certainly before the shock, the audio after it not clear (or low confidence) | Unable to Verify: the restart may have been said but not heard (D-122) | — |
+| No command, the audio clear from the shock to the end | Fail | `missing` |
+| No command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
+| No shock time; a start or continue/resume seen | **Not evaluable because of R5**, naming it | — |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
@@ -1303,3 +1320,20 @@ today.
 3. The lecturer's demonstration: no shock command at all, clear audio → A5 would fail `missing`. So
    A5 stays pending and is held back in the demo until the supervisor answers OQ-075. R5 is the same
    either way.
+
+### W-93 The restart after the shock
+*(Built in Increment 24; P-043.)*
+1. The shock on the screen at 15 s, "start compressions" at 18 s → **R7 Pass** and **A6 Pass**, with
+   the same reason; the time from the shock is not checked (the limit is unset).
+2. "Start compressions" only at 5 s, before the shock, clear audio to the end → **R7 Fail
+   `before_shock`** (reported under A6 too). The audio clear only up to 20 s → **Unable to Verify**:
+   the restart may have been said later but not heard. Another start at 18 s → Pass: an early start
+   doesn't spoil a later restart.
+3. "Resume compressions" in a segment 14.5–15.5 s, around the shock at 15 s → unresolved: **R7 Unable
+   to Verify**. The reason names the likely cause: the detector merges continue, resume and start,
+   and a command carries its whole segment, not its word time. An early start at 5 s with that
+   resume is still Unable to Verify, never `before_shock`.
+4. No shock on the screen, a removal at 16 s and a start at 18 s → **Not evaluable because of R5**:
+   the removal never gives the shock time.
+5. With a 5 s limit (once approved): a start in a segment 18–22 s is 3 to 7 s after the shock →
+   **Unable to Verify, `timing_uncertain`**; a start at 21–22 s → **Fail `too_late`**.

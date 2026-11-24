@@ -40,7 +40,8 @@ def raised_in_code():
             "flags": set(coverage.FLAGS) | set(coverage.HEADER_FLAGS) | set(context.FLAGS) | set(checks.FLAGS)
                      | set(policy.FLAGS) | set(video_rules.FLAGS) | set(audio_rules.FLAGS),
             "failure_codes": set(engine.FAILURE_CODES)
-                             | set(re.findall(r'failed\(\s*(?:"[RA]\d+"|rule_id),\s*"([a-z_]+)"', source))}   # rule modules
+                             | set(re.findall(r'failed\(\s*(?:"[RA]\d+"|rule_id),\s*"([a-z_]+)"', source))   # rule modules
+                             | set(re.findall(r'code="([a-z_]+)"', source))}   # passed to a shared check (timed_between)
                              # (a helper shared by several rules passes rule_id, e.g. A1 and A3)
 
 
