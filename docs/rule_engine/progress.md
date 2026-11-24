@@ -5056,3 +5056,15 @@ Results: full suite **789 tests run, all pass, 1 skipped**; the docs test passes
 - `decisions.md` (D-126, D-127), `open_questions.md` (OQ-062, OQ-071, OQ-075);
 - `pathways.md` (P-039, W-89), `decision_flow.yaml` (P-039);
 - `progress.md`, `ai_usage_log.md`.
+
+## S1: open question on implied relations across unseen steps (2026-11-24)
+
+`procedure.md` and the A5 correction were committed (`378a7c4`) and pushed.
+
+Docs only:
+- **OQ-078 (Arnikan):** under option B, an implied relation is judged only through the relations
+  that imply it, so it is never judged when an intermediate step is missing or unseen. Example: the
+  gel phase unseen, "charging" said after "stop", caught by no rule.
+- **Proposed for Increment 27:** S1 derives its relations per recording from the observed steps (the
+  transitive reduction restricted to them, minus other rules' relations).
+- **Plan:** added to the Increment 27 row, and scenario 14 added to the Increment 28 matrix.

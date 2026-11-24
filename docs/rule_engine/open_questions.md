@@ -67,6 +67,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
+| OQ-078 | new (2026-11-24) | Arnikan | — | open | S1: how to judge implied relations across a missing or unseen step? |
 | OQ-071 | new (2026-11-10) | Arnikan | — | answered | Should S1 own relations already implied by other rules' relations? |
 | OQ-007 | E-3c | Arnikan | — | answered | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | answered | Annotation label lists that drop the first-placement tag |
@@ -675,6 +676,23 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 ---
 
 ## For Arnikan (rule engine and annotation)
+
+### OQ-078 S1: how to judge implied relations across a missing or unseen step?
+- **Old no.:** new (2026-11-24) · **Owner:** Arnikan · **Raised:** 2026-11-24 · **Status:** open
+  (to settle before Increment 27, S1)
+- **Question:** under option B (D-126), an implied relation has no owner and is judged only through
+  the relations that imply it. If an intermediate step is missing or unseen, the implied relation is
+  never judged.
+  - **Example:** the gel phase isn't visible. S1 can't judge "charging → gel phase" or "gel phase →
+    stop", and "charging → stop" has no owner, so "charging" said after "stop" is caught by no rule.
+- **Proposed for Increment 27:** S1 derives its relations per recording from the observed steps: the
+  transitive reduction of the order restricted to the steps observed in that recording, excluding
+  relations owned by other rules. A relation that bridges a missing or unseen step (here "charging →
+  stop") is then checked by S1 unless another rule owns it. Each mistake is still judged only once,
+  because a bridging relation is S1's only when its intermediate steps weren't observed.
+- **Affects:** S1 (Increment 27), D-126; the Increment 28 matrix (scenario 14).
+- **Interim behaviour:** none: no rule reads the order yet. The loader's static ownership (D-126)
+  stays as the default for the observed-everything case.
 
 ### OQ-071 Should S1 own relations already implied by other rules' relations?
 - **Old no.:** new (2026-11-10) · **Owner:** Arnikan · **Raised:** 2026-11-10 · **Status:** open

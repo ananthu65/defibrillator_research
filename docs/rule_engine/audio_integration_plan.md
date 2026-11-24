@@ -291,7 +291,7 @@ adapter is only a fallback.
 | 24 | R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
 | 25 | A8, with its end event as a config value (start or shock, OQ-076) | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
 | 26 | A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
-| 27 | S1 Procedure order | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix | the checklist mapping (OQ-064) |
+| 27 | S1 Procedure order. **[2026-11-24] Open (OQ-078):** derive S1's relations per recording from the observed steps (the transitive reduction of the order restricted to them, minus other rules' relations), so a relation bridging a missing or unseen step is still checked once | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix, including scenario 14 | the checklist mapping (OQ-064); OQ-078 |
 | 28 | Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |
 
 ## 8. Combined scenario test matrix (synthetic merged timelines)
@@ -323,6 +323,9 @@ adapter is only a fallback.
 13. **[2026-11-09] Segment timing near a limit:** stop and start segments whose possible pause
     spans 4–6 s against A8's 5 s → Unable to Verify, `timing_uncertain`. Entirely within 5 s →
     Pass; entirely beyond → Fail `pre_shock_pause`.
+14. **[2026-11-24] A relation across an unseen step (OQ-078):** the gel phase unseen, "charging"
+    said after "stop" → under the proposed per-recording S1, S1 checks "charging → stop" and fails
+    `wrong_order` (charging misplaced); no other rule fails for it.
 
 ## 9. Open questions
 - **For the medical supervisor:**
