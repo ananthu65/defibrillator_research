@@ -5600,3 +5600,54 @@ Increment 27 was committed (`b0d1e89`).
   the paddles in view (their Passes need it), and one R2 test also shows the Unable to Verify without
   a header.
 
+## Increment 28: the combined scenario matrix, audio demo scenarios, docs (2026-11-24)
+
+Increment 27 (`b0d1e89`) and D-131/D-132 (`3b21402`) were committed and pushed. This increment is not
+committed.
+
+### What was built
+- **`tests/test_rule_engine_combined.py`** (19 scenarios, merged audio and video timelines, the full
+  `rules.yaml` with every built rule approved except A5 and A8, as in the demo; A8 approved where a
+  scenario is about it). Each scenario checks the exact set of failing rules, so every mistake is
+  reported by exactly one rule:
+  1. the lecturer-like correct procedure: no Fail, every rule Pass, Incomplete (unset limits);
+  2. one misplaced step (stand clear after the press): A7 only; A3 still passes;
+  3. two steps swapped: oxygen away and stand clear (A7, one mistake); stop and the first take (S1);
+  4. a missing step (no stop, clear audio): A4 `missing` only; A8 not evaluable because of A4;
+  5. an unseen step (stop outside the clear audio): no Fail; A4 Unable; S1 and A7 partial;
+  6. no audio, and audio without clear intervals: no Fail; the audio rules Unable; S1 partial;
+  7. no shock seen: A1, A3, R7 not evaluable because of R5; a resume stays unresolved;
+  8. timing noise: stop 0.9 s after the first take is a tie (Pass), 1.1 s is S1's mistake;
+  9. repeated commands: a second stand clear out of place, the first in place: no Fail;
+  10. low-confidence commands: no Fail; A4 Unable; S1 partial;
+  11. two commands in one segment ("stop, shocking"): no Fail; A7 partial;
+  12. segment timing near A8's 5 s: Unable, `timing_uncertain`;
+  13. the cross-modal OQ-078 case, charging after the first take with the gel phase out of view:
+      - stop missing (clear audio): S1 and A4 `missing`, each its own mistake;
+      - stop unseen (heard only with low confidence, audio clear): A4 Unable; S1 only;
+      - stop unseen in unclear audio (12–14.5 s): A4 Unable (D-122); that gap is where a correct
+        "charging" would have been (continue → first take), so S1 is Unable too (D-128): no Fail;
+      - charging after stop: A7, not S1;
+  14. a late gel: R1 only; S1 names R1 and leaves it.
+- **Where the plan's matrix (section 8) was adjusted:** scenario 2 is A7's, not S1's, under the
+  lecturer's order; scenario 3's A5/R4 swap is unknown now (OQ-075), so two other swaps are used.
+- **Demo:** three audio scenarios, built on scenario 1's video timeline with the lecturer's commands:
+  7 the lecturer-like procedure (every built rule passes, audio and video); 8 stand clear after the
+  buttons (A7 only); 9 a resume said at the shock (R7/A6 Unable, naming the likely cause). A5, A8 and
+  S1 stay held back. Ten scenarios, all matching.
+- **Docs:** `supervisor_briefing.md` rewritten for the whole engine: what it does, the ten design
+  policies (D-128 to D-132 included), every built rule, the departures from the proposal, and every
+  open question for the supervisor, Sanjeevan, Ananth and the team in one list (section 4).
+  `demo_walkthrough.md` (ten scenarios, the status, the policies, the one list), `procedure.md` (how
+  the whole engine judges the procedure: the owner of each relation, S1 per recording, the evidence
+  policies), `rules_status.md` (the whole engine), the plan (row 28, section 8 notes).
+
+### Tests (927 → 946)
+`tests/test_rule_engine_combined.py` (19 tests). The demo test covers the three new scenarios.
+
+Results: full suite **946 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all ten expected results; the pipeline command exits with 0.
+
+### Next
+The audio integration plan is complete (Increments 18–28). Waiting on the supervisor's answers and the
+upstream inputs (supervisor_briefing.md, section 4).
+

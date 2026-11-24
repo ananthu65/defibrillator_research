@@ -1,7 +1,7 @@
 # Rule engine: demo walkthrough
 
-**For:** the team today, and the supervisor meeting in three days · **From:** Arnikan ·
-**Date:** 2026-10-17 · **Reading time:** about 15–20 minutes
+**For:** the team and the supervisor meeting · **From:** Arnikan · **Date:** 2026-11-24 (first written
+2026-10-17) · **Reading time:** about 20 minutes
 
 This is a guide for presenting the rule engine as it stands. It covers the overall workflow and
 the key details. The detailed documents are linked rather than repeated:
@@ -13,7 +13,8 @@ the key details. The detailed documents are linked rather than repeated:
 | The diagrams | [diagrams.md](diagrams.md) |
 | What the feedback module receives | [output_contract.md](output_contract.md) |
 | Each rule's status | [rules_status.md](rules_status.md) |
-| Supervisor questions | [supervisor_briefing.md](supervisor_briefing.md) |
+| The procedure order | [procedure.md](procedure.md) |
+| Every open question, in one list | [supervisor_briefing.md, section 4](supervisor_briefing.md#4-every-open-question-in-one-list) |
 
 ---
 
@@ -51,7 +52,7 @@ flowchart TD
     IN["Timeline in<br/>(events + header)"] --> P["1. Preparation<br/>names mapped to the vocabulary;<br/>low-confidence events set aside (logged);<br/>data anomalies flagged"]
     P --> C["2. Coverage<br/>for each event: could it have been seen?<br/>covered / not covered / unknown, per time window"]
     C --> X["3. Procedure context<br/>key times computed once:<br/>shock time (screen only), placements, commands"]
-    X --> R["4. Rules<br/>one small function per rule,<br/>built from shared checks"]
+    X --> R["4. Rules<br/>video (R1-R8), audio (A1-A8, R7/A6)<br/>and the procedure order (S1),<br/>one small function per rule"]
     R --> O["5. Overall policy<br/>one result, with why"]
     O --> OUT["6. Report<br/>JSON, versioned contract"]
 ```
@@ -103,27 +104,28 @@ Results also carry **flags** that explain them, for example:
 All commands run from the repository root in the project's `.venv`.
 
 ```powershell
-.venv\Scripts\python -m rules.demo                       # all seven scenarios
+.venv\Scripts\python -m rules.demo                       # all ten scenarios
 .venv\Scripts\python -m rules.demo --scenario <id>       # one scenario
 .venv\Scripts\python -m rules.demo --scenario <id> --full  # with whole reasons
 ```
 
 **What the demo runs:**
-- **Scenarios:** seven synthetic timelines in [demo/scenarios/](demo/scenarios/), with no
+- **Scenarios:** ten synthetic timelines in [demo/scenarios/](demo/scenarios/), with no
   participant data. Each is listed with its expected results in
   [scenarios.yaml](demo/scenarios/scenarios.yaml).
 - **Config:** [configs/rule_engine/demo/rules_demo.yaml](../../configs/rule_engine/demo/rules_demo.yaml).
   It is a copy of the real catalogue in which the built rules (the seven video rules, A1 and
   A3 since Increment 21, A2 and A4 since Increment 22, R7 and A6 since Increment 24, A7 since Increment 26; A8, built in Increment 25, is held back until OQ-076 (stop to start or to the shock); S1, built in Increment 27, is held back until OQ-064; A5, built in Increment 23, is held back until OQ-075 because the
-  lecturer gave no shock command) are marked approved and the unbuilt audio rules are disabled. The scenarios
-  have no audio yet, so A1 to A4, R7/A6 and A7 give Unable to Verify or Not evaluable (no clear-audio intervals, D-122), or Not
-  evaluable because of R5 when no shock is seen. **DEMO ONLY: the rules are not approved by the supervisor.**
+  lecturer gave no shock command) are marked approved. Scenarios 1–6 are video only, so the audio
+  rules give Unable to Verify there (no clear-audio intervals, D-122), or Not evaluable because of R5
+  when no shock is seen. Scenarios 7–9 add the spoken commands, so audio and video are judged together.
+  **DEMO ONLY: the rules are not approved by the supervisor.**
   Every report it produces says so, with the flag `demo_only` (D-114).
 - **Output:** each scenario prints a table (rule, result, failure code, flags, short reason), the
   overall result and why, and whether it matched the expected result. A test checks that every
   scenario keeps its expected results, so the demo can't silently break.
 
-Every scenario uses the same procedure, timed in seconds:
+Every scenario uses the same video procedure, timed in seconds:
 1. Gel on the apical zone (3 s) and the sternal zone (5 s).
 2. Apical paddle taken (7 s, `first_paddle_taken`) and placed (9 s), sternal paddle taken (10 s,
    `second_paddle_taken`) and placed (12 s).
@@ -196,14 +198,49 @@ zones were in view.
   Overall: FAIL - R6 failed
 ```
 
-### Scenario 7: the same correct procedure with the real catalogue (`pending_rules`)
+### Scenario 7: the lecturer-like procedure, audio and video together (`lecturer_audio_video`)
+**Shows:** the video steps of scenario 1 with the lecturer's commands in his order, the audio clear
+throughout: oxygen away (0.2 s), stand clear (0.7 s), continue (1.2 s), charging (1.8 s), "applying
+gel" (3.2 s, during the gel), stop (5.6 s), and start (18 s, after the shock). Every built rule passes,
+video and audio, and A7 confirms the order of the commands. The overall result is Incomplete only
+because some time limits are not set yet.
+```
+  A1 Oxygen away                   Pass  timing_not_checked  oxygen away said at 0.2 s, before the shock on the screen at 15 s ...
+  A4 Stop compressions             Pass  timing_not_checked  stop said at 5.6 s, after continue (1.2 s), and before the shock ...
+  R7 Compressions restarted pr...  Pass  timing_not_checked  restart said at 18 s, after the shock on the screen at 15 s ...
+  A7 Correct sequence of audio...  Pass                      the commands heard are in the expected order ...
+  Overall: INCOMPLETE - timing not checked for R1, R6, A1, A3, A4, R7/A6
+```
+
+### Scenario 8: "all stand clear" said only after the buttons were pressed (`stand_clear_out_of_order`)
+**Shows:** one mistake, one rule. Stand clear (14.3 s) is still at the shock, so A3 passes; but in the
+lecturer's order it comes before continue, so A7 fails with `wrong_order`, naming stand clear. No other
+rule repeats it (D-123).
+```
+  A3 All stand clear               Pass  timing_not_checked  stand clear said at 14.3 s, at (within the tolerance of) the shock ...
+  A7 Correct sequence of audio...  FAIL  wrong_order  A3 (stand_clear_command at 14.3 s) is out of order
+  Overall: FAIL - A7 failed
+```
+
+### Scenario 9: "resume compressions" said right at the shock (`restart_near_the_shock`)
+**Shows:** a limit of today's audio input. The detector merges continue, resume and start into one
+command, and each command carries its whole Whisper segment. The segment (14.6–15.4 s) overlaps the
+shock (15 s), so whether it was the restart can't be told: R7 and A6 are Unable to Verify and name the
+likely cause. A7 passes, flagged `order_partially_checked`. The fix is the top request to Sanjeevan: a
+separate start command and word timestamps.
+```
+  R7 Compressions restarted pr...  Unable to Verify  a continue/resume command at 14.6 s is within the cross-modal tolerance ...
+  A7 Correct sequence of audio...  Pass  order_partially_checked  the commands heard are in the expected order ...
+```
+
+### Scenario 10: the same correct procedure with the real catalogue (`pending_rules`)
 **Shows:** what the system really says today. No rule is approved yet, so every rule is pending
 and the overall result is Incomplete, never Pass. (This scenario uses the real
 `configs/rules.yaml`, so it has no DEMO ONLY notice.)
 ```
   R1 Gel applied twice             pending  Pending supervisor-approved definition ...
   ...
-  Overall: INCOMPLETE - rules not yet approved for R1, R2, R8, R3, R4, R5, R6, A1, A2, A3, A4, A5, R7/A6, A7, A8
+  Overall: INCOMPLETE - rules not yet approved for R1, R2, R8, R3, R4, R5, R6, A1, A2, A3, A4, A5, R7/A6, A7, A8, S1
 ```
 
 ### Optional: real interim annotation data
@@ -232,7 +269,9 @@ On the interim export of 2026-10-16:
 | Rule | Status |
 |---|---|
 | R1 gel, R2 paddle order, R8 apical before sternal, R3 firm placement, R4 buttons, R5 shock on screen, R6 removal | **Built and tested, all pending** until the supervisor confirms their definitions |
-| A1–A8, R7/A6 (the audio commands and the restart of compressions) | Not built yet |
+| A1 oxygen away, A2 continue, A3 stand clear, A4 stop, R7/A6 restart, A7 command order | **Built and tested, all pending** (Increments 21–26) |
+| A5 shock command, A8 pre-shock pause, S1 procedure order | **Built and tested, pending, and held back in the demo** until OQ-075, OQ-076 and OQ-064 are answered |
+| The combined scenario matrix | 19 merged audio and video scenarios; each checks that every mistake is reported by exactly one rule (Increment 28) |
 
 **Annotation data for development** ([how-to for Ananth](../annotation/rule_engine_export_howto.md)).
 CVAT is frozen, and the training pipeline and Ananth's files are untouched. The rule engine reads
@@ -250,14 +289,10 @@ production the engine will read the pipeline's procedure transcript (D-117).
 - **The final export must be made with exporter version 3**, which has the paddle and hand data.
   The interim export predates it.
 
-**Waiting on:**
-
-| Who | What |
-|---|---|
-| **Supervisor** | Confirm each rule's definition; the clinical time limits ("no limit" is a valid answer); the steps before the shock (R5); the chest regions (R3); the command names and wordings; Unable to Verify overall (Fail or faculty review); one mistake or two for a parallel placement; inference from paddle removal. Full list by rule: [supervisor_briefing.md](supervisor_briefing.md#4-your-open-questions-by-rule) |
-| **Ananth** | The final export with exporter version 3, and the gel and placement validation files (OQ-054); constant frame rate (OQ-053); per-paddle placement and per-zone gel events from the video models (OQ-004); the pipeline calling the full assessment (OQ-017); the timeline header (OQ-020) |
-| **Sanjeevan** | The missing audio command events, stop and shock (OQ-009); confirming the output contract's versioning rule (OQ-045); how feedback uses the report |
-| **Team** | The engineering placeholder values, such as windows and thresholds (OQ-018); the final camera angle (OQ-038) |
+**Waiting on:** every open question for the supervisor, Sanjeevan and Ananth is in one list:
+[supervisor_briefing.md, section 4](supervisor_briefing.md#4-every-open-question-in-one-list). The two
+top-priority upstream requests are the visibility intervals for every video region (Ananth) and the
+clear-audio intervals (Sanjeevan): without them every "wrong place" Fail is Unable to Verify (D-128).
 
 ## 6. Key design decisions, in plain language
 
@@ -281,6 +316,16 @@ production the engine will read the pipeline's procedure transcript (D-117).
   failed or was not observed, it is reported as "Not evaluable because of X", and every part of it
   that can still be judged is checked (D-119).
 - **Each camera angle is assessed on its own.** Results are never compared across angles (D-096).
+- **One owner per order relation.** Each "X before Y" is judged by exactly one rule: the rule that
+  already checks it, A7 for the audio commands, S1 for the rest; one mistake is reported once (D-123,
+  D-126, D-131).
+- **A "wrong place" Fail needs clear evidence where the right place was.** Saying a step was in the
+  wrong place also claims it wasn't done in the right place; that needs the right place in view or the
+  audio clear there (D-128). A tag that contradicts the confirmed shock is Unable to Verify,
+  "contradictory" (D-129).
+- **A Pass that rests on an absence needs clear evidence too.** For example, A8's Pass needs the audio
+  clear before the stop, and R6's the zones in view before the shock (D-130, D-132). R5's Pass is only
+  flagged when a second shock can't be ruled out.
 
 ## 7. Known limitations
 
@@ -300,6 +345,10 @@ production the engine will read the pipeline's procedure transcript (D-117).
   they learned the paddle or the order is unknown.
 - **R3's "missing" and R4's "not pressed" can't happen yet.** A shock on the screen always infers a
   Pass for them. Whether that should change is OQ-061.
+- **Today's audio input merges continue, resume and start** and gives segment times, so a restart
+  said at the shock stays unresolved (scenario 9) until Sanjeevan's separate start command and word
+  timestamps arrive.
+- **The procedure order is the lecturer's interim order,** not yet approved (OQ-062).
 - **Settings still undecided:**
   - unknown coverage is treated as Unable to Verify (OQ-001);
   - Unable to Verify overall is undecided (OQ-002).
@@ -314,14 +363,10 @@ production the engine will read the pipeline's procedure transcript (D-117).
 
 ## 8. Next steps
 
-1. **The audio rules** (Increments 18–23):
-   - A1 oxygen away and A3 stand clear;
-   - A2 continue and A4 stop compressions;
-   - A5 the shock command;
-   - R7/A6 restarting compressions promptly;
-   - A7 the command order;
-   - A8 the pre-shock pause (at most 5 s, already approved).
-2. **The full scenario test matrix** (every rule under every coverage setting).
+1. **The supervisor's answers** ([the one list](supervisor_briefing.md#4-every-open-question-in-one-list)):
+   the rule definitions, the time limits, the procedure order, and A5, A8 and S1.
+2. **The upstream inputs:** region visibility from the video models (Ananth), clear-audio intervals,
+   the stop and shock commands, a separate start command and word timestamps (Sanjeevan).
 3. **The evaluator checklist and the feedback handover** (the checklist format is OQ-036).
 4. Alongside: **the final export** from Ananth, and the reviews that open the 9c and 9d gates.
 

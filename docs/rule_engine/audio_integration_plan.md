@@ -296,14 +296,17 @@ adapter is only a fallback.
 | 25 | **Built 2026-11-24.** A8, with its end event as a config value (start or shock, OQ-076). **[2026-11-24]** Also move the context's restart anchor (`_start_anchor`, a point comparison with the shock) to segment bounds (D-125), so A8 and R7 pick the same restart (done). A8 is held back in the demo until OQ-076 | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |
 | 26 | **Built 2026-11-24.** A7 on its own pairs; remove `depends_on`; retire R5 `preceding_steps` | `audio_rules.py`, `procedure.py`, `rules.yaml`, `video_rules.py` | swaps, repeats, missing and unseen commands | — |
 | 27 | **Built 2026-11-24.** S1 Procedure order. **[2026-11-24] Answered (OQ-078):** derive S1's relations per recording from the observed steps (the transitive reduction of the order restricted to them, minus other rules' relations), so a relation bridging a missing or unseen step is still checked once | `rules/procedure_rules.py`, `rules.yaml`, checklist | the section 8 matrix, including scenario 14 | the checklist mapping (OQ-064); OQ-078 |
-| 28 | Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |
+| 28 | **Built 2026-11-24.** Combined scenario matrix, demo scenarios, docs | `tests/test_rule_engine_combined.py`, demo | section 8 | — |
 
 ## 8. Combined scenario test matrix (synthetic merged timelines)
 1. **Correct full procedure:** all rules pass; the overall result is Incomplete while the limits
    are unset.
 2. **One step misplaced** (stand clear after the button press): S1 `wrong_order` naming A3; A3
-   still passes if it came before the shock.
-3. **Two steps swapped** (A5 and R4): one S1 `wrong_order` naming both.
+   still passes if it came before the shock. **[2026-11-24, Increment 28]** Under the lecturer's
+   order stand clear comes before continue, so A7 (its audio relations) names A3, once; S1 doesn't.
+3. **Two steps swapped** (A5 and R4): one S1 `wrong_order` naming both. **[2026-11-24]** A5 against R4
+   is unknown now (OQ-075), so the matrix swaps oxygen away and stand clear (A7, one mistake) and stop
+   and the first paddle taken (S1, one mistake).
 4. **Missing step** (no stop, inside a clear-audio interval): A4 `missing`; A8 not evaluable
    because of A4; S1 doesn't fail for it.
 5. **Unseen step** (stop outside the clear-audio intervals): A4 Unable to Verify; S1 flagged as

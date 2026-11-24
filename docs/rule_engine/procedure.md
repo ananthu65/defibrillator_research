@@ -29,9 +29,9 @@ the other.
 | 1 | `A1` | Oxygen away | audio | `oxygen_away_command` | A1 | compulsory | — | no | OQ-077 |
 | 2 | `A3` | All stand clear | audio | `stand_clear_command` | A3 | compulsory | — | no | OQ-077 |
 | 3 | `A2` | Continue compressions | audio | `continue_compressions_command` (or a resolved resume command) | A2 | compulsory | — | no | OQ-077 |
-| 4 | `CHARGE` | Charging | audio | `charging_command` | none yet (position by A7) | optional | — | no | OQ-072, OQ-074 |
+| 4 | `CHARGE` | Charging | audio | `charging_command` | none (position by A7 and S1) | optional | — | no | OQ-072, OQ-074 |
 | 5 | `R1` | Gel phase: gel on both placement zones | video | `gel_applied`, `apical_gel_applied`, `sternal_gel_applied` | R1 | compulsory | LS (both zones in view) | no | — |
-| 5 | `GELCMD` | Gel phase: "applying gel", said during it | audio | `gel_announcement_command` | none yet (position by A7) | optional | — | no | OQ-073 |
+| 5 | `GELCMD` | Gel phase: "applying gel", said during it | audio | `gel_announcement_command` | none (position by A7 and S1) | optional | — | no | OQ-073 |
 | 6 | `A4` | Stop CPR | audio | `stop_compressions_command` | A4 | compulsory | — | no | OQ-076 |
 | 7 | `R2A` | First paddle taken (by time, D-118) | video | `first_paddle_taken`, `second_paddle_taken` | R2 | compulsory | LS | no | — |
 | 8 | `PLACE` | First paddle firmly on the chest | video | `first_paddle_placed`, `apical_paddle_placed`, `sternal_paddle_placed` | R2, R8 | compulsory | LS (both zones in view) | no | — |
@@ -49,6 +49,36 @@ paddle steps come from the paddle order, by time, never from the tag names (A-02
 | Step | What | Evidence | Canonical event(s) | Rule | Known relations | Open questions |
 |---|---|---|---|---|---|---|
 | `A5` | Shock command | audio | `shock_command` | A5 | after stop (A4 → A5, A7) and before the shock (A5 → R5, A5's own rule), as in the proposal; its place among the shocking actions (`R2A`, `PLACE`, `R2B`, `R3`, `R4`) is unknown and unchecked | OQ-075 |
+
+## How the whole engine judges this procedure
+Every step is judged by its own rule (the "Rule" column), video and audio in one timeline. Each "X
+before Y" relation has exactly one owner, so one mistake is reported once (D-123):
+
+| Relation | Judged by |
+|---|---|
+| R1 → PLACE (gel before the paddles) | R1 |
+| R2A → PLACE → R2B (the paddle taken first placed before the other is taken) | R2 |
+| R3 → R5; R3 → R4 → R5 | R3; R4 |
+| R5 → R6 (removed after the shock) | R6 |
+| A1, A2, A3, A5 → R5 (said before the shock) | A1, A2, A3, A5 |
+| A2 → A4 (continue before stop); A4 → R5 | A4 |
+| R5 → R7 (restart after the shock) | R7/A6 |
+| Every other pair of audio commands | A7 (the command order) |
+| Everything else | S1 (the procedure order) |
+
+**S1, per recording (D-126, D-131):** S1 takes the observed steps, keeps the order between neighbouring
+observed steps, and drops every relation another rule owns. With every step observed, as in the
+lecturer's video, that leaves charging → gel phase, gel phase → stop, stop → first paddle taken, second
+paddle taken → both firmly on the chest, and removal → start. When a step is missing or unseen, the
+relation that bridges it is still judged once. A step S1 finds out of place that another rule already
+reports (for example gel after the placement, R1's) is left to that rule.
+
+**Evidence policies** ([supervisor_briefing.md](supervisor_briefing.md#the-design-policies)):
+- a step "in the wrong place" fails only if the right place was clearly observed (D-128);
+- a tag that contradicts the confirmed shock is Unable to Verify, "contradictory" (D-129);
+- a Pass that rests on something not happening needs that window clearly observed (D-130, D-132);
+- ties within the window (0.5 s in one modality, 1.0 s between audio and video) are not ordered, and
+  any occurrence in the right place counts.
 
 ## Flowchart
 Audio steps are rounded, video steps square. Optional steps are dashed. The gel phase is one box,
@@ -84,8 +114,13 @@ flowchart TD
 ```
 
 ## Open questions
+Every open question for the supervisor, Sanjeevan and Ananth is in one list in
+[supervisor_briefing.md, section 4](supervisor_briefing.md#4-every-open-question-in-one-list). Those
+about the order:
 - **OQ-062:** the supervisor's confirmation of the complete order (it is the lecturer's interim
   order until then).
+- **OQ-063:** which steps, if any, may swap?
+- **OQ-064:** is the procedure order (S1) its own checklist item?
 - **OQ-072:** is the spoken "charging" compulsory? If yes, a presence rule (A9).
 - **OQ-073:** is the spoken "applying gel" compulsory?
 - **OQ-074:** does the `charging_sound` event count as evidence for charging?

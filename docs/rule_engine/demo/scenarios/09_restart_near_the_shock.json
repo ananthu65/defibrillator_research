@@ -1,0 +1,279 @@
+{
+  "header": {
+    "recording_id": "DEMO_09",
+    "camera_angle": "LS",
+    "duration_seconds": 30.0,
+    "analyses_run": {
+      "video": true,
+      "audio": true
+    },
+    "coverage": {
+      "region:apical_zone": "covered",
+      "region:sternal_zone": "covered",
+      "region:screen": "covered",
+      "region:apical_paddle": "covered",
+      "region:sternal_paddle": "covered",
+      "region:apical_gel": "covered",
+      "region:sternal_gel": "covered"
+    },
+    "visibility": {
+      "region:apical_zone": [
+        [
+          0.0,
+          30.0
+        ]
+      ],
+      "region:sternal_zone": [
+        [
+          0.0,
+          30.0
+        ]
+      ],
+      "region:screen": [
+        [
+          0.0,
+          30.0
+        ]
+      ],
+      "region:apical_paddle": [
+        [
+          0.0,
+          30.0
+        ]
+      ],
+      "region:sternal_paddle": [
+        [
+          0.0,
+          30.0
+        ]
+      ],
+      "region:audio": [
+        [
+          0.0,
+          30.0
+        ]
+      ]
+    }
+  },
+  "events": [
+    {
+      "event_name": "oxygen_away_command",
+      "start": 0.2,
+      "end": 0.6,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a01_oxygen_away"
+    },
+    {
+      "event_name": "stand_clear_command",
+      "start": 0.7,
+      "end": 1.1,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a02_stand_clear"
+    },
+    {
+      "event_name": "continue_compressions_command",
+      "start": 1.2,
+      "end": 1.6,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a03_continue"
+    },
+    {
+      "event_name": "charging_command",
+      "start": 1.8,
+      "end": 2.2,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a04_charging"
+    },
+    {
+      "event_name": "apical_gel_applied",
+      "start": 3.0,
+      "end": 3.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e01_apical_gel_applied"
+    },
+    {
+      "event_name": "gel_announcement_command",
+      "start": 3.2,
+      "end": 3.6,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a05_applying_gel"
+    },
+    {
+      "event_name": "sternal_gel_applied",
+      "start": 5.0,
+      "end": 5.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e02_sternal_gel_applied"
+    },
+    {
+      "event_name": "stop_compressions_command",
+      "start": 5.6,
+      "end": 6.0,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a06_stop"
+    },
+    {
+      "event_name": "first_paddle_taken",
+      "start": 7.0,
+      "end": 7.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e03_first_paddle_taken"
+    },
+    {
+      "event_name": "first_paddle_placed",
+      "start": 9.0,
+      "end": 9.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e04_first_paddle_placed"
+    },
+    {
+      "event_name": "apical_paddle_placed",
+      "start": 9.0,
+      "end": 9.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e05_apical_paddle_placed"
+    },
+    {
+      "event_name": "second_paddle_taken",
+      "start": 10.0,
+      "end": 10.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e06_second_paddle_taken"
+    },
+    {
+      "event_name": "sternal_paddle_placed",
+      "start": 12.0,
+      "end": 12.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e07_sternal_paddle_placed"
+    },
+    {
+      "event_name": "paddles_firmly_on_chest",
+      "start": 12.5,
+      "end": 12.5,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e08_paddles_firmly_on_chest"
+    },
+    {
+      "event_name": "both_paddle_buttons_pressed",
+      "start": 14.0,
+      "end": 14.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e09_both_paddle_buttons_pressed"
+    },
+    {
+      "event_name": "resume_compressions_command",
+      "start": 14.6,
+      "end": 15.4,
+      "source": "audio",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {
+        "text": "synthetic",
+        "confidence_kind": "asr_proxy"
+      },
+      "camera_angle": null,
+      "event_id": "a07_resume"
+    },
+    {
+      "event_name": "shock_delivered_on_screen",
+      "start": 15.0,
+      "end": 15.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e10_shock_delivered_on_screen"
+    },
+    {
+      "event_name": "paddles_removed_after_shock",
+      "start": 17.0,
+      "end": 17.0,
+      "source": "video",
+      "confidence": 0.9,
+      "evidence_type": "direct",
+      "metadata": {},
+      "camera_angle": "LS",
+      "event_id": "e11_paddles_removed_after_shock"
+    }
+  ]
+}

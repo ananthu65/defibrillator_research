@@ -5,6 +5,15 @@ exists), `tested` (built and covered by the scenario tests). Every rule is also 
 `configs/rules.yaml` until the supervisor approves its definition, and it is not counted until
 then (D-043).
 
+**The whole engine (2026-11-24, Increment 28):** every rule is built and tested, video (R1–R8), audio
+(A1–A8, R7/A6) and the procedure order (S1), on one merged timeline. All are `pending` in
+`configs/rules.yaml`; A5, A8 and S1 are also held back in the demo (OQ-075, OQ-076, OQ-064). A combined
+scenario matrix (`tests/test_rule_engine_combined.py`, 19 scenarios) checks that every mistake is
+reported by exactly one rule. The design policies, including D-128 to D-132, are in
+[supervisor_briefing.md](supervisor_briefing.md#the-design-policies); every open question for the
+supervisor, Sanjeevan and Ananth is in
+[one list](supervisor_briefing.md#4-every-open-question-in-one-list).
+
 Shared steps used by every rule: P-014 (rule decision ladder) and P-008 (what a missing event
 means). Failure codes are listed in [anomalies.md](anomalies.md).
 

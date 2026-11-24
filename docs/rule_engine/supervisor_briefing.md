@@ -1,223 +1,193 @@
 # Rule engine: supervisor briefing
 
-**For:** the supervisor meeting · **From:** Arnikan · **Date:** 2026-10-17 · **State:** the seven
-video rules are built. All rules stay "pending" until you confirm their definitions.
+**For:** the supervisor meeting · **From:** Arnikan · **Date:** 2026-11-24 · **State:** the whole
+engine is built: the video rules, the audio rules and the procedure order. Every rule stays
+"pending" until you confirm its definition.
 
 IDs in brackets point to the project registers: decisions (D-),
 [decisions.md](decisions.md); open questions (OQ-), [open_questions.md](open_questions.md);
-assumptions (A-), [assumptions.md](assumptions.md).
+assumptions (A-), [assumptions.md](assumptions.md). The order of the steps is in
+[procedure.md](procedure.md).
 
 ## 1. What the rule engine does
 
 The rule engine is the part of ARTS that turns what was seen and heard in a defibrillation
-recording into an assessment. It receives a timeline of events (for example "gel applied", "shock
-shown on the screen", "stand clear" said) and checks each rule of the procedure against it.
+recording into an assessment. It receives one timeline of events from the video (for example "gel
+applied", "shock shown on the screen") and from the audio (for example "stand clear" said), and
+checks each rule of the procedure against it.
 
-- **One result per rule:** each rule gives **Pass** (seen directly), **Pass – Inferred** (shown
-  indirectly by an approved inference), **Fail** (with a named mistake), or **Unable to Verify**
-  (the evidence can't settle it). A rule that depends on something missing says "not evaluable
-  because of …" instead of repeating the same mistake.
-- **Any mistake fails the procedure.** There are no severity levels: a missed verbal command
-  fails exactly like a missed physical step (D-001, D-019).
-- **The learner is never blamed for missing data.** A step fails only when the evidence clearly
-  shows the mistake, for example when the area was in view and the step didn't happen. If the
-  camera couldn't see it, the result is Unable to Verify (D-004, D-007). Low-confidence evidence
-  is never a Fail (D-010).
+- **One result per rule:** **Pass** (seen directly), **Pass – Inferred** (shown by an approved
+  inference), **Fail** (with a named mistake), or **Unable to Verify** (the evidence can't settle
+  it). A rule that depends on something missing says "not evaluable because of …".
+- **Any mistake fails the procedure.** There are no severity levels: a missed verbal command fails
+  exactly like a missed physical step (D-001, D-019).
 - **A Pass must mean everything was checked.** The overall result is "Incomplete", never Pass,
-  while any of these remains:
-  - a rule is still pending;
-  - a clinical time limit hasn't been given;
-  - an order requirement isn't set;
-  - the data itself needs review.
-  (D-055, D-062, D-065, D-100.)
-- **The shock time comes only from the screen.** A paddle removal is never taken as evidence of
-  a shock or of its time, because paddles are sometimes removed without a successful shock. Without
-  the screen in view, the rules that need the shock time are not evaluable (D-093, D-115).
-- **Each camera angle is assessed on its own.** Results are never compared across angles (D-096).
-- **Clinical values are never invented.** Every time limit records who gave it and who approved
-  it. Until then it is empty, and the rule checks presence and order only. "No limit" can be
-  recorded as an approved answer too (D-103).
+  while a rule is pending, a clinical time limit hasn't been given, part of an order couldn't be
+  checked, or the data needs review (D-055, D-062, D-100).
 
-Overview diagrams:
-- [the whole flow](diagrams.md#a-end-to-end-from-recording-to-report);
-- [the steps every rule follows](diagrams.md#c-the-decision-ladder-every-rule-follows-p-026-p-014);
-- [what a missing event means](diagrams.md#d-what-a-missing-event-means-p-007-p-008-p-013);
-- [the overall result](diagrams.md#g-overall-result-p-017-built).
+### The design policies
+1. **The learner is never blamed for missing data.** A step fails only when the evidence clearly
+   shows the mistake. If it couldn't be seen or heard, the result is Unable to Verify (D-004, D-007).
+   Low-confidence evidence is never a Fail (D-010).
+2. **A missing command fails only inside clear audio.** The audio detector states when the audio was
+   clear; outside those intervals a missing command is Unable to Verify (D-122).
+3. **A Fail needs its own evidence.** A mistake in one step is never used as evidence of a mistake in
+   another step. If a step can't be judged because another is missing, it says "not evaluable because
+   of X", and every other part of it is still checked (D-119, D-121).
+4. **One owner per order relation.** Each "X before Y" in the procedure is judged by exactly one rule,
+   so one mistake is reported once (D-123, D-126, D-131).
+5. **A "wrong place" Fail needs clear evidence where the right place was (D-128).** A wrong-order or
+   wrong-time Fail also claims the step was *not* done in the right place. That is an absence, so it
+   needs the right place in view (video) or the audio clear there. Otherwise Unable to Verify.
+6. **A tag that contradicts the shock is not a Fail (D-129).** With the shock confirmed on the screen,
+   the paddles must have been on the chest and the buttons pressed. A tag saying otherwise (R3 placed
+   after the shock, R4 pressed before the placement) gives Unable to Verify, "contradictory".
+7. **A Pass that rests on an absence needs clear evidence too (D-130, D-132).** For example R6's Pass
+   also claims the paddles were not removed before the shock. If that couldn't be seen, Unable to
+   Verify. The exception is R5: a second shock is a data problem, not a learner action, so R5's Pass
+   is only flagged ("second shock not ruled out").
+8. **The shock time comes only from the screen.** A paddle removal is never evidence of a shock or of
+   its time (D-093, D-115).
+9. **Each camera angle is assessed on its own** (D-096).
+10. **Clinical values are never invented.** Every time limit records who gave and who approved it.
+    Until then it is empty, and the rule checks presence and order only. "No limit" can be recorded
+    as an approved answer (D-103).
 
-Today the rules run on the team's annotated videos, through a development and evaluation tool
-rather than the final input path; with perfect perception they also give a baseline for judging
-the rules themselves (D-117). Those results are marked as development data,
-not real assessments (D-066).
+Overview diagrams: [the whole flow](diagrams.md#a-end-to-end-from-recording-to-report);
+[the steps every rule follows](diagrams.md#c-the-decision-ladder-every-rule-follows-p-026-p-014);
+[a wrong place needs clear evidence](diagrams.md#w-a-wrong-place-needs-clear-evidence-where-the-right-place-was-d-128-d-129);
+[the overall result](diagrams.md#g-overall-result-p-017-built).
+
+Today the rules are developed on the team's annotated videos and on synthetic timelines. Those
+results are development data, not real assessments (D-066, D-117).
 
 ## 2. The built rules
 
-All seven rules below are built and tested. They report "pending" until you confirm them. The
-audio rules (A1–A8, R7) come next.
+All rules below are built and tested; each reports "pending" until you confirm it. Each rule's logic
+in plain words is in [rules_status.md](rules_status.md).
 
-**R1 Gel applied twice** ([diagram](diagrams.md#o-r1-gel-twice-once-to-each-zone-before-placement-p-038-built-in-increment-17-pending-until-approved)).
-Gel must be applied once to each placement zone (sternal on the chest, apical on the left side of
-the ribs), in either order, **before** the paddles are placed. If gel was applied only after the
-first paddle went on, R1 fails ("gel after placement"). One zone gelled and the other not is
-"applied once"; no gel is "missing". These fail only when the missing gel could have been seen.
-- **How gel is seen today:** by counting the annotators' "Gel applied" tags while both zones were
-  in view. Tags under 0.4 s apart count as one application.
-- **Planned:** a per-zone method from the tracked hand holding the gel bottle. It is used once its
-  validation report has been reviewed.
-- **Not checked:** the time between the two applications (no limit given yet), and more than two
-  applications.
+**Video**
+| Rule | Checks | Fails with |
+|---|---|---|
+| R1 Gel applied twice | Gel once on each placement zone, either order, before the paddles are placed | `after_placement`, `applied_once`, `missing` |
+| R2 Second paddle taken after the first is placed | The paddle taken first is placed before the other is taken | `taken_before_first_placed`, `simultaneous`, `first_placement_not_observed` |
+| R8 Apical before sternal | The apical paddle placed before the sternal one (both seen) | `wrong_order`, `simultaneous` |
+| R3 Paddles firmly on the chest | Firmly placed before the shock (or inferred from the shock) | `placed_after_shock` (only if the shock is not an inference source), `missing` |
+| R4 Both buttons pressed | After the placement and before the shock (or inferred from the shock) | `before_placement` (as R3), `not_pressed` |
+| R5 Shock on the screen | One new shock indication | `missing` |
+| R6 Paddles removed after the shock | The removal after the shock on the screen | `removed_before_shock`, `missing`, `too_late` (once a limit is given) |
 
-**R2 Second paddle taken after the first is placed** ([pathway table](pathways.md#p-032-r2-second-paddle-taken-after-the-first-is-placed-built-increment-11-pending-until-approved)).
-The paddle taken first, whichever it is, must be placed firmly before the other is taken. "First"
-is by time: under the team's working definition (A-027), `first_paddle_*` means the apical paddle and
-`second_paddle_*` the sternal paddle, so the tag names say which paddle, never the order (D-118). A
-learner who starts with the sternal paddle but handles one paddle at a time passes R2; R8 reports
-the order.
-- Taking the second paddle at the same moment as placing the first fails ("simultaneous");
-  taking it before the first is placed fails.
-- Taking both paddles together (within the simultaneous window) fails as "simultaneous",
-  whichever paddle the tags name first.
-- If the first placement wasn't seen although both zones were in view, it fails as "first
-  placement not observed": either the paddles were placed together, or the second was taken
-  first.
-- Otherwise, if the order can't be seen, Unable to Verify.
+**Audio** (Sanjeevan's command events; the shock time from the screen)
+| Rule | Checks | Fails with |
+|---|---|---|
+| A1 Oxygen away, A3 All stand clear | Said before the shock | `after_shock`, `missing` |
+| A2 Continue compressions | Said in the preparation, before the shock | `wrong_stage`, `missing` |
+| A4 Stop compressions | After "continue", before the shock | `wrong_order`, `after_shock`, `missing` |
+| A5 Shock command | Before or at the shock (held back: is it required? OQ-075) | `after_shock`, `missing` |
+| R7/A6 Restart compressions | Start said after the shock (one check, two IDs) | `before_shock`, `missing`, `too_late` (once a limit is given) |
+| A7 Command order | The commands heard in the expected order (its audio relations) | `wrong_order` |
+| A8 Pre-shock pause | Stop to restart within 5 s (approved); the end event is a setting (OQ-076) | `pre_shock_pause` |
 
-**R8 Apical paddle placed before sternal** ([diagram](diagrams.md#f-r8-apical-before-sternal-p-015-built-in-increment-12-pending-until-approved)).
-- **Both placements seen:** they are compared directly. Sternal first is "wrong order", and both
-  together is "simultaneous".
-- **Only one zone in view:** Unable to Verify. Which paddle went first can't be established from
-  one zone. (An earlier version inferred it from the first-placement tag, but under the team's
-  working definition that tag is the apical paddle's placement, so the inference could pass a
-  learner who placed the sternal paddle first.)
-- **Both paddles placed together:** both R2 and R8 fail, marked as one cause.
-- **On the annotations so far:** R8 has no direct evidence yet. Its placements come from the
-  paddle and zone boxes (Step 9c), whose settings are still placeholders to be set later (OQ-018),
-  and they are used only after my review. For the same reason, R2 can't detect a parallel
-  placement yet.
-
-**R3 Paddles placed firmly on the chest** ([diagram](diagrams.md#l-r3-paddles-placed-firmly-on-the-chest-p-035-built-in-increment-15-pending-until-approved)).
-- **Pass:** both paddles seen firmly on the chest before the shock shown on the screen.
-- **Fail:** placed firmly only after the shock ("placed after shock").
-- **Inferred:** if the firm placement wasn't seen, R3 passes by inference when the shock on the
-  screen is confirmed. A paddle removal never infers it.
-- **No shock on the screen:** R3 is not evaluable.
-- **Not checked yet:** where the paddles were placed ("not in zone"), because the chest regions
-  are not approved yet. Until then R3 checks timing and presence only.
-
-**R4 Both discharge buttons pressed** ([diagram](diagrams.md#m-r4-both-discharge-buttons-pressed-p-036-built-in-increment-16-pending-until-approved)).
-- **Pass:** both buttons pressed after the paddles were placed and at or before the shock.
-- **Fail:** pressed before the paddles were placed ("before placement").
-- **Inferred:** if no press was seen, R4 passes by inference from the shock on the screen, as R3
-  does; never from the paddle removal. "Not pressed" would fail only if both paddles were in view
-  throughout. While the shock infers, that case can't happen yet (see OQ-061).
-- **No shock on the screen:** R4 is not evaluable.
-
-**R5 Shock confirmed on screen** ([pathway table](pathways.md#p-033-r5-shock-confirmed-on-screen-built-increment-13-pending-until-approved)).
-- **One shock seen:** R5 passes, but the order against the preceding steps isn't checked until
-  you say which steps those are. The overall result stays Incomplete meanwhile.
-- **Missing:** no shock shown fails only if the screen was in view throughout, from paddles
-  firmly on the chest to paddles removed. Otherwise Unable to Verify.
-- **Two shocks:** a data problem, so Unable to Verify.
-
-**R6 Paddles removed after the shock** ([diagram](diagrams.md#k-r6-paddles-removed-after-the-shock-p-034-built-in-increment-14-pending-until-approved)).
-- **Pass:** the removal is after the shock shown on the screen. A removal up to 0.5 s before it
-  counts as at the shock, because the screen may update after the discharge.
-- **Fail:** clearly before the shock ("removed before shock"). Removal is not counted as proof
-  of a shock: paddles are sometimes removed without a successful shock.
-- **No shock seen:** R6 is not evaluable.
-- **No removal:** fails only if both placement zones were in view until the end.
-- **Not checked:** the time from shock to removal, until you give a limit or say "no limit".
+**Procedure order**
+| Rule | Checks | Fails with |
+|---|---|---|
+| S1 Procedure order | The whole procedure in the expected order, on the relations no other rule judges (OQ-064: its own checklist item?) | `wrong_order` |
 
 ## 3. Where the system departs from the original proposal
 
 | Change | Reason |
 |---|---|
-| **No severity levels:** any mistake fails the procedure, and there is no "critical error" class (D-001, D-019) | Defibrillation is life-critical: a missed verbal safety command is as serious as a missed physical step |
-| **R1 redefined:** gel applied **twice, once on each placement zone**, in either order, and still **before placement** (D-109, D-110). An earlier version dropped "before placement" (D-018); it is restored | Twice, one per zone, is the procedure taught. A shock without gel harms the patient, so gel must come first |
-| **R2 redefined:** the second paddle may be taken only after the first is **placed** (D-051) | This is the procedure taught |
-| **New rule R8: apical paddle before sternal** (D-052). Judged only when both placements are seen; with one zone in view it is Unable to Verify (D-116) | It is a taught step |
-| **New rule A8: pre-shock pause** from "stop CPR" to "start CPR" at most **5 s**, approved by you (D-016) | A taught limit on the pause in compressions |
-| **R7 and A6 are one check**, reported under both IDs and counted as one mistake (D-044) | They describe the same step |
-| **A7 checks the command order only.** A missing command is reported by its own rule, not again by A7. "Stop" before "continue" is A4's mistake only (D-027) | A mistake in one step is never used as evidence of a mistake in another step (D-119) |
-| **R3 does not yet judge "paddle outside its zone"** (D-106) | The chest regions are not approved yet (OQ-012) |
-| **A parallel placement fails both R2 and R8,** marked as one cause (D-098) | They are separate checklist items, but the feedback should say one action caused both (OQ-059) |
+| **No severity levels:** any mistake fails the procedure (D-001, D-019) | A missed verbal safety command is as serious as a missed physical step |
+| **R1:** gel **twice, once on each placement zone**, either order, **before placement** (D-109, D-110) | Twice, one per zone, is the procedure taught; a shock without gel harms the patient |
+| **R2:** the second paddle is taken only after the first is **placed** (D-051) | The procedure taught |
+| **New rule R8:** apical paddle before sternal (D-052) | A taught step |
+| **New rule A8:** pre-shock pause at most **5 s**, approved by you (D-016) | A taught limit |
+| **R7 and A6 are one check**, reported under both IDs (D-044) | The same step |
+| **A7 checks the command order only;** a missing command is its own rule's mistake (D-027) | One mistake, one rule (D-119) |
+| **New rule S1:** the order of the whole procedure, judged only where no other rule judges it (D-123, D-126) | The proposal's order has steps no single rule covers (OQ-064) |
+| **R5 no longer checks the steps before the shock;** each step's own rule does (D-123) | One owner per relation |
+| **R3 does not yet judge "paddle outside its zone"** (D-106) | The chest regions are not approved (OQ-012) |
+| **The interim order is the lecturer's video,** not yet approved (D-127, OQ-062) | The best source until you confirm the order |
 
-Not a departure: the shock time comes only from the screen, and a paddle removal is never taken
-as evidence of a shock (D-093, D-115). The original documents have no rule inferring a shock from
-the removal.
+Not a departure: the shock time comes only from the screen, and a paddle removal is never evidence
+of a shock (D-093, D-115).
 
-## 4. Your open questions, by rule
+## 4. Every open question, in one list
 
-Each question shows what the system does until it is answered.
+Each question shows what the system does until it is answered. Details:
+[open_questions.md](open_questions.md).
 
-### The overall result
-- **OQ-002: no rule fails, but some steps couldn't be verified.** Should the overall result be
-  Fail or "faculty review"?
-  - *Until then:* reported as "Unable to Verify", never Pass.
-- **OQ-001: it's unknown whether a step could have been seen** (for example no information on
-  whether the audio was analysed). Should a missing step then fail, or be Unable to Verify?
-  - *Until then:* Unable to Verify.
-  - *Note:* choosing Fail would fail learners for what a camera never showed, for example R5 in a
-    view without the screen.
-- **OQ-036: evaluator checklist.** What does the checklist look like, and which rules feed each
-  item?
-  - *Until then:* one item per rule (planned).
-- **OQ-015: final IDs for the new rules** R8 and A8.
-  - *Until then:* "R8" and "A8".
+### For you (the supervisor)
+**The overall result and the checklist**
+- **OQ-002:** no rule fails, but some steps couldn't be verified: Fail or "faculty review"? *Until
+  then:* reported as Unable to Verify, never Pass.
+- **OQ-001:** when it's unknown whether a step could have been seen, Fail or Unable to Verify?
+  *Until then:* Unable to Verify. (Fail would fail learners for what a camera never showed.)
+- **OQ-036:** the evaluator checklist and which rules feed each item. *Until then:* one item per rule.
+- **OQ-064:** is the procedure order (S1) its own checklist item? *Until then:* built, held back.
+- **OQ-015:** final IDs for R8 and A8. *Until then:* "R8" and "A8".
 
-### R1 Gel
-- **OQ-016: time period.** Within what time must the two gel applications happen? "No limit" is a
-  valid answer.
-  - *Until then:* not checked, and the overall result stays Incomplete.
-- **OQ-021: three or more applications.** A mistake, or does "at least twice" pass?
-  - *Until then:* passes.
+**The procedure order**
+- **OQ-062:** the approved full order of the audio and video steps ([procedure.md](procedure.md)).
+  *Until then:* the lecturer's interim order (D-127).
+- **OQ-063:** which steps, if any, may swap? *Until then:* none, except the gel and "applying gel"
+  (said while the gel is applied, D-127).
+- **OQ-077:** must oxygen away, stand clear and continue be in exactly this order? *Until then:* strict.
+- **OQ-075:** is the shock command (A5) required, and where does it go? The lecturer gave none.
+  *Until then:* A5 built, held back.
+- **OQ-072, OQ-073:** are the spoken "charging" and "applying gel" compulsory? *Until then:* optional:
+  checked for position only if said.
+- **OQ-074:** does the charging sound count as evidence for charging? *Until then:* only the spoken
+  "charging" is the step.
 
-### R2 and R8 Paddle order
-- **OQ-059: parallel placement.** Both paddles placed together fails R2 and R8, each on its own
-  evidence (D-119). One mistake or two?
-  - *Until then:* two, marked as one cause.
-- **OQ-006: fallback.** May "the paddle taken first was also placed first" ever be assumed as a
-  last resort, when no placement can be seen at all? Since the tags say which paddle is which
-  (A-027), it would apply only when the apical paddle was taken first (D-118).
-  - *Until then:* off.
-- **OQ-022: paddle lifted and placed again before the shock.** Acceptable or a mistake? Which
-  placement counts?
-  - *Until then:* the earliest counts; the repeat is flagged for review, never a Fail by itself.
+**Time limits and repeats**
+- **OQ-016:** the missing time limits: the two gel applications (R1), shock → removal (R6),
+  shock → restart (R7/A6), stop → shock (A4), how early the shock command may come (A5), oxygen away
+  and stand clear before the shock (A1, A3). "No limit" is a valid answer. *Until then:* not checked;
+  the overall result stays Incomplete.
+- **OQ-076:** the pre-shock pause (A8): stop → start, or stop → shock? In the lecturer's order the whole
+  shocking process lies between stop and start; on a lecturer-like timeline stop → start is 6–8 s
+  (Fail) and stop → shock 3–4 s (Pass). *Until then:* stop → start; A8 held back.
+- **OQ-021:** gel applied more than twice: a mistake? *Until then:* passes.
+- **OQ-022:** paddles lifted and placed again before the shock? *Until then:* the earliest counts.
+- **OQ-023:** buttons pressed more than once? *Until then:* any valid press counts.
 
-### R3 Paddles firmly on the chest
-- **OQ-012: chest regions.** Please approve the regions and what counts as a correct placement.
-  - *Until then:* R3 checks timing and presence only, never "not in zone".
-- **OQ-061: inference when the step was visible but not seen.** Can the training defibrillator
-  deliver a shock without firm contact? Should the shock on the screen still infer R3 and R4 when
-  the zones (R3) or paddles (R4) were in view and the step wasn't seen?
-  - *Until then:* the inference applies, so R3's "missing" and R4's "not pressed" can't be
-    produced.
+**Paddles and the shock**
+- **OQ-059:** a parallel placement fails R2 and R8: one mistake or two? *Until then:* two, marked as one
+  cause.
+- **OQ-006:** may "the paddle taken first was also placed first" be assumed when no placement is seen?
+  *Until then:* off.
+- **OQ-012:** approve the chest regions (R3 "outside its zone"). *Until then:* timing and presence only.
+- **OQ-061:** should the shock on the screen still infer R3 and R4 when the step was in view but not
+  seen? *Until then:* it infers.
+- **OQ-057:** are you content that the shock time comes only from the screen? *Until then:* never
+  estimated.
 
-### R4 Both buttons pressed
-- **OQ-023: buttons pressed more than once.** Acceptable or a mistake? Which press counts?
-  - *Until then:* any valid press counts.
-- OQ-061 above also applies.
+**The commands**
+- **OQ-010, OQ-065:** the command names, the accepted phrases per command, and their order. *Until
+  then:* the proposal's names and the lecturer's phrases, marked provisional.
 
-### R5 Shock on screen
-- **OQ-013: preceding steps.** Which steps must come before the shock: paddle placement only, or
-  placement and both buttons pressed?
-  - *Until then:* presence only, and the overall result stays Incomplete.
+### For Sanjeevan (audio)
+- **OQ-009:** the missing command events: stop compressions and the shock command, and a separate start
+  command with word timestamps (top priority: without them a restart said at the shock stays
+  unresolved, and R7/A6 give Unable to Verify even for a correct learner).
+- **OQ-068:** clear-audio intervals, their signal and format (top priority: without them every missing
+  command and every audio "wrong place" Fail is Unable to Verify).
+- **OQ-066:** non-standard phrasing: strict or lenient matching?
+- **OQ-045:** confirm the output contract's versioning rule.
 
-### R6 and the shock time
-- **OQ-016: removal time limit.** Is there a time limit from shock to removal? "No limit" is a
-  valid answer.
-  - *Until then:* not checked, and the overall result stays Incomplete.
-- **OQ-057: shock time only from the screen.** Are you content that the shock time comes only from
-  the screen, so that in a view without the screen every shock-dependent rule is not evaluable?
-  - *Until then:* never estimated.
+### For Ananth (video)
+- **Top priority:** visibility intervals for every region (both placement zones, the screen, the
+  paddles, the learner's hand), in the annotation adapter's header format. Without them every video
+  "wrong place" Fail is Unable to Verify (D-128; upstream_requirements.md).
+- **OQ-004:** who produces the per-paddle placement events?
+- **OQ-020:** the timeline header: can it be provided, in what format?
+- **OQ-017:** the pipeline calling the full rule-engine assessment.
+- **OQ-054:** when the final annotation export will be available; **OQ-053:** constant frame rate;
+  **OQ-055:** does anything take the camera view from the backup file name?
 
-### Audio rules (A1–A8, R7; to be built next)
-- **OQ-010: commands.** Please confirm the six commands (oxygen away, continue compressions, all
-  stand clear, stop compressions, shock, start or resume compressions), their accepted wordings
-  and their order.
-  - *Until then:* the proposal's names, marked provisional.
-- **OQ-016: time limits.**
-  - Shock → restart compressions (R7/A6).
-  - Stop command → shock (A4).
-  - How early the verbal shock command may come (A5).
-  - Whether oxygen away and stand clear (A1, A3) have a limit before the shock.
-  - *Until then:* not checked.
+### For the team (Ananth, Sanjeevan and Arnikan)
+- **OQ-018:** the engineering placeholder values (windows, thresholds).
+- **OQ-019:** which side applies confidence thresholds?
+- **OQ-037:** the model output formats and the meaning of confidence.
+- **OQ-038:** the final camera angle.
