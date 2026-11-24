@@ -23,6 +23,8 @@ timing_limits:
   stop_to_shock_seconds:            {value: null, note: "stop-compressions command -> shock (planned for A4); not used by any rule yet"}
   shock_command_tolerance_seconds:  {value: null, note: "verbal shock command may precede the shock by this (planned for A5); not used by any rule yet"}
   shock_to_removal_seconds:         {value: null, note: "shock -> paddles removed (R6, Increment 14); unset, so timing not checked; the supervisor's answer may be no limit (no_limit: true, D-103)"}
+  oxygen_away_before_shock_seconds:   {value: null, note: "A1: how long before the shock the command may come (proposal 8.1); unset, so timing not checked; the answer may be no limit (D-103)"}
+  stand_clear_before_shock_seconds:   {value: null, note: "A3: how long before the shock the command may come (proposal 8.1); unset, so timing not checked; the answer may be no limit (D-103)"}
   pre_shock_pause_seconds:               # A8: stop CPR -> start CPR
     value: 5
     approved_by: Dr. Senani Samarasinghe
@@ -57,8 +59,8 @@ rules:
   # R6: paddles_removed_after_shock means the paddles were removed; it does not prove a shock (D-104).
   # Its removal time limit is timing_limits.shock_to_removal_seconds (unset; possibly no limit, D-103).
   - {id: R6, title: Paddles removed after shock, status: pending, implementation: null, parameters: {}}
-  # A1 and A3: any time limit (for example how long before the shock) is for the supervisor; the answer
-  # may be "no limit" (D-103). No limit record exists for them yet.
+  # A1 and A3: any time limit (how long before the shock) is for the supervisor; the answer may be
+  # "no limit" (D-103). Their records are oxygen_away_before_shock_seconds and stand_clear_before_shock_seconds.
   - {id: A1, title: Oxygen away, status: pending, implementation: null, parameters: {}}
   - {id: A2, title: Continue compressions, status: pending, implementation: null, parameters: {}}
   - {id: A3, title: All stand clear, status: pending, implementation: null, parameters: {}}

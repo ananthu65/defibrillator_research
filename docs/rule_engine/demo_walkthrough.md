@@ -113,8 +113,10 @@ All commands run from the repository root in the project's `.venv`.
   participant data. Each is listed with its expected results in
   [scenarios.yaml](demo/scenarios/scenarios.yaml).
 - **Config:** [configs/rule_engine/demo/rules_demo.yaml](../../configs/rule_engine/demo/rules_demo.yaml).
-  It is a copy of the real catalogue in which the seven built rules are marked approved and the
-  unbuilt audio rules are disabled. **DEMO ONLY: the rules are not approved by the supervisor.**
+  It is a copy of the real catalogue in which the built rules (the seven video rules, and A1 and
+  A3 since Increment 21) are marked approved and the unbuilt audio rules are disabled. The scenarios
+  have no audio yet, so A1 and A3 give Unable to Verify (no clear-audio intervals, D-122), or Not
+  evaluable because of R5 when no shock is seen. **DEMO ONLY: the rules are not approved by the supervisor.**
   Every report it produces says so, with the flag `demo_only` (D-114).
 - **Output:** each scenario prints a table (rule, result, failure code, flags, short reason), the
   overall result and why, and whether it matched the expected result. A test checks that every

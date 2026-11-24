@@ -252,6 +252,21 @@ run with a clear error, and no assessment is produced (D-064).
 | The rule **raises an error** or returns something invalid | **`engine_error`** with the message; every other rule still runs; dependents not evaluable; overall incomplete (D-063) |
 | A shared-contract rule (`module:function`) breaks the contract | The run stops (shared contract) |
 
+#### P-040 A1 oxygen away and A3 all stand clear (built, Increment 21; pending until approved)
+Each owns "command before the shock" (D-123). Commands are Sanjeevan's events (D-125), compared as
+their Whisper segments.
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Shock time; a command not certainly after the shock (a tie within the cross-modal tolerance or a segment overlap counts) | Pass – Direct; timing not checked (limit unset); an approved "no limit" passes fully (D-103) | `timing_not_checked` |
+| Shock time; an approved numeric limit before the shock | engine_error: no failure code is defined, never guessed | — |
+| Shock time; commands only certainly after the shock | Fail | `after_shock` |
+| Shock time; no command, the audio clear from the start to the shock | Fail | `missing` |
+| Shock time; no command, a low-confidence one, or the audio not clear throughout (no intervals, unclear, not analysed) | Unable to Verify, never Fail (D-010, D-122) | `low_confidence_evidence` |
+| No shock time; a command seen | **Not evaluable because of R5**, naming it (D-121) | — |
+| No shock time; no command while the audio was clear throughout the recording | Fail, on the rule's own evidence (D-121) | `missing` |
+| No shock time; otherwise | **Not evaluable because of R5** | — |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
@@ -1221,3 +1236,15 @@ today.
 3. O₂ away and gel are unordered (unknown, OQ-062): no rule checks their order.
 4. A chain making the restart come before O₂ away creates a cycle, so the catalogue doesn't load:
    "circular order: … R7 -> A1".
+
+### W-90 Oxygen away and stand clear around the shock
+*(Built in Increment 21; P-040.)*
+1. "Oxygen away" in a segment 5–6 s, the shock on the screen at 15 s, clear audio throughout →
+   **A1 Pass – Direct**, timing not checked (no limit set), so the overall result can't be Pass.
+2. "Stand clear" in a segment 14–16.5 s, overlapping the shock at 15 s → a tie, never "after" →
+   **A3 Pass**. Said only at 18–19 s → **A3 Fail `after_shock`**.
+3. No "oxygen away" at all:
+   - with clear-audio intervals covering 0–15 s → **A1 Fail `missing`**;
+   - with no intervals stated (the audio only analysed) → **Unable to Verify** (D-122).
+4. No shock on the screen, "oxygen away" at 5 s → **A1 Not evaluable because of R5**, naming the
+   command.

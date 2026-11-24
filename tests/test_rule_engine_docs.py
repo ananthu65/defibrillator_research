@@ -14,7 +14,7 @@ import unittest
 import yaml
 
 from pipeline.config import ROOT
-from rules import checks, context, coverage, engine, outcome, policy, render, video_rules
+from rules import audio_rules, checks, context, coverage, engine, outcome, policy, render, video_rules
 from rules.config import load_rules_config
 from rules.engine import assess
 from rules.outcome import RuleOutcome
@@ -38,9 +38,10 @@ def raised_in_code():
     return {"rejections": set(re.findall(r'(?:TimelineError|RegistryError)\(\s*"([a-z_]+)"', source)),
             "anomalies": set(re.findall(r'Anomaly\(\s*"([a-z_]+)"', source)),
             "flags": set(coverage.FLAGS) | set(coverage.HEADER_FLAGS) | set(context.FLAGS) | set(checks.FLAGS)
-                     | set(policy.FLAGS) | set(video_rules.FLAGS),
+                     | set(policy.FLAGS) | set(video_rules.FLAGS) | set(audio_rules.FLAGS),
             "failure_codes": set(engine.FAILURE_CODES)
-                             | set(re.findall(r'failed\(\s*"[RA]\d+",\s*"([a-z_]+)"', source))}   # rule modules
+                             | set(re.findall(r'failed\(\s*(?:"[RA]\d+"|rule_id),\s*"([a-z_]+)"', source))}   # rule modules
+                             # (a helper shared by several rules passes rule_id, e.g. A1 and A3)
 
 
 def listed_in_flow(status=None):

@@ -437,3 +437,23 @@ flowchart TD
     P2 -.-> UO
     UO -->|yes| U3["Unable to Verify<br/>placement_time_unknown (D-118)"]
 ```
+
+## (p) A1 and A3: a command before the shock (P-040, built in Increment 21; pending until approved)
+
+The input is Sanjeevan's command events (D-125); a command lies somewhere in its Whisper segment.
+A missing command can fail only within clear-audio intervals (D-122).
+
+```mermaid
+flowchart TD
+    S{"Shock time?<br/>(screen only, D-093)"} -->|yes| V{"A command not certainly<br/>after the shock?<br/>(tie: tolerance or segment overlap)"}
+    V -->|yes| P["Pass – Direct<br/>timing not checked (limit unset);<br/>approved no limit: passes fully"]
+    V -->|"no, but commands after it"| F1["Fail after_shock"]
+    V -->|no command| C{"Audio clear from the<br/>start to the shock?"}
+    C -->|yes| F2["Fail missing"]
+    C -->|"no / low confidence"| U["Unable to Verify"]
+    S -->|no| N{"A command seen?"}
+    N -->|yes| NE1["Not evaluable because of R5,<br/>naming the command (D-121)"]
+    N -->|no| C2{"Audio clear throughout<br/>the recording?"}
+    C2 -->|yes| F3["Fail missing (D-121)"]
+    C2 -->|no| NE2["Not evaluable because of R5"]
+```

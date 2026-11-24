@@ -1180,6 +1180,43 @@ decision_points:
     assumptions: []
     open_questions: [OQ-017, OQ-045]
 
+  - id: P-040
+    name: A1 oxygen away and A3 all stand clear, each before the shock
+    stage: rule
+    status: built
+    decides: A1's and A3's results (Increment 21); each runs only when approved in rules.yaml, pending until then. Each owns the relation "command before the shock" (D-123). The input is Sanjeevan's command events (D-125), compared as segment intervals
+    inputs: [oxygen_away_command or stand_clear_command (audio, Whisper segment start and end), shock anchor (the screen only, D-093), the audio region's clear-audio intervals (D-122), rules.yaml oxygen_away_before_shock_seconds / stand_clear_before_shock_seconds]
+    branches:
+      - condition: A shock time; a command not certainly after the shock (before it, or a tie within cross_modal_tolerance_seconds or its segment's overlap, D-125)
+        outcome: Pass – Direct; any one occurrence in the right place counts; the time limit before the shock is unset, so timing not checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: A shock time; an approved numeric limit before the shock
+        outcome: engine_error - no failure code is defined for it, so it is refused loudly, never guessed (D-063)
+      - condition: A shock time; commands only certainly after the shock
+        outcome: Fail after_shock
+        failure_codes: [after_shock]
+      - condition: A shock time; no command, the audio clear throughout from the start to the shock (stated clear-audio intervals)
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: A shock time; no command, a low-confidence one exists, or the audio not clear throughout (no intervals stated, unclear, or not analysed)
+        outcome: Unable to Verify, never Fail (D-010, D-122)
+        flags: [low_confidence_evidence]
+      - condition: No shock time; a command seen
+        outcome: Not evaluable because of R5, naming the command as the part still checked (D-121)
+        next: P-020
+      - condition: No shock time; no command while the audio was clear throughout the recording
+        outcome: Fail missing, on the rule's own evidence (D-121)
+        failure_codes: [missing]
+      - condition: No shock time; otherwise
+        outcome: Not evaluable because of R5; whether the command was said is unknown too
+        next: P-020
+    config: [configs/rules.yaml timing_limits.oxygen_away_before_shock_seconds, timing_limits.stand_clear_before_shock_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
+    code: rules/audio_rules.py (oxygen_away, stand_clear, _before_shock)
+    decisions: [D-062, D-093, D-103, D-119, D-121, D-122, D-123, D-125]
+    assumptions: []
+    open_questions: [OQ-009, OQ-010, OQ-016, OQ-068]
+
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039
     name: Procedure order (precedence graph)

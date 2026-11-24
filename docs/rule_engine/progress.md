@@ -4885,3 +4885,50 @@ Increment 21 on.
 
 ### Tests
 Full suite: **761 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+## Increment 21: A1 oxygen away and A3 all stand clear (2026-11-10)
+
+Not committed.
+
+### What was built
+`rules/audio_rules.py` (P-040). A1 and A3 share `_before_shock`; each owns "command before the
+shock" (D-123). Commands are Sanjeevan's events (D-125), compared as Whisper segments.
+- **With a shock time:**
+  - a command not certainly after the shock → Pass; a tie (within the cross-modal tolerance, or a
+    segment overlapping the shock) counts;
+  - commands only after the shock → `after_shock`;
+  - no command → `missing` only within clear-audio intervals from the start to the shock (D-122);
+    otherwise Unable to Verify;
+  - low confidence → never Fail.
+- **Without a shock time (D-121):** a command seen → Not evaluable because of R5, naming it; no
+  command with the audio clear throughout → `missing`; otherwise Not evaluable because of R5.
+- **Timing:** new null limit records `oxygen_away_before_shock_seconds` and
+  `stand_clear_before_shock_seconds` (`rules.yaml` and the demo copy). Unset → timing not checked;
+  an approved "no limit" passes fully. An approved number is refused as engine_error, because the
+  brief defines no failure code for it (no clinical value or code invented).
+- **Demo config:** A1 and A3 are approved, as built rules. The scenarios have no audio, so they
+  give Unable to Verify (or Not evaluable without a shock); no overall result changed.
+
+### Tests (761 → 780)
+New `tests/test_rule_engine_a1_a3.py` (19 tests, each case for both rules), using the **full
+`rules.yaml`** (the new testing practice):
+- before the shock; the overall result Incomplete; a segment overlapping the shock; within the
+  tolerance after it; only after (`after_shock`); any occurrence counts;
+- missing with clear audio (`missing`), without intervals, with unclear audio, not analysed (Unable
+  to Verify);
+- low confidence; without a shock time (a command seen, missing with clear audio, missing without
+  clear audio, two shocks);
+- the time limit (approved "no limit"; a numeric limit refused);
+- pending by default; the owned relations.
+
+Full suite: **780 tests run, all pass, 1 skipped**; the docs test passes (its failure-code search now also finds a code raised by a helper shared by several rules, `failed(rule_id, ...)`); the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-040), `pathways.md` (P-040, W-90), `diagrams.md` ((p));
+- `anomalies.md`, `output_contract.md` (`missing` and `after_shock` built for A1 and A3; version
+  unchanged), `rules_status.md`;
+- `demo_walkthrough.md`, `audio_integration_plan.md` (Increment 21 built);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 22 (A2, A4) on Arnikan's "continue".

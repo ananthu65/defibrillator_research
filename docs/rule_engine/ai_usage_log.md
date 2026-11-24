@@ -122,6 +122,7 @@ falls within Level 3 for this project.*
 | 2026-11-09: checked the R4/R6 "because of R3" rule against R3's inferred pass, found R6 wrongly not evaluable when R3 passed by inference (and the same edge in R4), fixed both, added 5 tests and updated the docs | Asked for the check: "because of R3" only when R3 doesn't pass (D-102) |
 | 2026-11-09: Increment 20: wrote `procedure_order.yaml` from the proposal and `rules/procedure.py` (closure, cycle detection, interchangeable groups, unknown pairs, one owner per relation), linked it to the catalogue, 21 tests, docs | Approved the increment (D-120, D-123); the order stays a draft until the supervisor confirms it (OQ-062) |
 | 2026-11-10: checked that the complete order can be applied by config only; added pair-by-pair unknown entries, a clearer message for implied pairs, 3 tests and the how-to; computed S1's implied relations (21 of 31 remain under option A, 3 under option B) for OQ-071; recorded the testing practice | Set the order's status (complete order requested from the supervisor), required a config-only path, proposed restricting S1 to non-implied relations, and set the practice that interaction tests use the full rules.yaml |
+| 2026-11-10: Increment 21: built A1 and A3 (a shared before-the-shock check with segment intervals, the D-121/D-122 paths and null limit records; a numeric limit refused rather than guessed), approved them in the demo config, 19 tests on the full rules.yaml, docs | Approved the increment's plan (D-121 to D-125) |
 
 ## How I evaluated the AI's work
 

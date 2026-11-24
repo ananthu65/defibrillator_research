@@ -249,7 +249,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 
 | Code | Status | Rules | Meaning for feedback |
 |---|---|---|---|
-| `missing` | built (R1, R3, R5, R6; the others planned) | R1, R3, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R1: no gel on either zone, while it could have been seen (D-113). For R3: the paddles were not seen firmly on the chest, no inference applied, and both placement zones were visible from first paddle taken to the shock (D-106). For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) |
+| `missing` | built (R1, R3, R5, R6, A1, A3; the others planned) | R1, R3, R5, R6, A1–A5, R7/A6 | The required step or command was not done. For R1: no gel on either zone, while it could have been seen (D-113). For R3: the paddles were not seen firmly on the chest, no inference applied, and both placement zones were visible from first paddle taken to the shock (D-106). For R5: no shock on the screen while the screen was visible throughout the window from paddles firmly on chest to paddles removed (D-101). For R6: no paddle removal while both placement zones were visible from the shock to the end of the recording (D-104) For A1 and A3: no command while the audio was clear (stated clear-audio intervals, D-122), before the shock or, without a shock time, in the whole recording |
 | `applied_once` | built (R1) | R1 | Gel applied to one placement zone only: the other zone had none, although it could have been seen (D-110, D-113) |
 | `after_placement` | built (R1, v9) | R1 | Gel applied only after the first paddle was placed. A shock without gel harms the patient (D-109) |
 | `outside_time_period` | built (R1) | R1 | The two gel applications were further apart than the approved period (unset now, so not produced yet) |
@@ -262,7 +262,7 @@ All are **planned**: they appear once the rule that raises them is built (Increm
 | `before_placement` | built (R4) | R4 | Buttons pressed before the paddles were placed (D-108) |
 | `not_pressed` | built (R4) | R4 | Buttons not pressed, although both paddles were visible from the placement to the shock (D-108). Not produced while either inference source is listed (D-107, OQ-061) |
 | `removed_before_shock` | built (R6) | R6 | Paddles removed before the shock on the screen: a removal tagged more than `removal_before_screen_tolerance_seconds` before it (the screen may lag the discharge, D-105), or (once the gate is approved) a derived placement that ended before it, flagged `derived_placement` (D-104) |
-| `after_shock` | planned | A1, A3, A4 | The command came after the shock |
+| `after_shock` | built (A1, A3; A4 planned) | A1, A3, A4 | The command came only certainly after the shock on the screen (a segment overlapping the shock, or within the cross-modal tolerance, is a tie, never after, D-125) |
 | `wrong_stage` | planned | A2 | "Continue compressions" at the wrong stage |
 | `before_shock` | planned | R7/A6 | The restart command came before the shock |
 | `too_late` | built (R6; R7/A6 planned) | R6, R7/A6 | Done after the approved delay. For R6: the paddles were removed later than an approved `shock_to_removal_seconds` (unset now, so not produced yet). For R7/A6: the restart command came after the approved delay |
