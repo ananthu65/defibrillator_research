@@ -35,7 +35,9 @@ def header():
     return TimelineHeader.from_dict({
         "camera_angle": "LS", "duration_seconds": 30.0, "analyses_run": {"video": True, "audio": False},
         "coverage": {"region:apical_zone": "covered", "region:sternal_zone": "covered"},
-        "visibility": {"region:apical_zone": [[0.0, 30.0]], "region:sternal_zone": [[0.0, 30.0]]}}, regions=REGIONS)
+        "visibility": {"region:apical_zone": [[0.0, 30.0]], "region:sternal_zone": [[0.0, 30.0]],
+                       # the paddles in view too, so an R2 Pass can rule out an earlier take (D-132)
+                       "region:apical_paddle": [[0.0, 30.0]], "region:sternal_paddle": [[0.0, 30.0]]}}, regions=REGIONS)
 
 
 def run(events):

@@ -481,13 +481,31 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Decision:** per recording, S1's relations are the transitive reduction of the procedure order
   restricted to the observed steps, minus every relation another rule owns. A relation that bridges
   a missing or unseen step is then S1's unless another rule owns it, so it is judged once.
-- **One rule per mistake (agent proposal, to confirm):** a step S1 finds misplaced that also breaks,
+- **One rule per mistake (agent proposal, confirmed by Arnikan 2026-11-24):** a step S1 finds misplaced that also breaks,
   in every occurrence, a relation another rule owns is left to that rule and named in S1's reason.
   Without it, the gel applied after the placement would fail R1 (R1 → placement) and S1 (gel after
   stop) for one action (D-119).
-- **Correction to OQ-078's example:** "charging" said after "stop" is A7's relation (both are audio
-  commands), so A7 catches it; the bridge S1 catches is cross-modal.
+- **Correction to OQ-078's example (accepted by Arnikan 2026-11-24):** "charging" said after "stop" is
+  A7's relation (both are audio commands), so A7 catches it; the bridge S1 catches is cross-modal.
 - **Affects:** S1 (P-046, Increment 27).
+
+### D-132 Passes that rest on an absence need clear evidence too (extends D-130)
+- **Date / by / status:** 2026-11-24 · Arnikan · approved, after the agent's audit of Passes.
+- **Decision:** a Pass that also claims something did NOT happen needs that window in view (or the
+  audio clear); otherwise Unable to Verify, flagged `correct_occurrence_unseen`, naming the window:
+  - R1: the first-placed paddle's zone, from the last counted gel to its placement (it was not placed
+    earlier, before the gel);
+  - R2: the other paddle, from the first take to the first placement (it was not taken earlier);
+  - R6: both zones, from the firm placement to the shock (the paddles were not removed before it);
+  - R8: the sternal zone, from the start of the placement phase to the apical placement (it was not
+    placed earlier).
+- **Exception, R5:** a second shock is a data anomaly, not a learner action. R5's Pass stays and is
+  flagged `second_shock_not_ruled_out` when the screen was not in view from the placement to the
+  removal (D-101). The flag does not prevent an overall Pass on its own: the overall policy turns
+  only pending, assumed and engine-error results and the timing and order flags into Incomplete;
+  every other rule flag, like `contradictory` or `derived_placement`, is shown in the report but
+  doesn't block a Pass.
+- **Affects:** R1 (P-038), R2 (P-032), R5 (P-033), R6 (P-034), R8 (P-015); A8 is D-130.
 
 ## Rule definitions
 

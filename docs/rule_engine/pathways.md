@@ -382,6 +382,12 @@ otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
 | R4 `before_placement` | placement → shock, or the recording end (both paddles); with the shock as an inference source: `contradictory` (D-129) |
 | R6 `removed_before_shock` (derived) / `too_late` | exit → shock (that zone) / shock → + limit (both zones); the removal-tag case is unchanged |
 | R8 `wrong_order` | start of the placement phase → sternal placement (the apical zone) |
+| **Passes (D-130, D-132):** A8 | latest continue (or start) → stop (audio) |
+| R1 Pass | last counted gel → the first placement (that paddle's zone) |
+| R2 Pass | first take → first placement (the other paddle) |
+| R6 Pass | firm placement → shock (both zones) |
+| R8 Pass | start of the placement phase → apical placement (the sternal zone) |
+| R5 Pass (exception) | placement → removal (the screen): not in view → Pass flagged `second_shock_not_ruled_out`, never blocking an overall Pass |
 
 ### Stage: configuration
 

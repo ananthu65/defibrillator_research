@@ -5579,3 +5579,24 @@ Results: full suite **921 tests run, all pass, 1 skipped**; the docs test passes
 ### Next
 Increment 28 (the combined scenario matrix) on Arnikan's "continue".
 
+### Review (Arnikan, 2026-11-24): D-131 confirmed; D-132 Passes that rest on an absence
+Increment 27 was committed (`b0d1e89`).
+- **D-131 confirmed** (a step also misplaced on another rule's relation is left to that rule), and the
+  OQ-078 correction accepted (audio–audio cases are A7's; S1 covers the cross-modal bridge).
+- **D-132** (`rules/video_rules.py`, helper `_pass_needs`): a Pass that also claims something did not
+  happen needs that window in view; otherwise Unable to Verify, `correct_occurrence_unseen`:
+  - R1: the first-placed paddle's zone, last counted gel → its placement;
+  - R2: the other paddle (its paddle region), first take → first placement;
+  - R6: both zones, firm placement → shock (`paddles_removed_after_shock` checked in both zones);
+  - R8: the sternal zone, start of the placement phase → apical placement.
+- **R5, the exception:** the Pass stays, flagged `second_shock_not_ruled_out` when the screen was not in
+  view from the placement to the removal (D-101). The overall policy turns only pending, assumed and
+  engine-error results and the timing and order flags into Incomplete, so this flag doesn't block an
+  overall Pass on its own (a test checks R5 is not in the Incomplete list). Report version 16.
+- **Demo, before and after:** identical. Every scenario states the zones, the paddles and the screen
+  in view for the whole recording, so every window is in view.
+- **Tests (921 → 927):** new `tests/test_rule_engine_d132.py` (6 tests: R1, R2, R6, R8 window in view
+  or not; R5 plain and flagged, not blocking). Updated: the R2 and paddle-order test headers now state
+  the paddles in view (their Passes need it), and one R2 test also shows the Unable to Verify without
+  a header.
+

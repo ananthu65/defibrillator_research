@@ -183,6 +183,9 @@ decision_points:
         flags: [multiple_shocks]
       - condition: A shock on screen
         outcome: Pass – Direct (no order check; no order_not_checked since Increment 26, D-123)
+      - condition: A shock on screen, the screen not in view throughout paddles firmly on chest .. paddles removed (D-101)
+        outcome: Pass – Direct, flagged - a second shock can't be ruled out; a data anomaly, not a learner action, so the flag doesn't block an overall Pass (D-132)
+        flags: [second_shock_not_ruled_out]
       - condition: A leftover preceding_steps parameter (retired)
         outcome: engine_error (a configuration error, never a result about the learner, D-063)
       - condition: No shock on screen, a low-confidence one exists
@@ -195,7 +198,7 @@ decision_points:
         outcome: Unable to Verify, never Fail (D-094)
     config: [engine.yaml coverage_policy]
     code: rules/video_rules.py (shock_confirmed_on_screen)
-    decisions: [D-039, D-093, D-094, D-101, D-123]
+    decisions: [D-039, D-093, D-094, D-101, D-123, D-132]
     assumptions: []
     open_questions: []
 
@@ -225,6 +228,9 @@ decision_points:
         outcome: Pass – Direct; the time limit is checked (P-024); unset, so flagged timing_not_checked and the overall result cannot be Pass (D-062); an approved no limit passes fully (D-103)
         flags: [timing_not_checked]
         next: P-024
+      - condition: That Pass, but both zones from the firm placement to the shock not clearly in view (D-132)
+        outcome: Unable to Verify - a removal before the shock can't be ruled out; an uncertain result never becomes a Pass
+        flags: [correct_occurrence_unseen]
       - condition: A removal later than an approved shock_to_removal_seconds, both zones in view from the shock up to the limit (D-128)
         outcome: Fail too_late
         failure_codes: [too_late]
@@ -241,7 +247,7 @@ decision_points:
         outcome: Unable to Verify, never Fail
     config: [configs/rules.yaml timing_limits.shock_to_removal_seconds, engine.yaml removal_before_screen_tolerance_seconds, engine.yaml coverage_policy]
     code: rules/video_rules.py (paddles_removed_after_shock)
-    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105, D-121, D-128]
+    decisions: [D-039, D-088, D-092, D-093, D-103, D-104, D-105, D-121, D-128, D-132]
     assumptions: [A-022]
     open_questions: [OQ-016, OQ-057]
 
@@ -264,8 +270,11 @@ decision_points:
       - condition: A take missing, but that paddle was placed before the other was taken
         outcome: It was taken first; R2 is judged as below, and the result carries the flag (D-118)
         flags: [take_order_from_placement]
-      - condition: The paddle taken first (by time; an exact tie counts as apical) placed before the other paddle is taken (outside the simultaneous window)
+      - condition: The paddle taken first (by time; an exact tie counts as apical) placed before the other paddle is taken (outside the simultaneous window), the other paddle in view from the first take to the placement (D-132)
         outcome: Pass – Direct, whichever paddle it is; a sternal-first learner handling one paddle at a time passes, and R8 reports the order
+      - condition: The same, but the other paddle from the first take to the placement not clearly in view (D-132)
+        outcome: Unable to Verify - an earlier take of the other paddle can't be ruled out; an uncertain result never becomes a Pass
+        flags: [correct_occurrence_unseen]
       - condition: Its placement and the other paddle taken within simultaneous_window_seconds
         outcome: Fail simultaneous
         failure_codes: [simultaneous]
@@ -288,7 +297,7 @@ decision_points:
         outcome: Unable to Verify
     config: [configs/rules.yaml R2 status, engine.yaml simultaneous_window_seconds, coverage_policy]
     code: rules/video_rules.py (second_paddle_after_first_placed), rules/context.py (paddle_order), rules/paddle_timing.py (paddle_timing)
-    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118, D-128]
+    decisions: [D-051, D-091, D-092, D-095, D-097, D-098, D-118, D-128, D-132]
     assumptions: [A-019, A-027]
     open_questions: [OQ-059]
 
@@ -694,6 +703,9 @@ decision_points:
         outcome: Compare the placement times; apical first → Pass – Direct; within the simultaneous window → Fail simultaneous; sternal first → Fail wrong_order, only with the apical zone in view from the start of the placement phase to the sternal placement (D-128); derived placements carry derived_placement
         failure_codes: [wrong_order, simultaneous]
         flags: [derived_placement]
+      - condition: Apical first, but the sternal zone from the start of the placement phase to the apical placement not clearly in view (D-132)
+        outcome: Unable to Verify - an earlier sternal placement can't be ruled out; an uncertain result never becomes a Pass
+        flags: [correct_occurrence_unseen]
       - condition: Sternal first, but the apical zone from the start of the placement phase to the sternal placement not clearly in view (or seen with low confidence)
         outcome: Unable to Verify - a correctly placed occurrence may have been missed (D-128); the window is named in the reason and timestamps
         flags: [correct_occurrence_unseen]
@@ -711,7 +723,7 @@ decision_points:
         outcome: Unable to Verify; the fallback doesn't apply (D-118)
     config: [engine.yaml simultaneous_window_seconds, engine.yaml assume_first_taken_is_apical]
     code: rules/video_rules.py (apical_before_sternal)
-    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118, D-128]
+    decisions: [D-013, D-014, D-003, D-058, D-060, D-088, D-091, D-092, D-098, D-099, D-116, D-118, D-128, D-132]
     assumptions: [A-009, A-027]
     open_questions: [OQ-004, OQ-006, OQ-059]
 
@@ -866,6 +878,9 @@ decision_points:
         outcome: Pass – Direct, then the period check
         flags: [derived_gel_application]
         next: P-024
+      - condition: A Pass (either path), but the first-placed paddle's zone from the last counted gel to its placement not clearly in view (D-132)
+        outcome: Unable to Verify - an earlier placement of that paddle can't be ruled out; an uncertain result never becomes a Pass
+        flags: [correct_occurrence_unseen]
       - condition: Past the 9d gate; one zone gelled, the other not gelled
         outcome: Fail applied_once
         failure_codes: [applied_once]
@@ -901,7 +916,7 @@ decision_points:
         outcome: Not checked (D-110, OQ-021)
     config: [configs/rules.yaml timing_limits.gel_application_period_seconds, engine.yaml gel_minimum_gap_seconds, engine.yaml simultaneous_window_seconds, engine.yaml coverage_policy.regions (apical_gel, sternal_gel, apical_zone, sternal_zone)]
     code: rules/video_rules.py (gel_applied_twice)
-    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118, D-128]
+    decisions: [D-010, D-062, D-103, D-109, D-110, D-111, D-112, D-113, D-118, D-128, D-132]
     assumptions: [A-023, A-026]
     open_questions: [OQ-016, OQ-021]
 

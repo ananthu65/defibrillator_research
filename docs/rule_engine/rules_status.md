@@ -47,7 +47,9 @@ was not done in the right place, so it needs clear evidence where the right plac
 Unable to Verify, `correct_occurrence_unseen`. Applied to every audio rule (A1–A5, A7, A8, R7/A6)
 and every video rule (R1, R2, R3, R4, R6, R8); the windows are in pathways.md ("D-128 and D-129
 across the rules"). **D-129:** R3 `placed_after_shock` and R4 `before_placement` with the shock
-confirmed on the screen as an inference source are Unable to Verify, `contradictory`.
+confirmed on the screen as an inference source are Unable to Verify, `contradictory`. **D-130,
+D-132:** a Pass that rests on an absence (A8, R1, R2, R6, R8) needs that window clear or in view;
+R5's Pass is only flagged (`second_shock_not_ruled_out`), since a second shock is a data anomaly.
 
 | Rule | Logic in plain words | Events and key times used | Decision points | Failure codes | Increment | Status | Waiting on |
 |---|---|---|---|---|---|---|---|

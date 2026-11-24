@@ -26,9 +26,9 @@ def ev(label, t, event_id=None, confidence=1.0, source="annotation"):
     return Event(label, t, t, source, confidence, event_id=event_id or f"{label}@{t}", camera_angle="LS")
 
 
-def header(apical=((0.0, 20.0),), sternal=((0.0, 20.0),), duration=20.0):
-    """Both placement zones visible throughout 0-20 s by default."""
-    visibility = {}
+def header(apical=((0.0, 20.0),), sternal=((0.0, 20.0),), duration=20.0, paddles=((0.0, 20.0),)):
+    """Both placement zones and both paddles visible throughout 0-20 s by default (the paddles: D-132)."""
+    visibility = {f"region:{p}_paddle": [list(span) for span in paddles] for p in ("apical", "sternal")} if paddles else {}
     if apical is not None:
         visibility["region:apical_zone"] = [list(span) for span in apical]
     if sternal is not None:
@@ -48,8 +48,12 @@ TAKEN = ev("first_paddle_taken", 5)
 
 class Order(unittest.TestCase):
     def test_first_placed_before_the_second_is_taken_passes(self):
-        outcome = r2([TAKEN, ev("first_paddle_firmly_on_the_chest", 7, "p1"), ev("second_paddle_taken", 9, "s2")])
+        events = [TAKEN, ev("first_paddle_firmly_on_the_chest", 7, "p1"), ev("second_paddle_taken", 9, "s2")]
+        outcome = r2(events, header())
         self.assertEqual((outcome.kind, outcome.evidence), ("pass_direct", ("p1", "s2")))
+        unseen = r2(events)   # no header: an earlier take of the other paddle can't be ruled out (D-132)
+        self.assertEqual(unseen.kind, "unable_to_verify")
+        self.assertIn("correct_occurrence_unseen", unseen.flags)
         self.assertEqual(outcome.timestamps, {"first_paddle_placed": 7, "second_paddle_taken": 9})
 
     def test_second_taken_before_the_first_is_placed(self):

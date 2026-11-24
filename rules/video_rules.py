@@ -12,6 +12,7 @@ from rules.outcome import assumed, failed, not_evaluable, passed, unable
 from rules.registry import rule
 
 FIRST_TAKEN, FIRST_PLACED, SECOND_TAKEN = "first_paddle_taken", "first_paddle_placed", "second_paddle_taken"
+PADDLE_TAKEN_EVENT = {"apical": FIRST_TAKEN, "sternal": SECOND_TAKEN}   # identity under A-027; order by time (D-118)
 BOTH_PLACED = "paddles_firmly_on_chest"
 BUTTONS = "both_paddle_buttons_pressed"
 GEL = "gel_applied"
@@ -32,8 +33,9 @@ ONE_ZONE = "one_zone_in_view"              # R8: one placement seen, the other p
 DERIVED_GEL = "derived_gel_application"   # R1: the result rests on a gel application derived from the boxes (D-111)
 PLACEMENT_TIME_UNKNOWN = "placement_time_unknown"   # R2, R1: a paddle placement needed to judge the order is unknown (D-118)
 TAKE_DEDUCED = "take_order_from_placement"  # R2: the paddle taken first was deduced from its placement (no take tag, D-118)
+SECOND_SHOCK = "second_shock_not_ruled_out"  # R5: the screen not in view throughout placement -> removal (D-132)
 FLAGS = (DERIVED, PARALLEL, PLACEMENT_MISSING, CONTRADICTORY, ONE_ZONE, DERIVED_GEL, PLACEMENT_TIME_UNKNOWN,
-         TAKE_DEDUCED)
+         TAKE_DEDUCED, SECOND_SHOCK)
 
 
 def _evidence_flags(events):
@@ -68,6 +70,30 @@ def _wrong_place(rule_id, code, found, window, reason, *, evidence, uses=(), fla
                   f"({why}) (D-128)", evidence=tuple(evidence) + low, uses=(*uses, *found),
                   flags=(*flags, checks.CORRECT_UNSEEN),
                   timestamps={**(timestamps or {}), "unseen_window_start": window[0], "unseen_window_end": window[1]})
+
+
+def _pass_needs(rule_id, result, found, window, what):
+    """D-132 (extends D-130): a Pass that also claims something did NOT happen needs that window in view: every
+    outcome in `found` (a missing-event check over the window) covered and failing. Otherwise Unable to Verify,
+    flagged correct_occurrence_unseen, naming the window. An uncertain result never becomes a Pass."""
+    if result.kind != "pass_direct" or window is None:
+        return result
+    unseen = [m for m in found if not (m.coverage.status == COVERED and m.outcome == "fail")]
+    if not unseen:
+        return result
+    where = f"from {window[0]:g} s to {window[1]:g} s"
+    why = ", ".join(f"{m.coverage.scope or m.event_name}: "
+                    f"{'seen with low confidence' if LOW_CONFIDENCE_FLAG in m.flags else m.coverage.status}"
+                    for m in unseen)
+    low = tuple(dict.fromkeys(i for m in found for i in m.low_confidence_event_ids))
+    return unable(rule_id, f"{result.reason}; but {what} can't be ruled out: not clearly in view {where} ({why}) "
+                  "(D-132)", evidence=tuple(result.evidence) + low, uses=tuple(found),
+                  flags=(*result.flags, checks.CORRECT_UNSEEN),
+                  timestamps={**result.timestamps, "unseen_window_start": window[0], "unseen_window_end": window[1]})
+
+
+def _ordered(start, end):
+    return (min(start, end), max(start, end))
 
 
 def _region_less(ctx, event_name, window):
@@ -158,7 +184,16 @@ def gel_applied_twice(ctx, definition, results):
                               where)
     else:
         result = _gel_by_tags(ctx, [t for t in tags if in_phase(t)], end, where)
-    return _gel_order_check(result, order, early)
+    result = _gel_order_check(result, order, early)
+    if placement is not None and early:   # D-132: that paddle was not placed earlier, before the last counted gel
+        last = max(e.start for e in early)
+        window = _ordered(min(last, placement.start), placement.start)
+        sternal = placement.event_name == STERNAL
+        zone = [ctx.missing(STERNAL, window)] if sternal else [ctx.missing(APICAL, window),
+                                                                *_region_less(ctx, FIRST_PLACED, window)[:1]]
+        result = _pass_needs("R1", result, zone, window, f"an earlier placement of the "
+                             f"{'sternal' if sternal else 'apical'} paddle (before the gel)")
+    return result
 
 
 def _gel_order_check(result, order, counted):
@@ -333,8 +368,13 @@ def _order(ctx, first, placed, other_taken, first_taken=None):
     flags = _evidence_flags([placed])
     other = "sternal" if first == "apical" else "apical"
     if relation == checks.BEFORE:
-        return passed("R2", f"the {first} paddle (taken first) placed at {placed.start:g} s, before the {other} paddle "
-                      f"was taken at {other_taken.start:g} s", evidence, flags=flags, timestamps=timestamps)
+        result = passed("R2", f"the {first} paddle (taken first) placed at {placed.start:g} s, before the {other} paddle "
+                        f"was taken at {other_taken.start:g} s", evidence, flags=flags, timestamps=timestamps)
+        # D-132: the other paddle was not taken earlier, from the first take to the first placement
+        start = first_taken.start if first_taken is not None and first_taken.start <= placed.start else 0.0
+        window = (start, placed.start)
+        taken = [ctx.coverage.region_missing(f"{other}_paddle", PADDLE_TAKEN_EVENT[other], window)]
+        return _pass_needs("R2", result, taken, window, f"an earlier take of the {other} paddle")
     if relation == checks.SIMULTANEOUS:
         return failed("R2", "simultaneous", f"the {other} paddle taken at {other_taken.start:g} s, at the same time as "
                       f"the {first} paddle (taken first) was placed ({placed.start:g} s)", evidence=evidence,
@@ -692,7 +732,9 @@ def shock_confirmed_on_screen(ctx, definition, results):
     "X before the shock" relation is owned by X's rule (R3, R4, A1-A5), so R5 no longer checks the order and
     no longer flags `order_not_checked`. A leftover `preceding_steps` parameter is a configuration error.
     1. Two or more shocks (the preparation anomaly multiple_shocks) -> Unable to Verify.
-    2. A shock on screen -> Pass - Direct.
+    2. A shock on screen -> Pass - Direct; flagged second_shock_not_ruled_out when the screen was not in view
+       throughout the D-101 window (D-132). The flag doesn't block an overall Pass: a second shock is a data
+       anomaly, not a learner action.
     3. No shock on screen -> coverage of the screen over the window from paddles firmly on chest to
        paddles removed (the whole recording when either tag is missing, D-101): visible throughout
        -> Fail `missing`; otherwise Unable to Verify (D-094). Low confidence is never a Fail.
@@ -708,8 +750,14 @@ def shock_confirmed_on_screen(ctx, definition, results):
     if not shocks:
         return _shock_missing(ctx)
     shock = shocks[0]
-    return passed("R5", f"shock confirmed on the screen at {shock.start:g} s", (shock.event_id,),
-                  timestamps={SHOCK: shock.start})
+    # D-132: a second shock is a data anomaly, not a learner action: the Pass stays, flagged when the screen was
+    # not in view throughout placement -> removal (D-101), so a second shock can't be ruled out
+    window = _shock_window(ctx)
+    seen = ctx.coverage.status(SHOCK, window).status == COVERED
+    note = "" if seen else ("; a second shock can't be ruled out: the screen was not in view throughout "
+                            + (f"{window[0]:g}-{window[1]:g} s" if window else "the recording") + " (D-132)")
+    return passed("R5", f"shock confirmed on the screen at {shock.start:g} s{note}", (shock.event_id,),
+                  flags=() if seen else (SECOND_SHOCK,), timestamps={SHOCK: shock.start})
 
 
 def _shock_window(ctx):
@@ -813,8 +861,14 @@ def _removed_at_or_after(ctx, removal, shock):
         result = _wrong_place("R6", "too_late", zones, window, f"paddles removed {seconds:g} s after the shock: "
                               f"{check.note}", evidence=evidence, uses=(shock, check), timestamps=timestamps)
         return replace(result, timing_checked=True) if result.kind == "fail" else result
-    return passed("R6", f"paddles removed at {removal.start:g} s, after the shock at {shock.time:g} s: {check.note}",
-                  evidence, uses=(shock, check), timestamps=timestamps, timing_checked=check.checked)
+    result = passed("R6", f"paddles removed at {removal.start:g} s, after the shock at {shock.time:g} s: {check.note}",
+                    evidence, uses=(shock, check), timestamps=timestamps, timing_checked=check.checked)
+    # D-132: the paddles were not removed before the shock, from the firm placement to the shock
+    placement = _placement(ctx)
+    if placement is None or placement.start > shock.time:
+        return result
+    window = (placement.start, shock.time)
+    return _pass_needs("R6", result, _region_less(ctx, REMOVAL, window), window, "a removal before the shock")
 
 
 def _removal_without_shock(ctx, shock):
@@ -942,8 +996,12 @@ def _direct(ctx, apical, sternal):
     timestamps = {APICAL: apical.time, STERNAL: sternal.time}
     relation = checks.relation(apical.time, sternal.time, checks.simultaneous_window(ctx))
     if relation == checks.BEFORE:
-        return passed("R8", f"apical paddle placed at {apical.time:g} s, before the sternal at {sternal.time:g} s",
-                      evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)
+        result = passed("R8", f"apical paddle placed at {apical.time:g} s, before the sternal at {sternal.time:g} s",
+                        evidence, uses=(apical, sternal), flags=flags, timestamps=timestamps)
+        # D-132: the sternal paddle was not placed earlier, from the start of the placement phase to the apical one
+        phase = _placement_phase(ctx)
+        window = (phase[0] if phase is not None and phase[0] <= apical.time else 0.0, apical.time)
+        return _pass_needs("R8", result, [ctx.missing(STERNAL, window)], window, "an earlier sternal placement")
     if relation == checks.SIMULTANEOUS:
         return failed("R8", "simultaneous", f"apical ({apical.time:g} s) and sternal ({sternal.time:g} s) paddles "
                       "placed at the same time", evidence=evidence, uses=(apical, sternal), flags=flags,

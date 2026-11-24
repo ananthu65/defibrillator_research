@@ -122,6 +122,9 @@ Notes:
   evidence (clear audio, or visibility) over the window where a correctly placed occurrence would
   have had to be. Otherwise Unable to Verify (D-128). A tag that contradicts the confirmed shock
   (R3 placed after it, R4 pressed before the placement) is Unable to Verify, `contradictory` (D-129).
+- **A Pass that rests on an absence needs clear evidence too** (D-130, D-132): for example R6's
+  Pass also claims the paddles were not removed before the shock. Otherwise Unable to Verify. R5 is
+  the exception: a second shock is a data anomaly, so its Pass is only flagged.
 - **Overall result:** any Fail → Fail. No Fail but at least one Unable to Verify → a
   configurable outcome (Fail or faculty review), **not decided yet**; make it one setting.
   All counted rules Pass (direct or inferred) → Pass.

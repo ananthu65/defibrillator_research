@@ -138,6 +138,7 @@ falls within Level 3 for this project.*
 | 2026-11-24: applied D-128 to the video rules (R1, R2, R3, R4, R6, R8) and to A8 and R7 too_late with the windows the agent's audit proposed, added D-129 (R3/R4 contradictory against the shock), the shared flag correct_occurrence_unseen and report version 15, wrote the tests and docs, compared the demo before and after | The agent's audit found the gaps; Arnikan decided the fixes, the windows and D-129 |
 | 2026-11-24: implemented D-130 (A8 Pass needs clear audio before the stop), checked region-less events against both placement zones, added Ananth's region-visibility requirement (top priority), audited Passes that rest on an absence (report only) | Decided D-130, the both-zones check and the upstream priority |
 | 2026-11-24: Increment 27: built S1 (per-recording relations, minimum misplaced set shared with A7 in order_check.py, one rule per mistake, D-128 windows), added S1 to the catalogue (pending, held back in the demo), updated the rule-count tests and the pipeline reference, wrote the tests and docs; found that OQ-078's example is A7's relation | Specified S1's relations, method and tests; decided OQ-078 |
+| 2026-11-24: implemented D-132 (R1, R2, R6, R8 Passes need the absence window in view; R5 flagged second_shock_not_ruled_out without blocking a Pass), report version 16, tests and docs; recorded D-131 as confirmed | Confirmed D-131 and the OQ-078 correction; decided D-132 and the R5 exception |
 
 ## How I evaluated the AI's work
 

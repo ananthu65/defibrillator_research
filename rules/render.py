@@ -8,7 +8,7 @@ from dataclasses import asdict
 
 from rules.policy import DEMO_NOTICE
 
-REPORT_VERSION = 15  # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
+REPORT_VERSION = 16  # 2: count anomalies (D-071); 3: header visibility and flags (D-092); 4: no_shock meaning,
 #                      screen (D-093, D-094); 5: R8 flags possible_parallel_placement, derived_placement (D-098);
 #                      6: order_not_checked (D-100); 7: timing_limits no_limit (D-103); 8: inferred_from_removal,
 #                      paddle regions (D-107, D-108); 9: after_placement, derived_gel_application, gel regions
@@ -16,7 +16,8 @@ REPORT_VERSION = 15  # 2: count anomalies (D-071); 3: header visibility and flag
 #                      removed (D-115); 12: one_zone_in_view replaces R8's one-zone inference (D-116);
 #                      13: placement_time_unknown, paddle order from event times (D-118); 14: timing_uncertain,
 #                      order_partially_checked, the audio region, R3/R4/R6 judged without a shock time (D-121 to D-125);
-#                      15: correct_occurrence_unseen (D-128); R3/R4 contradictory against the shock (D-129)
+#                      15: correct_occurrence_unseen (D-128); R3/R4 contradictory against the shock (D-129);
+#                      16: second_shock_not_ruled_out; correct_occurrence_unseen on Passes (D-130, D-132)
 REPORT_KIND = "rule_engine_report"
 
 
