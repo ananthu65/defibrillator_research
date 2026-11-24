@@ -5,9 +5,7 @@ nothing here imports audio/. A command event carries its Whisper segment, so it 
 interval (checks.relation_between, D-125). A missing command can Fail only inside stated clear-audio
 intervals (the audio region, D-122). Registered rules run only when approved in configs/rules.yaml.
 """
-from itertools import combinations
-
-from rules import checks
+from rules import checks, order_check
 from rules.coverage import COVERED, LOW_CONFIDENCE_FLAG
 from rules.outcome import failed, not_evaluable, passed, unable
 from rules.registry import rule
@@ -142,12 +140,7 @@ def _without_shock(ctx, rule_id, event_name, what, commands, shock):
 CONTINUE, STOP = "continue_compressions_command", "stop_compressions_command"
 
 
-def _possibly(ctx, event_name):
-    """Ambiguous commands left unresolved (P-011: near the shock, or no shock time) that could have been
-    event_name. Their stage is unknown, so they are neither evidence nor absence (D-010, D-125)."""
-    unresolved = {r.event_id for r in ctx.resolutions if r.resolved_to is None}
-    return [e for e in ctx.events if e.event_id in unresolved
-            and event_name in (ctx.config.vocabulary.resolution(e.source, e.event_name) or ())]
+_possibly = order_check.possibly
 
 
 def _screen(ctx):
@@ -610,7 +603,7 @@ def command_order(ctx, definition, results):
     relations = [(r.before, r.after) for r in order.owned_by("A7")]
     ids = [s.id for s in order.steps if any(s.id in pair for pair in relations)]
     real = {s: [e for e in ctx.events if e.event_name in order.step(s).events] for s in ids}
-    unsure = {s: _unseen_occurrences(ctx, order.step(s)) for s in ids}
+    unsure = {s: order_check.unseen_occurrences(ctx, order.step(s)) for s in ids}
     observed = [s for s in ids if real[s]]
     clear = ctx.coverage.region_status("audio", _whole(ctx)).status == COVERED
     unseen = [s for s in ids if not real[s] and (unsure[s] or (not clear and not order.step(s).optional))]
@@ -619,126 +612,38 @@ def command_order(ctx, definition, results):
     if len(observed) < 2:
         return unable("A7", f"fewer than two commands of the procedure order heard ({', '.join(observed) or 'none'}), "
                       "so their order can't be judged")   # nothing checked, so not "partially checked"
-    certain = _minimum_misplaced(ctx, ids, relations, real, {})
+    certain = order_check.minimum_misplaced(ctx, ids, relations, real, {}, "A7")
     note = f"; not checked (unseen): {', '.join(unseen)}" if unseen else ""
     if not certain.all_dropped:
-        same = _same_segment_pairs(certain.chosen, relations)
+        same = order_check.same_segment_pairs(certain.chosen, relations)
         segment = ("; in one segment, so not ordered: " + ", ".join(f"{a} and {b}" for a, b in same)) if same else ""
-        return passed("A7", f"the commands heard are in the expected order ({_listing(certain.chosen)}){segment}{note}",
+        return passed("A7", f"the commands heard are in the expected order ({order_check.listing(certain.chosen)})"
+                      f"{segment}{note}",
                       tuple(e.event_id for e in certain.chosen.values()),
                       flags=(checks.ORDER_PARTIALLY_CHECKED,) if partial or same else (),
                       timestamps={s: e.start for s, e in certain.chosen.items()})
-    possible = _minimum_misplaced(ctx, ids, relations, real, unsure)
+    possible = order_check.minimum_misplaced(ctx, ids, relations, real, unsure, "A7")
     if not possible.all_dropped:
         return unable("A7", f"{_describe(certain, real)}, but a low-confidence or unresolved command could be an "
-                      f"occurrence in the right place{note}", evidence=_evidence(certain, real, ids),
-                      timestamps=_times(certain, real), flags=(checks.ORDER_PARTIALLY_CHECKED,))
+                      f"occurrence in the right place{note}", evidence=order_check.evidence(certain.all_dropped, real, ids),
+                      timestamps=order_check.times(certain.all_dropped, real), flags=(checks.ORDER_PARTIALLY_CHECKED,))
+    required = lambda other: real[other] and not order.step(other).optional
     unheard = [(step, window) for step in possible.all_dropped
-               for window in [_correct_window(ctx, order, step, relations, real)]
+               for window in [order_check.correct_window(step, relations, real, required, _recording_end(ctx))]
                if any(ctx.missing(name, window).outcome != "fail" for name in order.step(step).events)]
+    evidence, times = order_check.evidence(possible.all_dropped, real, ids), order_check.times(possible.all_dropped, real)
     if unheard:
         where = "; ".join(f"{step} from {w[0]:g} s to {w[1]:g} s" for step, w in unheard)
         return unable("A7", f"{_describe(possible, real)}, but a correctly placed occurrence may have been said and not "
                       f"heard: the audio was not clear where it would have been ({where}) (D-128){note}",
-                      evidence=_evidence(possible, real, ids), timestamps=_times(possible, real),
+                      evidence=evidence, timestamps=times,
                       flags=(checks.ORDER_PARTIALLY_CHECKED, checks.CORRECT_UNSEEN))
-    return failed("A7", "wrong_order", f"{_describe(possible, real)}{note}", evidence=_evidence(possible, real, ids),
-                  timestamps=_times(possible, real), flags=partial_flag)
-
-
-class _Solution:
-    """The minimum solutions: misplaced = steps in every one; between = steps in some but not all (one mistake
-    between them); chosen = the occurrences kept by the first solution."""
-
-    def __init__(self, misplaced, between, chosen):
-        self.misplaced, self.between, self.chosen = misplaced, between, chosen
-
-    @property
-    def all_dropped(self):
-        return list(self.misplaced) + list(self.between)
-
-
-def _minimum_misplaced(ctx, ids, relations, real, unsure):
-    """Kept sets tried from the largest down (deterministic; at most 15 steps). Dropping a step heard for real
-    costs 1; a step seen only through low-confidence or unresolved commands drops for free."""
-    steps = [s for s in ids if real[s] or unsure.get(s)]
-    if len(steps) > 15:
-        raise ValueError(f"A7: {len(steps)} steps observed; the order search handles at most 15")
-    occurrences = {s: sorted(real[s] + unsure.get(s, []), key=lambda e: (e.start, e.end)) for s in steps}
-    preds = {s: [p for p, q in relations if q == s] for s in steps}
-    best, solutions = None, []
-    for size in range(len(steps), -1, -1):
-        for kept in combinations(steps, size):
-            dropped = frozenset(s for s in steps if s not in kept and real[s])
-            if best is not None and len(dropped) > best:
-                continue
-            chosen = _place(ctx, kept, occurrences, preds)
-            if chosen is None:
-                continue
-            if best is None or len(dropped) < best:
-                best, solutions = len(dropped), [(dropped, chosen)]
-            elif dropped not in [d for d, _ in solutions]:
-                solutions.append((dropped, chosen))
-    every = frozenset.intersection(*[d for d, _ in solutions])
-    some = frozenset.union(*[d for d, _ in solutions]) - every
-    return _Solution([s for s in ids if s in every], [s for s in ids if s in some], solutions[0][1])
-
-
-def _place(ctx, kept, occurrences, preds):
-    """A topological sweep: each kept step's earliest occurrence not certainly before any kept predecessor.
-    Earliest is optimal: the constraints only push later steps later."""
-    chosen = {}
-    for step in kept:   # kept follows the procedure's step order, a topological order
-        before = [chosen[p] for p in preds[step] if p in chosen]
-        fits = [o for o in occurrences[step] if all(checks.relation_between(ctx, o, b) != checks.BEFORE for b in before)]
-        if not fits:
-            return None
-        chosen[step] = fits[0]
-    return chosen
-
-
-def _unseen_occurrences(ctx, step):
-    """Occurrences that could be this step but can't be used: low confidence, or unresolved (P-011)."""
-    vocabulary = ctx.config.vocabulary
-    low = [e for e in ctx.prepared.excluded if e.event_name in step.events
-           or set(vocabulary.resolution(e.source, e.event_name) or ()) & set(step.events)]
-    return low + [e for name in step.events for e in _possibly(ctx, name)]
-
-
-def _same_segment_pairs(chosen, relations):
-    return [(a, b) for a, b in relations if a in chosen and b in chosen and checks.same_segment(chosen[a], chosen[b])]
-
-
-def _listing(chosen):
-    return ", ".join(f"{s} at {e.start:g} s" for s, e in chosen.items())
+    return failed("A7", "wrong_order", f"{_describe(possible, real)}{note}", evidence=evidence, timestamps=times,
+                  flags=partial_flag)
 
 
 def _describe(solution, real):
-    parts = [f"{s} ({real[s][0].event_name} at {real[s][0].start:g} s) is out of order" for s in solution.misplaced]
-    if solution.between:
-        names = " and ".join(f"{s} ({real[s][0].event_name} at {real[s][0].start:g} s)" for s in solution.between)
-        parts.append(f"{names} are in the wrong order (one mistake)")
-    return "; ".join(parts)
-
-
-def _evidence(solution, real, ids):
-    return tuple(real[s][0].event_id for s in sorted(solution.all_dropped, key=ids.index))
-
-
-def _times(solution, real):
-    return {s: real[s][0].start for s in solution.all_dropped}
-
-
-def _correct_window(ctx, order, step, relations, real):
-    """D-128: where a correctly placed occurrence of `step` would have had to be: after the earliest occurrence of
-    each observed required predecessor and before the latest occurrence of each observed required successor (any
-    occurrence counts); the recording start or end where none."""
-    required = lambda other: real[other] and not order.step(other).optional
-    preds = [p for p, q in relations if q == step and required(p)]
-    succs = [q for p, q in relations if p == step and required(q)]
-    start = max((checks.time_bounds(real[p][0])[0] for p in preds), default=0.0)
-    end = min((checks.time_bounds(real[q][-1])[1] for q in succs), default=_recording_end(ctx) or start)
-    return (min(start, end), max(start, end))
+    return order_check.describe(solution.misplaced, solution.between, real)
 
 
 def _whole(ctx):

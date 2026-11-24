@@ -80,3 +80,6 @@ rules:
   # A8: stop -> end of the pause within pre_shock_pause_seconds. end_event is start (the restart, as approved)
   # or shock (the shock on the screen); start until the supervisor decides (OQ-076).
   - {id: A8, title: Pre-shock pause, status: pending, enabled: false, implementation: null, parameters: {end_event: start}}
+  # S1: the procedure order on the relations no other rule owns, derived per recording from the observed
+  # steps (D-126, OQ-078). Built in Increment 27; pending: whether it is its own checklist item is open (OQ-064).
+  - {id: S1, title: Procedure order, status: pending, enabled: false, implementation: null, parameters: {}}

@@ -476,6 +476,19 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
 - **Affects:** A8 (P-044). Other Passes that rest on an absence were audited (progress.md, 2026-11-24);
   their gaps are not fixed yet.
 
+### D-131 S1 derives its relations per recording from the observed steps
+- **Date / by / status:** 2026-11-24 · Arnikan · approved. **Answers OQ-078.** Refines D-126 (option B).
+- **Decision:** per recording, S1's relations are the transitive reduction of the procedure order
+  restricted to the observed steps, minus every relation another rule owns. A relation that bridges
+  a missing or unseen step is then S1's unless another rule owns it, so it is judged once.
+- **One rule per mistake (agent proposal, to confirm):** a step S1 finds misplaced that also breaks,
+  in every occurrence, a relation another rule owns is left to that rule and named in S1's reason.
+  Without it, the gel applied after the placement would fail R1 (R1 → placement) and S1 (gel after
+  stop) for one action (D-119).
+- **Correction to OQ-078's example:** "charging" said after "stop" is A7's relation (both are audio
+  commands), so A7 catches it; the bridge S1 catches is cross-modal.
+- **Affects:** S1 (P-046, Increment 27).
+
 ## Rule definitions
 
 ### D-018 Gel: applied twice within the approved period; order versus placement not checked

@@ -12,7 +12,7 @@ from rules.errors import ConfigError
 
 RULES = yaml.safe_load((ROOT / "configs/rules.yaml").read_text(encoding="utf-8"))
 ENGINE = yaml.safe_load((ROOT / "configs/rule_engine/engine.yaml").read_text(encoding="utf-8"))
-DISPLAY = ["R1", "R2", "R8", "R3", "R4", "R5", "R6", "A1", "A2", "A3", "A4", "A5", "R7", "A6", "A7", "A8"]
+DISPLAY = ["R1", "R2", "R8", "R3", "R4", "R5", "R6", "A1", "A2", "A3", "A4", "A5", "R7", "A6", "A7", "A8", "S1"]
 
 
 def rules_config(**changes):

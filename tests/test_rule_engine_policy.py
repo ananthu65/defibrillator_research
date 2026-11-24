@@ -164,7 +164,7 @@ class ThroughTheEngine(unittest.TestCase):
     def test_real_catalogue_is_incomplete_with_r7_a6_once(self):
         result = assess([Event("Gel applied", 1, 1, "annotation", 1.0, event_id="g")], RULES)
         self.assertEqual(result.overall.result, INCOMPLETE)
-        self.assertEqual(len(result.overall.incomplete), 15)
+        self.assertEqual(len(result.overall.incomplete), 16)   # S1 added in Increment 27
         self.assertIn(("R7", "A6"), [c.rule_ids for c in result.overall.incomplete])
 
     def test_timeline_anomalies_reach_the_policy(self):

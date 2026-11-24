@@ -67,7 +67,7 @@ first, so that section can be printed for supervisor meetings.
 | OQ-019 | E-12 | team | Ananth, Sanjeevan, Arnikan | open | Which side applies confidence thresholds? |
 | OQ-037 | Brief §9 | team | Ananth, Sanjeevan | open | Model output formats and the meaning of confidence |
 | OQ-038 | Brief §9 | team | Ananth | open | Final camera angle |
-| OQ-078 | new (2026-11-24) | Arnikan | — | open | S1: how to judge implied relations across a missing or unseen step? |
+| OQ-078 | new (2026-11-24) | Arnikan | — | answered | S1: how to judge implied relations across a missing or unseen step? |
 | OQ-071 | new (2026-11-10) | Arnikan | — | answered | Should S1 own relations already implied by other rules' relations? |
 | OQ-007 | E-3c | Arnikan | — | answered | Zone visibility for annotation timelines |
 | OQ-008 | E-3d | Arnikan | — | answered | Annotation label lists that drop the first-placement tag |
@@ -693,8 +693,12 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 ## For Arnikan (rule engine and annotation)
 
 ### OQ-078 S1: how to judge implied relations across a missing or unseen step?
-- **Old no.:** new (2026-11-24) · **Owner:** Arnikan · **Raised:** 2026-11-24 · **Status:** open
-  (to settle before Increment 27, S1)
+- **Old no.:** new (2026-11-24) · **Owner:** Arnikan · **Raised:** 2026-11-24 · **Status:** answered
+  (2026-11-24, Arnikan): the proposal below, built in Increment 27. **Correction:** the example's
+  "charging → stop" is A7's relation (both are audio commands, A7's audio scope), so A7 already catches
+  "charging" said after "stop". The case S1 catches is a cross-modal bridge, for example "charging" said
+  after the first paddle is taken while the gel phase and stop are unseen.
+- **Answered:** 2026-11-24 → **D-131**
 - **Question:** under option B (D-126), an implied relation has no owner and is judged only through
   the relations that imply it. If an intermediate step is missing or unseen, the implied relation is
   never judged.

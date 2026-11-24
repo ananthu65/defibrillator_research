@@ -312,11 +312,11 @@ class PipelineOutputUnchanged(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertEqual(report[key], golden[key])
 
-    def test_real_config_gives_sixteen_pending_rules(self):
+    def test_real_config_gives_seventeen_pending_rules(self):   # S1 added in Increment 27
         events = merge_timeline([Event.from_dict(e) for e in
                                  json.loads((ROOT / "tests/fixtures/sample_timeline.json").read_text())])
         result = assess(events, RULES)
-        self.assertEqual(len(result.outcomes), 16)
+        self.assertEqual(len(result.outcomes), 17)
         self.assertTrue(all(o.kind == PENDING and o.reason == PENDING_REASON for o in result.outcomes))
 
 

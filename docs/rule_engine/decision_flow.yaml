@@ -1451,12 +1451,46 @@ decision_points:
     assumptions: []
     open_questions: [OQ-009, OQ-062, OQ-072, OQ-073, OQ-075, OQ-077]
 
+  - id: P-046
+    name: S1 the procedure order
+    stage: rule
+    status: built
+    decides: S1's result (Increment 27); pending in rules.yaml and held back in the demo (whether S1 is its own checklist item is open, OQ-064). S1 reads events, not rule results (D-123)
+    inputs: [every step's events (procedure_order.yaml; derived steps from the paddle order, D-118), the relation owners, low-confidence and unresolved events, region visibility and clear-audio intervals (D-122)]
+    branches:
+      - condition: Fewer than two observed steps in S1's own relations
+        outcome: Unable to Verify
+      - condition: Per recording - the transitive reduction of the order restricted to the observed steps, minus every relation another rule owns (D-126 option B, OQ-078); a relation bridging a missing or unseen step is S1's unless another rule owns it
+        outcome: S1's relations for this recording
+      - condition: No step misplaced on S1's relations (any occurrence in the right place counts; a tie within simultaneous_window_seconds in one modality or cross_modal_tolerance_seconds across is not ordered; the gel phase interchangeable; optional steps only if present; A5 against the shocking actions unordered, OQ-075)
+        outcome: Pass - Direct
+        next: P-025
+      - condition: No step misplaced, but a step unseen (not observed and not clearly absent) or two related commands in one segment
+        outcome: Pass - Direct, never clean
+        flags: [order_partially_checked]
+      - condition: A misplaced step that also breaks, in every occurrence, a relation another rule owns (for example the gel after the placement, R1's)
+        outcome: Left to that rule and named in the reason; S1 doesn't report it (one rule per mistake, D-119, D-123)
+      - condition: Misplaced, but a low-confidence or unresolved event could be an occurrence in the right place
+        outcome: Unable to Verify
+        flags: [order_partially_checked]
+      - condition: Misplaced, the window of the correct occurrence (latest observed required predecessor to earliest observed required successor) not clear or not in view (D-128)
+        outcome: Unable to Verify
+        flags: [order_partially_checked, correct_occurrence_unseen]
+      - condition: Misplaced, every reported step's window clear or in view
+        outcome: Fail wrong_order - the misplaced steps, or one ordering mistake between them (equal solutions)
+        failure_codes: [wrong_order]
+    config: [configs/rule_engine/procedure_order.yaml, engine.yaml simultaneous_window_seconds and cross_modal_tolerance_seconds, engine.yaml regions and coverage_policy]
+    code: rules/procedure_rules.py (procedure_order), rules/order_check.py (shared with A7)
+    decisions: [D-119, D-120, D-121, D-122, D-123, D-125, D-126, D-127, D-128, D-131]
+    assumptions: []
+    open_questions: [OQ-062, OQ-064, OQ-075, OQ-077]
+
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039
     name: Procedure order (precedence graph)
     stage: configuration
     status: built
-    decides: The expected relative order of every audio and video step, and which rule judges each "X before Y" relation (D-120, D-123); loaded and validated with the catalogue. NOT clinically approved (OQ-062); A7 reads it since Increment 26, S1 from Increment 27
+    decides: The expected relative order of every audio and video step, and which rule judges each "X before Y" relation (D-120, D-123); loaded and validated with the catalogue. NOT clinically approved (OQ-062); A7 reads it since Increment 26, S1 since Increment 27
     inputs: [configs/rule_engine/procedure_order.yaml (steps, chains, unknown, interchangeable, owners, default_owner), the vocabulary]
     branches:
       - condition: A step's events are not canonical, or mix modalities, or its derived kind is not earliest_take, later_take or earliest_placement

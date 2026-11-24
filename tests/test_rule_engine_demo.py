@@ -57,7 +57,8 @@ class DemoConfig(unittest.TestCase):
 
     # built rules held back in the demo, with the open question that keeps them out
     HELD_BACK = {"A5": "OQ-075: whether a shock command is required is open; the lecturer gave none",
-                 "A8": "OQ-076: stop to start or stop to the shock; under start a lecturer-like timeline fails"}
+                 "A8": "OQ-076: stop to start or stop to the shock; under start a lecturer-like timeline fails",
+                 "S1": "OQ-064: whether S1 is its own checklist item is open"}
 
     def test_built_rules_approved_and_the_rest_disabled(self):
         built = set(discover()) - set(self.HELD_BACK)

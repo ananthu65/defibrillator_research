@@ -611,3 +611,21 @@ flowchart TD
     V -->|no| U2["Unable to Verify<br/>correct_occurrence_unseen<br/>(the window named)"]
 ```
 
+## (x) S1 the procedure order (P-046, built in Increment 27; pending, OQ-064)
+
+```mermaid
+flowchart TD
+    O["Observed steps"] --> R["S1's relations: the transitive reduction<br/>over the observed steps, minus every<br/>relation another rule owns (OQ-078)"]
+    R --> N{"Two or more observed<br/>steps in them?"}
+    N -->|no| U0["Unable to Verify"]
+    N -->|yes| M{"Minimum set of misplaced steps"}
+    M -->|none| P{"A step unseen?"}
+    P -->|no| OK["Pass"]
+    P -->|yes| OKP["Pass<br/>order_partially_checked"]
+    M -->|some| E{"Also breaks a relation<br/>another rule owns?"}
+    E -->|yes| L["Left to that rule (named)"]
+    E -->|no| W{"Correct place clearly<br/>observed? (D-128)"}
+    W -->|no| U["Unable to Verify<br/>correct_occurrence_unseen"]
+    W -->|yes| F["Fail wrong_order"]
+```
+

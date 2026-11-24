@@ -5525,3 +5525,57 @@ Each would give Unable to Verify (`correct_occurrence_unseen`) when its window i
 
 Results: full suite **908 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
 
+## Increment 27: S1 the procedure order (2026-11-24)
+
+D-130, the region-less events and Ananth's visibility requirement were committed (`6765001`) and
+pushed. This increment is not committed.
+
+### What was built
+- **`rules/order_check.py`:** the minimum-misplaced search, moved out of A7 so A7 and S1 share it,
+  with an early stop (once smaller kept sets can only drop more observed steps than the best found).
+  A7's results are unchanged (its tests pass as before).
+- **S1** (`rules/procedure_rules.py`, P-046):
+  - **relations per recording (D-126 option B, OQ-078):** the transitive reduction of the order over
+    the observed steps, minus every relation another rule owns. A relation bridging a missing or
+    unseen step is S1's unless another rule owns it;
+  - **method (plan section 4):** the minimum set of misplaced steps; ties within the window are not
+    ordered; the gel phase interchangeable; optional steps only if present; A5 against the shocking
+    actions unordered; equal solutions are one mistake; fewer than two observed steps in S1's
+    relations → Unable to Verify;
+  - **one rule per mistake:** a misplaced step that also breaks, in every occurrence, a relation
+    another rule owns is left to that rule and named. Without this, the gel applied after the
+    placement would fail R1 (R1 → placement) and S1 (gel after stop) for one action;
+  - **D-128** for each reported step (the window from the full reduction over the observed steps);
+    unseen steps (not observed and not clearly absent) flag `order_partially_checked`;
+  - derived steps (first and second paddle taken, the first placement) come from the paddle order.
+- **Catalogue:** S1 added to `rules.yaml` (pending, OQ-064) and held back in the demo config. The
+  tests that pin the rule list were updated: the display order, the rule count (16 → 17, in
+  `test_pipeline_contracts.py`, as its comment asks), the pipeline reference (S1 added as pending,
+  the only change), the Incomplete list (15 → 16), and the procedure-order tests that expected S1
+  not to exist yet.
+- **OQ-078 answered**, with a correction: its example ("charging" after "stop", gel phase unseen) is
+  A7's relation (both audio), so A7 catches it. The cross-modal bridge is S1's (for example
+  "charging" after the first paddle is taken, the gel phase and stop unseen); a test covers each.
+
+### Tests (908 → 921)
+New `tests/test_rule_engine_s1.py` (13 tests, full `rules.yaml`): the lecturer-like procedure (clean
+Pass, S1's five relations); stop after the first take (S1 Fail; no other rule fails, with every built
+rule approved except A5 and A8); a cross-modal tie; the gel phase interchangeable and optional steps;
+A5 unordered; charging after the first take with the gel phase and stop unseen (S1); charging after
+stop with the gel phase unseen (A7, not S1); the gel after the placement (R1 only); a window not
+clearly heard (Unable to Verify); unseen steps (never a clean Pass); fewer than two steps; pending and
+held back; ownership.
+
+Results: full suite **921 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-046), `pathways.md` (P-046, W-97), `diagrams.md` ((x));
+- `anomalies.md`, `output_contract.md` (`wrong_order` built for S1; version unchanged),
+  `rules_status.md`, `procedure.md`, `methods.md`;
+- `open_questions.md` (OQ-078 answered, with the correction), `audio_integration_plan.md` (row 27),
+  `demo_walkthrough.md`;
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 28 (the combined scenario matrix) on Arnikan's "continue".
+

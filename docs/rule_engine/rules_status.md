@@ -29,8 +29,8 @@ D-118). Untested on reversed-order recordings.
 expected position and the owner of each order relation (validated at load; Increment 20). It is
 NOT clinically approved (OQ-062). Since 2026-11-24 it is the interim order from the lecturer's
 ground-truth video (D-127), with charging and the spoken "applying gel" as optional steps. S1
-"Procedure order" (planned) owns only relations nothing else implies (D-126); A7 owns the audio
-pairs.
+"Procedure order" (built in Increment 27, pending) judges the relations no other rule owns, derived per
+recording from the observed steps (D-126, OQ-078); A7 owns the audio pairs.
 
 **Audio (D-122, D-125):** the audio rules read Sanjeevan's command events. A missing command can
 fail only inside stated clear-audio intervals; otherwise it is Unable to Verify. Until stop,
@@ -67,6 +67,7 @@ confirmed on the screen as an inference source are Unable to Verify, `contradict
 | **A6** Start or resume compressions promptly | The same check as R7, reported under A6 (D-044) | as R7 | as R7 | as R7 | 24 | **implemented** (as R7); pending until approved | as R7 |
 | **A7** Command order | Only the audio–audio relations A7 owns in `procedure_order.yaml` (interim: oxygen away → stand clear → continue → charging → "applying gel" → stop → shock command → start); A2 → A4 stays A4's. The minimum set of misplaced commands (plan section 4): any occurrence in the right place counts; ties and one-segment pairs are not ordered; missing commands left out; optional steps checked only if said. Unseen commands (unclear audio, low confidence, unresolved continue/resume) → `order_partially_checked`; a misplacement they could remove, or one with unclear audio, is Unable to Verify. Fewer than two commands → Unable to Verify. No `depends_on` (D-123) | the audio commands, the procedure order, clear-audio intervals | P-045, P-025, P-011 | `wrong_order` | 26 | **implemented** (Increment 26); pending until approved | OQ-062, OQ-075, OQ-077 |
 | **A8** Pre-shock pause | "Stop CPR" to the end of the pause within **5 s** (approved, D-016), judged on the shortest and longest possible pause (D-125): uncertain → Unable to Verify (`timing_uncertain`). A Fail needs clear audio over the pause (D-128); a Pass needs clear audio from the latest continue (or the start) to the stop (D-130). The end event is a config value (`end_event`): start (the restart, as approved; default) or shock (OQ-076). The restart is the same one R7 judges. No shock time → Not evaluable because of R5; no stop → because of A4; no restart → because of R7 | stop command, continue command, restart (start anchor), shock time | P-044, P-012, P-024, P-025 | `pre_shock_pause` | 25 | **implemented** (Increment 25); pending until approved | OQ-009, OQ-015, OQ-076 |
+| **S1** Procedure order | The order of the whole procedure on the relations no other rule owns, derived per recording: the transitive reduction of the order over the observed steps, minus other rules' relations, so a relation bridging a missing or unseen step is still judged once (OQ-078). The minimum set of misplaced steps (as A7); a step also misplaced on another rule's relation is left to that rule. D-128 for each reported step; unseen steps → `order_partially_checked` | every step's events, the procedure order, region visibility and clear-audio intervals | P-046, P-025 | `wrong_order` | 27 | **implemented** (Increment 27); pending, and held back in the demo until OQ-064 | OQ-062, OQ-064 |
 
 ## What is built so far (Increments 0–17, with 9a to 9d)
 

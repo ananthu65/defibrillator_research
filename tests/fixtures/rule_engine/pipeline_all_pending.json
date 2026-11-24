@@ -167,6 +167,14 @@
       "supporting_events": [],
       "timestamps": {},
       "schema_version": 1
+    },
+    {
+      "rule_id": "S1",
+      "status": "unable_to_assess",
+      "reason": "Pending supervisor-approved definition and new rule implementation",
+      "supporting_events": [],
+      "timestamps": {},
+      "schema_version": 1
     }
   ],
   "feedback": [
@@ -185,6 +193,7 @@
     "R7: Pending supervisor-approved definition and new rule implementation.",
     "A6: Pending supervisor-approved definition and new rule implementation.",
     "A7: Pending supervisor-approved definition and new rule implementation.",
-    "A8: Pending supervisor-approved definition and new rule implementation."
+    "A8: Pending supervisor-approved definition and new rule implementation.",
+    "S1: Pending supervisor-approved definition and new rule implementation."
   ]
 }

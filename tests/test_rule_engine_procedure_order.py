@@ -163,7 +163,7 @@ class Validation(unittest.TestCase):
 
     def test_every_owner_is_a_rule_in_the_catalogue_or_the_planned_default(self):
         owners = {r.owner for r in ORDER.relations} - {None}
-        self.assertEqual(owners - set(RULE_IDS), {"S1"})   # S1 is added to rules.yaml in Increment 27
+        self.assertEqual(owners - set(RULE_IDS), set())   # S1 is in rules.yaml since Increment 27
 
     def test_an_unknown_pair_ordered_by_the_chains_is_refused(self):
         chains = [*DATA["chains"], {"chain": ["A5", "R4"], "source": "test"}]
@@ -222,9 +222,10 @@ class LoadedWithTheCatalogue(unittest.TestCase):
             with self.assertRaisesRegex(ConfigError, "circular order"):
                 RuleEngineConfig.from_dict({**RULES, "procedure_order": str(path)})
 
-    def test_no_rule_reads_it_yet(self):
-        """S1 and A7 come in Increments 26-27; the order changes no result today."""
-        self.assertNotIn("S1", RULE_IDS)
+    def test_a7_and_s1_read_it(self):
+        """A7 since Increment 26, S1 since Increment 27: both are registered rules in the catalogue."""
+        from rules.registry import discover
+        self.assertTrue({"A7", "S1"} <= set(discover()) and {"A7", "S1"} <= set(RULE_IDS))
 
 
 if __name__ == "__main__":

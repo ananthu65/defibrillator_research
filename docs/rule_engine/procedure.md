@@ -12,8 +12,9 @@ differ from it.
 - **Status:** **NOT clinically approved.** `approved_by` is null until the medical supervisor confirms
   the order (OQ-062).
 - **How the order is checked:** each "X before Y" relation has one owner (D-123). The rule that
-  already checks it owns it; A7 owns the other audio pairs; S1 "Procedure order" (planned) owns the
-  few relations nothing else implies (D-126). Steps marked optional are checked for their position
+  already checks it owns it; A7 owns the other audio pairs; S1 "Procedure order" (built in Increment
+  27, pending) judges the relations no other rule owns, derived per recording from the observed steps,
+  so a relation across a missing or unseen step is still judged once (D-126, OQ-078). Steps marked optional are checked for their position
   only when present.
 
 ## Steps

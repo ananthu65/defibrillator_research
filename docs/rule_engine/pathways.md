@@ -350,6 +350,21 @@ commands are left out; optional steps (charging, "applying gel") are checked onl
 | Misplaced, the audio not clear where a correct occurrence would have been (from its latest observed required predecessor to its earliest observed required successor) | Unable to Verify (D-128) | `order_partially_checked` |
 | Misplaced, the audio clear over each reported command's window | Fail: the misplaced commands, or one ordering mistake between them | `wrong_order` |
 
+#### P-046 S1 the procedure order (built, Increment 27; pending, held back in the demo, OQ-064)
+S1's relations are derived per recording: the transitive reduction of the order restricted to the
+observed steps, minus every relation another rule owns. A relation that bridges a missing or unseen
+step is S1's unless another rule owns it (OQ-078).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Fewer than two observed steps in S1's relations | Unable to Verify | — |
+| None misplaced | Pass – Direct | — |
+| None misplaced; a step unseen, or two commands in one segment | Pass – Direct, never clean | `order_partially_checked` |
+| A misplaced step that also breaks a relation another rule owns | left to that rule, named in the reason | — |
+| Misplaced, a low-confidence or unresolved event could be in the right place | Unable to Verify | `order_partially_checked` |
+| Misplaced, its correct place not clearly observed (D-128) | Unable to Verify | `order_partially_checked`, `correct_occurrence_unseen` |
+| Misplaced, its correct place clearly observed | Fail: the misplaced steps, or one mistake between them | `wrong_order` |
+
 #### D-128 and D-129 across the rules (2026-11-24)
 A wrong-place or wrong-time Fail needs clear evidence over the window of the correct occurrence;
 otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
@@ -358,7 +373,7 @@ otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
 |---|---|
 | A1, A3, A5 `after_shock`; A2 `wrong_stage` | recording start → shock |
 | A4 `after_shock` / `wrong_order` | first continue (or start) → shock / continue → shock (or end) |
-| A7 `wrong_order` | latest observed required predecessor → earliest observed required successor |
+| A7 / S1 `wrong_order` | latest observed required predecessor → earliest observed required successor |
 | A8 `pre_shock_pause` / A8 Pass (D-130) | stop → end event / latest continue (or start) → stop |
 | R7/A6 `before_shock` / `too_late` | shock → recording end / shock → restart |
 | R1 `after_placement` / `outside_time_period` | recording start → first placement / first application → + period (both zones) |
@@ -372,8 +387,8 @@ otherwise Unable to Verify, `correct_occurrence_unseen`, naming the window.
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
 The expected order of every audio and video step, as "X before Y" chains
-(`configs/rule_engine/procedure_order.yaml`, D-120). A7 reads it since Increment 26; S1 will
-(Increment 27).
+(`configs/rule_engine/procedure_order.yaml`, D-120). A7 reads it since Increment 26, S1 since
+Increment 27.
 
 | Condition | Outcome |
 |---|---|
@@ -1442,4 +1457,21 @@ shock is judged by its own rule.
 5. A8: stop 10–11 s, start 17–18 s, the audio clear only to 15 s → **Unable to Verify**: an unheard
    earlier restart would have shortened the pause. With the audio clear throughout → **Fail
    `pre_shock_pause`** (6 to 8 s).
+
+### W-97 The procedure order (S1)
+*(Built in Increment 27; P-046.)*
+1. The lecturer-like procedure (oxygen away 2 s … start 23 s, no shock command), everything in view
+   and the audio clear → **S1 Pass**, with no flag. S1's relations: charging → gel phase, gel phase →
+   stop, stop → first paddle taken, second paddle taken → both firmly on the chest, removal → start.
+2. Stop said at 16.5 s, after the first paddle was taken at 15 s → **S1 Fail `wrong_order`**: "A4
+   and R2A are in the wrong order (one mistake)". No other rule fails: A4 (stop before the shock) and
+   R2 pass.
+3. The same with the audio unclear from 12 to 16 s → **Unable to Verify**, `correct_occurrence_unseen`:
+   stop's correct place (10–15 s) wasn't clearly heard (D-128).
+4. Charging said at 16.5 s, after the first take, with the gel phase out of view and stop not said →
+   the relation "charging → first paddle taken" bridges the unseen steps → **S1 Fail** (OQ-078).
+5. Charging said after stop, with the gel phase out of view → "charging → stop" is A7's relation (both
+   audio) → **A7 Fail**, S1 doesn't report it.
+6. The gel applied only after the placement → **R1 Fail `after_placement`**; S1 also sees the gel after
+   stop, but leaves it to R1 and names it ("reported by their own rule: R1").
 
