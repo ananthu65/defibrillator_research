@@ -5068,3 +5068,70 @@ Docs only:
 - **Proposed for Increment 27:** S1 derives its relations per recording from the observed steps (the
   transitive reduction restricted to them, minus other rules' relations).
 - **Plan:** added to the Increment 27 row, and scenario 14 added to the Increment 28 matrix.
+
+## Increment 22: A2 continue compressions and A4 stop CPR (2026-11-24)
+
+OQ-078 was committed (`17471d1`) and pushed. This increment is not committed.
+
+### What was built
+`rules/audio_rules.py` (P-041), under the current order (procedure.md):
+- **A2** owns "continue before the shock":
+  - a continue not certainly after the shock → Pass;
+  - only an unresolved continue/resume (its segment overlaps the shock) → Unable to Verify;
+  - continue only certainly after the shock → `wrong_stage`;
+  - none → `missing` only within clear-audio intervals (D-122);
+  - without a shock time → Not evaluable because of R5, naming the command, or `missing` with
+    clear audio (D-121).
+- **A4** owns "continue before stop" (D-027) and "stop before the shock":
+  - stops only certainly after the shock → `after_shock`;
+  - continue only certainly after every stop → `wrong_order`, with or without a shock time (its own
+    evidence);
+  - no continue observed, or only unresolved ones → Not evaluable because of A2, naming the stop;
+  - stop and continue in one segment → Pass, flagged `order_partially_checked`;
+  - in order → Pass, with the stop-to-shock limit unset (timing not checked); an approved number is
+    refused as engine_error.
+- **Command resolution follows D-125 (`rules/context.py`):** a continue/resume phrase is resolved only
+  when its whole segment is certainly before or after the shock, beyond the cross-modal tolerance
+  (1.0 s). Otherwise it stays unresolved.
+  - **Behaviour change:** before, the segment start and the 0.5 s window decided. A segment
+    overlapping the shock could be called "continue", and a command 0.6 s after the shock was
+    resolved to "start"; now it stays unresolved.
+  - Context tests updated (the window cases, plus a new overlapping-segment test). An excluded
+    (low-confidence) command has no metadata; `segment_timed` now allows for that.
+- **Demo config:** A2 and A4 approved. No audio in the scenarios: Unable to Verify, or Not
+  evaluable without a shock; no overall result changed.
+
+### Tests (790 → 815)
+- New `tests/test_rule_engine_a2_a4.py` (25 tests, full `rules.yaml`):
+  - A2 with and without a shock time (resolved resume, overlapping resume, `wrong_stage`, resume
+    after the shock as the restart, missing, low confidence);
+  - A4 (in order, `wrong_order` with and without a shock time, `after_shock`, a tie with the shock,
+    one segment, no continue, only an unresolved resume, missing);
+  - limits; ownership; pending by default.
+- Context: 1 new resolution test.
+
+Results: full suite **815 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-011, P-041), `pathways.md` (P-011, P-041, W-91), `diagrams.md` ((r));
+- `anomalies.md`, `output_contract.md` (`wrong_stage` built; `missing`, `after_shock`, `wrong_order`
+  built for A4; version unchanged), `rules_status.md`;
+- `decisions.md` (D-125 note), `demo_walkthrough.md`, `audio_integration_plan.md` (Increment 22
+  built);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 23 (A5) on Arnikan's "continue".
+
+### Review of Increment 22 (Arnikan, 2026-11-24)
+- **Confirmed:** with no continue observed and the stop certainly after the shock, A4 fails
+  `after_shock` (D-121), not "Not evaluable because of A2". The code already did this; a test now
+  pins it.
+- **Resolution change approved.** Its consequence is recorded in `upstream_requirements.md` and
+  `rules_status.md`: while continue, resume and start are merged into one detected command, a
+  restart said within about 1.0 s of the shock is unresolved, so R7/A6 gives Unable to Verify even
+  when correct. "A separate start command" and "word timestamps" are now the top-priority requests
+  to Sanjeevan.
+- **Results:** full suite **816 tests run, all pass, 1 skipped**; the docs test passes; the demo
+  matches all seven expected results; the pipeline command exits with 0.
+

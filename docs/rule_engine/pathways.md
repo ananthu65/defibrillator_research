@@ -206,9 +206,9 @@ or anything else, and there is no fallback setting (D-115).
 | Condition | Outcome | Flags |
 |---|---|---|
 | No shock time | Unresolved | `no_shock_time` |
-| Within 0.5 s of the shock | Unresolved | `command_near_shock` |
-| Before the shock | "Continue compressions" | — |
-| After the shock | "Start compressions" | — |
+| The command's segment not certainly before or after the shock (within 1.0 s, the cross-modal tolerance, for an audio command; a segment overlapping the shock included, D-125) | Unresolved | `command_near_shock` |
+| The whole segment certainly before the shock | "Continue compressions" | — |
+| The whole segment certainly after the shock | "Start compressions" | — |
 
 #### P-012 Anchor selection (built): which event gives each key time
 | Condition | Outcome | Flags |
@@ -266,6 +266,25 @@ their Whisper segments.
 | No shock time; a command seen | **Not evaluable because of R5**, naming it (D-121) | — |
 | No shock time; no command while the audio was clear throughout the recording | Fail, on the rule's own evidence (D-121) | `missing` |
 | No shock time; otherwise | **Not evaluable because of R5** | — |
+
+#### P-041 A2 continue compressions and A4 stop CPR (built, Increment 22; pending until approved)
+A2 owns "continue before the shock"; A4 owns "continue before stop" (D-027) and "stop before the
+shock" (D-123). Continue/resume phrases are resolved by their segment's position relative to the
+shock (P-011).
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| A2: a continue not certainly after the shock | Pass – Direct | — |
+| A2: only an unresolved continue/resume (its segment overlaps the shock) | Unable to Verify: continue or start can't be told | — |
+| A2: continue only certainly after the shock | Fail | `wrong_stage` |
+| A4: stop only certainly after the shock | Fail | `after_shock` |
+| A4: continue only certainly after every stop (with or without a shock time) | Fail, A4's own evidence (D-027, D-121) | `wrong_order` |
+| A4: stop before the shock, no continue observed or only unresolved ones | **Not evaluable because of A2**, naming the stop | — |
+| A4: stop before the shock, after a continue | Pass – Direct; timing not checked (limit unset) | `timing_not_checked` |
+| A4: stop and continue in one Whisper segment | Pass, not ordered, never a clean Pass | `order_partially_checked` |
+| A2/A4: no command, the audio clear (to the shock; the whole recording without a shock time) | Fail | `missing` |
+| A2/A4: no command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
+| No shock time; a command seen | **Not evaluable because of R5**, naming it | — |
 
 ### Stage: configuration
 
@@ -1251,3 +1270,14 @@ today.
    - with no intervals stated (the audio only analysed) → **Unable to Verify** (D-122).
 4. No shock on the screen, "oxygen away" at 5 s → **A1 Not evaluable because of R5**, naming the
    command.
+
+### W-91 Continue and stop around the shock
+*(Built in Increment 22; P-041.)*
+1. "Continue compressions" at 4 s, "stop" at 8 s, the shock on the screen at 15 s, clear audio →
+   **A2 Pass**, **A4 Pass** (stop-to-shock timing not checked).
+2. "Stop" at 4 s and "continue" at 8 s → **A4 Fail `wrong_order`**; A2 still passes (D-027).
+3. A "resume compressions" segment 14–16 s, overlapping the shock at 15 s → unresolved (D-125):
+   **A2 Unable to Verify**. A stop at 8 s with only that resume → **A4 Not evaluable because of A2**.
+4. "Stop compressions, continue" in one segment → **A4 Pass, flagged `order_partially_checked`**.
+5. No shock on the screen: stop at 4 s and continue at 8 s → still **A4 Fail `wrong_order`**: the
+   order needs no shock time (D-121).

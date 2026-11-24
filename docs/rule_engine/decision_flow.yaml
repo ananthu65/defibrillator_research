@@ -579,18 +579,18 @@ decision_points:
       - condition: No shock time (no shock, or multiple shocks)
         outcome: Unresolved
         flags: [no_shock_time]
-      - condition: Within simultaneous_window_seconds of the shock time
+      - condition: The command's segment not certainly before or after the shock (within cross_modal_tolerance_seconds of it for an audio event, simultaneous_window_seconds otherwise; a segment overlapping the shock included, D-125)
         outcome: Unresolved
         flags: [command_near_shock]
-      - condition: Before the shock
+      - condition: The whole segment certainly before the shock
         outcome: continue_compressions_command
         next: P-012
-      - condition: After the shock
+      - condition: The whole segment certainly after the shock
         outcome: start_compressions_command
         next: P-012
-    config: [vocabulary.yaml resolve_by_shock, engine.yaml simultaneous_window_seconds]
-    code: rules/context.py (_resolve)
-    decisions: [D-041, D-017, D-115]
+    config: [vocabulary.yaml resolve_by_shock, engine.yaml cross_modal_tolerance_seconds, engine.yaml simultaneous_window_seconds]
+    code: rules/context.py (_resolve), rules/checks.py (time_bounds)
+    decisions: [D-041, D-017, D-115, D-125]
     assumptions: [A-010]
     open_questions: [OQ-009]
 
@@ -1216,6 +1216,57 @@ decision_points:
     decisions: [D-062, D-093, D-103, D-119, D-121, D-122, D-123, D-125]
     assumptions: []
     open_questions: [OQ-009, OQ-010, OQ-016, OQ-068]
+
+  - id: P-041
+    name: A2 continue compressions and A4 stop CPR
+    stage: rule
+    status: built
+    decides: A2's and A4's results (Increment 22); each runs only when approved in rules.yaml. A2 owns continue before the shock; A4 owns continue before stop (D-027) and stop before the shock (D-123). Continue/resume phrases are resolved by position relative to the shock (P-011)
+    inputs: [continue_compressions_command (unambiguous, or a resume phrase resolved before the shock), unresolved continue/resume commands, stop_compressions_command, shock anchor (the screen only), the audio region's clear-audio intervals (D-122), rules.yaml stop_to_shock_seconds]
+    branches:
+      - condition: A2, shock time; a continue command not certainly after the shock
+        outcome: Pass – Direct
+      - condition: A2, shock time; no such command but an unresolved continue/resume command (its segment overlaps the shock)
+        outcome: Unable to Verify - continue or start can't be told (D-125)
+      - condition: A2, shock time; continue commands only certainly after the shock
+        outcome: Fail wrong_stage
+        failure_codes: [wrong_stage]
+      - condition: A2 or A4, shock time; no command, the audio clear from the start to the shock
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: A2 or A4, shock time; no command, low confidence or the audio not clear throughout
+        outcome: Unable to Verify, never Fail (D-010, D-122)
+        flags: [low_confidence_evidence]
+      - condition: A4, shock time; stop commands only certainly after the shock
+        outcome: Fail after_shock
+        failure_codes: [after_shock]
+      - condition: A4; continue commands only certainly after every stop (with or without a shock time)
+        outcome: Fail wrong_order - A4's own evidence, no shock time needed (D-027, D-121)
+        failure_codes: [wrong_order]
+      - condition: A4, shock time; a stop before the shock but no continue observed, or only unresolved continue/resume commands
+        outcome: Not evaluable because of A2, naming the stop as the part still checked (D-121)
+        next: P-020
+      - condition: A4, shock time; a stop before the shock and a continue not certainly after it
+        outcome: Pass – Direct; the stop-to-shock limit is unset, so timing not checked (D-062); an approved no limit passes fully (D-103); an approved number is refused as engine_error
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: A4; the stop and the continue in one Whisper segment
+        outcome: Pass, but not ordered - flagged, never a clean Pass (D-125)
+        flags: [order_partially_checked]
+      - condition: No shock time; a command seen (A2 - continue or an unresolved continue/resume; A4 - a stop in order)
+        outcome: Not evaluable because of R5, naming the command (D-121)
+        next: P-020
+      - condition: No shock time; no command while the audio was clear throughout the recording
+        outcome: Fail missing (D-121)
+        failure_codes: [missing]
+      - condition: No shock time; otherwise
+        outcome: Not evaluable because of R5
+        next: P-020
+    config: [configs/rules.yaml timing_limits.stop_to_shock_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
+    code: rules/audio_rules.py (continue_compressions, stop_compressions, _stop_order, _possibly)
+    decisions: [D-027, D-062, D-103, D-119, D-121, D-122, D-123, D-125]
+    assumptions: []
+    open_questions: [OQ-009, OQ-010, OQ-016, OQ-068, OQ-076]
 
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039

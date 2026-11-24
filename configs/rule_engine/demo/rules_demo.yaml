@@ -70,9 +70,9 @@ rules:
   # A1 and A3: any time limit (how long before the shock) is for the supervisor; the answer may be
   # "no limit" (D-103). Their records are oxygen_away_before_shock_seconds and stand_clear_before_shock_seconds.
   - {id: A1, title: Oxygen away, status: approved, implementation: null, parameters: {}}
-  - {id: A2, title: Continue compressions, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A2, title: Continue compressions, status: approved, implementation: null, parameters: {}}
   - {id: A3, title: All stand clear, status: approved, implementation: null, parameters: {}}
-  - {id: A4, title: Stop compressions, status: pending, enabled: false, implementation: null, parameters: {}}
+  - {id: A4, title: Stop compressions, status: approved, implementation: null, parameters: {}}
   - {id: A5, title: Shock command, status: pending, enabled: false, implementation: null, parameters: {}}
   - {id: R7, title: Compressions restarted promptly after shock, status: pending, enabled: false, implementation: null, parameters: {}}
   - {id: A6, title: Start or resume compressions promptly, same_as: R7, status: pending, enabled: false}

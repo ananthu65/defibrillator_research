@@ -166,6 +166,11 @@ decision points (P) in [decision_flow.yaml](decision_flow.yaml) and [pathways.md
   - **Six requests to Sanjeevan** are in `upstream_requirements.md`. The top priority is the
     missing commands (stop, shock command, start, unambiguous continue); until they are detected,
     A4, A5, A8 and R7/A6 give Unable to Verify.
+- **Applied to command resolution (Increment 22, 2026-11-24):** a continue/resume phrase is resolved by
+  its whole segment: continue only when the segment is certainly before the shock, start only when
+  certainly after, beyond the cross-modal tolerance. Otherwise it stays unresolved (P-011). Before, the
+  segment's start time and the 0.5 s window decided, so a segment overlapping the shock could be
+  resolved wrongly.
 - **Affects:** every audio rule, S1; the audio input path. **Related:** D-120 to D-124.
 
 ### D-126 S1 owns only relations no other relation implies

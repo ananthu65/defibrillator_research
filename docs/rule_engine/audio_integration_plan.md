@@ -286,7 +286,7 @@ adapter is only a fallback.
 | 19 | **[2026-11-09] deferred, not built (D-124, D-125).** Transcript command-recognition adapter (input `TranscriptSegment`), only if the input format changes | `rules/adapters/transcript.py`, `command_phrases.yaml` | skipped for command events; exact, fuzzy and near matches; **single-word phrases exact only** ("shocked" and "charge" don't match "shock" and "discharge"); strict and lenient; ambiguous phrases; word and segment times; unrecognised speech kept, written only under `data/`; low confidence | the phrase list, provisional |
 | 20 | **Built 2026-11-09.** Procedure-order config and loader | `procedure_order.yaml`, `rules/procedure.py`, `rules/config.py` | a cycle, an unknown step, two owners, unknown pairs not checked | — |
 | 21 | **Built 2026-11-10.** A1, A3 | `audio_rules.py`, `rules.yaml` | present/missing × shock/no shock × audio clear/unknown/not run | — |
-| 22 | A2, A4 | same | stage; stop before continue; continue missing | A4 limit (null is fine) |
+| 22 | **Built 2026-11-24.** A2, A4 | same | stage; stop before continue; continue missing | A4 limit (null is fine) |
 | 23 | A5 | same | presence; R5 unaffected | A5 tolerance (null is fine) |
 | 24 | R7/A6 | same | `before_shock`, `too_late`, an unresolved resume command, two IDs | R7 limit (null is fine) |
 | 25 | A8, with its end event as a config value (start or shock, OQ-076) | same, `rules.yaml` parameters | 4.9, 5.0 and 5.1 s; stop or restart missing; both end events | the approval date; the end event |

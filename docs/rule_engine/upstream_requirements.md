@@ -183,12 +183,18 @@ provisional** until the medical-faculty supervisor confirms them.
 ### Requests from the rule engine (2026-11-09, D-125)
 The command events from `detect_commands` are the rule engine's audio input (D-125; please confirm
 it is final, OQ-067). The phrase list in `configs/pipeline.yaml` is the single list (OQ-069).
-1. **Top priority: detect the missing commands:** stop compressions, the shock command, start
-   compressions after the shock, and an unambiguous continue before it (OQ-009). Until they are
-   detected, **A4, A5, A8 and R7/A6 give Unable to Verify**.
-2. **Word timestamps** (or the command's own start time) in the command events. Today each event
-   carries its Whisper segment's start and end, so the engine compares segment intervals and can't
-   order two commands said in one segment.
+1. **Top priority: a separate start command, and word timestamps** (updated 2026-11-24).
+   - **Why:** today "continue", "resume" and "start" are merged into `resume_compressions_command`,
+     and each event carries its Whisper segment. The engine resolves such a command only when its
+     whole segment is certainly before or after the shock, beyond the 1.0 s cross-modal tolerance
+     (D-125). So a restart said within about that tolerance of the shock stays unresolved, and
+     **R7/A6 gives Unable to Verify even when the learner was correct**.
+   - **Asked:** emit `start_compressions_command` for start phrases (and `continue_compressions_command`
+     for an unambiguous continue), and the command's own start time from word timestamps
+     (faster-whisper `word_timestamps=True`). That also lets the engine order two commands said in
+     one segment.
+2. **Detect the other missing commands:** stop compressions and the shock command (OQ-009). Until
+   they are detected, **A4, A5 and A8 give Unable to Verify**.
 3. **Clear-audio intervals** (OQ-068): details below.
 4. **Single-word phrases** (such as "shock", "discharge"): match whole words only, with a guard
    against phrases such as "no shock" or "shock advised".

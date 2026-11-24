@@ -10,6 +10,7 @@ time. A paddle removal is never taken as evidence of a shock or of its time.
 Event time rule: all times are event `start` times (see docs/rule_engine/anomalies.md).
 """
 from dataclasses import dataclass, field, replace
+from rules.checks import time_bounds
 from rules.coverage import Coverage, LOW_CONFIDENCE_FLAG, MissingOutcome
 from rules.paddle_timing import APICAL, PADDLES, STERNAL, other, paddle_timing
 from rules.prepare import SHOCK_EVENT
@@ -123,7 +124,7 @@ class ProcedureContext:
         resolution = self.coverage.config.vocabulary.resolution(excluded.source, excluded.event_name)
         if resolution is None or event_name not in resolution:
             return False
-        resolved, _ = _resolve(resolution, excluded.start, self.shock, self._window)
+        resolved, _ = _resolve(resolution, excluded, self.shock, self.config)
         return resolved in (None, event_name)  # unresolvable: it could have been either
 
     @property
@@ -145,7 +146,7 @@ def build_context(prepared, config, header=None):
         if resolution is None or event.event_name in config.vocabulary.events:
             events.append(event)
             continue
-        resolved, flags = _resolve(resolution, event.start, shock, window)
+        resolved, flags = _resolve(resolution, event, shock, config)
         resolutions.append(CommandResolution(event.event_id, event.event_name, event.start, resolved, flags))
         if resolved is None:
             events.append(event)
@@ -243,14 +244,25 @@ def _shock_anchor(prepared):
                   reason="no shock seen on the screen; the shock time is never inferred (D-093)")
 
 
-def _resolve(resolution, time, shock, window):
-    """(canonical name or None, flags) for an ambiguous command at `time`."""
+def _resolve(resolution, event, shock, config):
+    """(canonical name or None, flags) for an ambiguous command, by its position relative to the shock.
+
+    D-125: a command event carries its Whisper segment, so it may lie anywhere in it. It is resolved only
+    when the whole segment is certainly before (or after) the shock on the screen, beyond the window:
+    cross_modal_tolerance_seconds for an audio event against the screen, else simultaneous_window_seconds.
+    Otherwise it stays unresolved (command_near_shock): never guessed.
+    """
     if not shock.present:
         return None, (NO_SHOCK_TIME,)
-    if abs(time - shock.time) <= window:
-        return None, (COMMAND_NEAR_SHOCK,)
+    window = config.engine.value("cross_modal_tolerance_seconds" if event.source == "audio"
+                                 else "simultaneous_window_seconds")
+    first, last = time_bounds(event)
     before, after = resolution
-    return (before if time < shock.time else after), ()
+    if last < shock.time - window:
+        return before, ()
+    if first > shock.time + window:
+        return after, ()
+    return None, (COMMAND_NEAR_SHOCK,)
 
 
 def _start_anchor(events, shock, prepared, resolutions=()):

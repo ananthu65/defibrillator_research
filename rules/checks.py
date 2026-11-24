@@ -183,7 +183,8 @@ def segment_timed(event):
     """An audio command event carries its Whisper segment's start and end (D-125): the command itself lies
     somewhere in it. Word-timed events (metadata time_basis: word) and all video or annotation events are
     at their start."""
-    return event.source == "audio" and event.metadata.get("time_basis") != "word"
+    metadata = getattr(event, "metadata", None) or {}   # an excluded (low-confidence) event has no metadata
+    return event.source == "audio" and metadata.get("time_basis") != "word"
 
 
 def time_bounds(event):

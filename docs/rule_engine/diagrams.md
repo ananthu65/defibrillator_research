@@ -492,3 +492,30 @@ flowchart TD
     class R1,R2A,PLACE,R2B,R3,R4,R5,R6 video
     class A5 unknown
 ```
+
+## (r) A2 continue and A4 stop (P-041, built in Increment 22; pending until approved)
+
+A2 owns "continue before the shock"; A4 owns "continue before stop" and "stop before the shock".
+Commands are Whisper segments (D-125).
+
+```mermaid
+flowchart TD
+    subgraph A2["A2 continue compressions"]
+        C0{"Shock time?"} -->|yes| C1{"A continue not certainly<br/>after the shock?"}
+        C1 -->|yes| CP["Pass"]
+        C1 -->|"no; an unresolved resume<br/>overlaps the shock"| CU["Unable to Verify<br/>(continue or start?)"]
+        C1 -->|"no; continue only after"| CF["Fail wrong_stage"]
+        C1 -->|no command| CM{"Audio clear to<br/>the shock?"}
+        CM -->|yes| CF2["Fail missing"]
+        CM -->|no| CU2["Unable to Verify"]
+        C0 -->|no| CN["Not evaluable because of R5<br/>(or Fail missing with clear audio)"]
+    end
+    subgraph A4["A4 stop compressions"]
+        S0{"A stop not certainly<br/>after the shock?"} -->|"no; stops only after"| SF1["Fail after_shock"]
+        S0 -->|yes| S1{"A continue not certainly<br/>after the stop?"}
+        S1 -->|yes| SP["Pass<br/>timing not checked"]
+        S1 -->|"one segment"| SPP["Pass, not ordered<br/>order_partially_checked"]
+        S1 -->|"continues only after"| SF2["Fail wrong_order (D-027)"]
+        S1 -->|"no continue, or only unresolved"| SN["Not evaluable because of A2"]
+    end
+```

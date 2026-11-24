@@ -112,7 +112,9 @@ class CommandResolution(unittest.TestCase):
         self.assertEqual(resolved.metadata["shock_time"], 30)
 
     def test_command_within_the_window_of_the_shock_is_left_unresolved(self):
-        for t in (29.5, 30.0, 30.4):
+        """D-125: the 1 s segment [t, t + 1] must be certainly before or after the shock (30 s), beyond the
+        cross-modal tolerance (1.0 s)."""
+        for t in (28.5, 29.5, 30.0, 30.4, 30.9):
             with self.subTest(t=t):
                 ctx = context([SHOCK, cmd("resume_compressions_command", t, "r")])
                 resolution = self.resolution(ctx, "r")
@@ -122,8 +124,15 @@ class CommandResolution(unittest.TestCase):
                 self.assertEqual(ctx.named("start_compressions_command"), [])
 
     def test_command_just_outside_the_window_is_resolved(self):
-        ctx = context([SHOCK, cmd("resume_compressions_command", 30.6, "r")])
+        ctx = context([SHOCK, cmd("resume_compressions_command", 31.1, "r")])
         self.assertEqual(self.resolution(ctx, "r").resolved_to, "start_compressions_command")
+        ctx = context([SHOCK, cmd("resume_compressions_command", 27.9, "c")])   # its segment ends at 28.9 s
+        self.assertEqual(self.resolution(ctx, "c").resolved_to, "continue_compressions_command")
+
+    def test_a_segment_overlapping_the_shock_is_left_unresolved(self):
+        """D-125: a segment 26-31 s starts well before the shock but may be after it."""
+        long = ev("resume_compressions_command", 26, "audio", 0.9, "r", end=31)
+        self.assertIsNone(self.resolution(context([SHOCK, long]), "r").resolved_to)
 
     def test_no_shock_leaves_commands_unresolved_and_flagged(self):
         ctx = context([cmd("resume_compressions_command", 10, "r")])

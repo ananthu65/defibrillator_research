@@ -217,9 +217,9 @@ each rule is built. Per-rule status is in [rules_status.md](rules_status.md).
 | R5 Shock confirmed on screen (**built**, Increment 13, P-033; reported pending until approved) | `missing` (no shock while the screen was visible throughout paddles firmly on chest → paddles removed, D-101), `wrong_order` (shock before a preceding step, once those are set, D-100) |
 | R6 Paddles removed after shock (**built**, Increment 14, P-034; reported pending until approved) | `removed_before_shock` (a removal more than the removal-before-screen tolerance before the shock, D-105, or, past the gate, a derived placement ended by a real exit before it, D-104), `missing` (no removal while both placement zones were visible from the shock to the end of the recording, A-022), `too_late` (only once an approved removal time limit is exceeded; the limit is unset now) |
 | A1 Oxygen away (**built**, Increment 21, P-040; reported pending until approved) | `missing` (no command while the audio was clear: before the shock, or in the whole recording without a shock time), `after_shock` (said only certainly after the shock on the screen) |
-| A2 Continue compressions | `missing`, `wrong_stage` |
+| A2 Continue compressions (**built**, Increment 22, P-041; reported pending until approved) | `missing`, `wrong_stage` (continue said only certainly after the shock on the screen) |
 | A3 All stand clear (**built**, Increment 21, P-040; reported pending until approved) | `missing`, `after_shock` (as A1) |
-| A4 Stop compressions | `missing`, `after_shock`, `wrong_order` |
+| A4 Stop compressions (**built**, Increment 22, P-041; reported pending until approved) | `missing`, `after_shock`, `wrong_order` (stop before every continue, D-027) |
 | A5 Shock command | `missing` |
 | R7 / A6 Restart compressions promptly | `missing`, `before_shock`, `too_late` |
 | A7 Command sequence | `wrong_order` (a missing command is "not evaluable because of Ax", D-027) |
