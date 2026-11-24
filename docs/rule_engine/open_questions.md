@@ -335,7 +335,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Old no.:** Brief §9 · **Owner:** team · **Also involves:** supervisor (the checklist mirrors
   the faculty's evaluation rubric) · **Raised:** 2026-10-10 · **Status:** open
 - **Question:** What does the evaluator checklist look like, and which rules feed each item?
-- **Affects:** P-018; Increment 25.
+- **Affects:** P-018; the evaluator checklist output (planned, not built).
 - **Interim behaviour:** A one-item-per-rule placeholder mapping (planned).
 
 ### OQ-014 Approval of the A8 5-second limit — *answered*
@@ -392,7 +392,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 - **Question:** should the overall order be a separate checklist item, or map onto existing
   items?
 - **Affects:** S1; the checklist (P-018).
-- **Interim behaviour:** S1 is planned as its own rule, pending.
+- **Interim behaviour:** S1 is built as its own rule (Increment 27, P-046), pending in `rules.yaml` and held back in the demo.
 
 ### OQ-065 The accepted phrases per command
 - **Old no.:** new (2026-10-20) · **Owner:** supervisor · **Also involves:** Sanjeevan, Arnikan
@@ -404,7 +404,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
 
 ### OQ-070 Should charging be a step in the procedure order?
 - **Old no.:** new (2026-11-09) · **Owner:** supervisor · **Also involves:** Sanjeevan, Arnikan ·
-  **Raised:** 2026-11-09 · **Status:** open
+  **Raised:** 2026-11-09 · **Status:** answered
 - **Question:** the proposal places "continue compressions" (A2) "during the preparation or
   charging stage". The audio branch already detects a `charging_sound` event (unused by any rule).
   Should charging be a step in the order (for example, continue before or during charging), and
@@ -714,8 +714,7 @@ Questions the supervisor owns, then questions owned by others that have a clinic
   stays as the default for the observed-everything case.
 
 ### OQ-071 Should S1 own relations already implied by other rules' relations?
-- **Old no.:** new (2026-11-10) · **Owner:** Arnikan · **Raised:** 2026-11-10 · **Status:** open
-  (to settle before Increment 27, S1); **answered**
+- **Old no.:** new (2026-11-10) · **Owner:** Arnikan · **Raised:** 2026-11-10 · **Status:** answered
 - **Question:** with the transitive closure, S1 owns long-range relations that other rules' relations
   already imply. For example, "O₂ away before removal" follows from A1's "O₂ away before the shock"
   and R6's "shock before removal". A late command would then fail both its own rule and S1, for the

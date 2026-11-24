@@ -113,20 +113,27 @@ flowchart TD
     class A5 unknown
 ```
 
-## Open questions
-Every open question for the supervisor, Sanjeevan and Ananth is in one list in
-[supervisor_briefing.md, section 4](supervisor_briefing.md#4-every-open-question-in-one-list). Those
-about the order:
-- **OQ-062:** the supervisor's confirmation of the complete order (it is the lecturer's interim
-  order until then).
-- **OQ-063:** which steps, if any, may swap?
-- **OQ-064:** is the procedure order (S1) its own checklist item?
-- **OQ-072:** is the spoken "charging" compulsory? If yes, a presence rule (A9).
-- **OQ-073:** is the spoken "applying gel" compulsory?
-- **OQ-074:** does the `charging_sound` event count as evidence for charging?
-- **OQ-075:** is the shock command (A5) required, and where does it go among the shocking actions?
-- **OQ-076:** A8 pre-shock pause: stop to start (approved, 5 s), or stop to the shock?
-- **OQ-077:** must oxygen away, stand clear and continue be in exactly this order?
+## Open questions about the procedure
+Each question shows what the engine does until it is answered. Every open question, about the
+procedure or anything else, is in one table in [open_questions_summary.md](open_questions_summary.md).
+
+| Question | Why it is open | Until it is answered |
+|---|---|---|
+| **The shock command (A5), OQ-075:** is a spoken shock command required, and where does it go among the shocking actions? | The lecturer gave none. The proposal puts it after stop (A4 → A5) and before the shock (A5 → R5) | A5 is built and pending, and held back in the demo, so a learner who says none isn't failed. A5 against the shocking actions (steps 7–11) is unknown and unchecked |
+| **"Applying gel", OQ-073:** is it compulsory? | The lecturer said it while applying the gel, so it belongs to the gel phase (step 5) | Optional: when said, its position is checked (by A7 and S1); never reported missing |
+| **"Charging", OQ-072 and OQ-074:** is it compulsory, and does the defibrillator's charging sound count as evidence? | The lecturer said it before the gel phase; the audio branch also detects a charging sound | Optional, as "applying gel"; only the spoken command is the step. If compulsory, a presence rule (A9) would be added |
+| **A8, OQ-076:** is the pre-shock pause stop → start (the approved definition, 5 s) or stop → shock? | In this order the whole shocking process lies between stop and start | Stop → start (`end_event: start` in `rules.yaml`); A8 is built, pending, and held back in the demo. A change is one config value |
+| **The opening commands, OQ-077:** must oxygen away, stand clear and continue be in exactly this order? | One demonstration shows one correct order; the COACHED sequence puts "continue" first | Strict (steps 1 → 2 → 3). If they may swap, they become an interchangeable group in the config |
+| **The complete order, OQ-062:** does the medical supervisor confirm it? (OQ-063: which steps may swap; OQ-064: is S1 its own checklist item?) | The order is the lecturer's interim order, not clinically approved | The interim order is used, marked NOT clinically approved (`approved_by: null`). Only the gel and "applying gel" may swap. S1 is built and held back |
+
+**A8 on a lecturer-like timeline** (synthetic, Increment 25; segment-timed commands judged on the
+shortest and longest possible pause, D-125): stop 10–11 s, paddles taken 11.5 and 12 s, firmly on the
+chest 13 s, shock on the screen 14 s, removal 15 s, start 17–18 s.
+
+| A8 end event | Pause | A8 |
+|---|---|---|
+| start (stop → restart, the approved definition) | 6–8 s | Fail `pre_shock_pause` |
+| shock (stop → the shock on the screen) | 3–4 s | Pass |
 
 ## When the order changes
 Change `procedure_order.yaml` (see [audio_integration_plan.md](audio_integration_plan.md) section 11)

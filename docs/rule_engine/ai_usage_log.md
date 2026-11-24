@@ -140,6 +140,7 @@ falls within Level 3 for this project.*
 | 2026-11-24: Increment 27: built S1 (per-recording relations, minimum misplaced set shared with A7 in order_check.py, one rule per mistake, D-128 windows), added S1 to the catalogue (pending, held back in the demo), updated the rule-count tests and the pipeline reference, wrote the tests and docs; found that OQ-078's example is A7's relation | Specified S1's relations, method and tests; decided OQ-078 |
 | 2026-11-24: implemented D-132 (R1, R2, R6, R8 Passes need the absence window in view; R5 flagged second_shock_not_ruled_out without blocking a Pass), report version 16, tests and docs; recorded D-131 as confirmed | Confirmed D-131 and the OQ-078 correction; decided D-132 and the R5 exception |
 | 2026-11-24: Increment 28: wrote the combined scenario matrix (17 merged scenarios, one rule per mistake), three audio demo scenarios, and rewrote the supervisor briefing (whole engine, design policies, every open question in one list), with the walkthrough, procedure and status docs | Specified the matrix, the demo scenarios and the docs; reviews the result |
+| 2026-11-24: wrote the docs index, the work report, the open questions summary and the procedure's open-questions table, checked every number and status against the code and the latest test run, and fixed four stale register entries | Specified the documents, their audience and sections; reviews them before the merge PR |
 
 ## How I evaluated the AI's work
 

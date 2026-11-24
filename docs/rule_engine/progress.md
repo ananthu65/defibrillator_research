@@ -5651,3 +5651,22 @@ Results: full suite **946 tests run, all pass, 1 skipped**; the docs test passes
 The audio integration plan is complete (Increments 18–28). Waiting on the supervisor's answers and the
 upstream inputs (supervisor_briefing.md, section 4).
 
+## Docs: the work report, the procedure, the open questions summary, the index (2026-11-24)
+
+Increment 28 was committed (`6464ad4`) and pushed. Docs only: no code, config or test changed.
+- **New:** `README.md` (the index of every document, readable overviews and reference registers),
+  `rule_engine_report.md` (the complete work report for the team, 14 sections),
+  `open_questions_summary.md` (the 38 open questions by who must answer, and the answered ones with
+  their decisions).
+- **`procedure.md`:** "Open questions about the procedure" as a table (A5, "applying gel",
+  "charging" and the charging sound, A8 with the lecturer-like table, the opening order, the complete
+  order), each with what the engine does meanwhile.
+- **Inconsistencies found and fixed in the register (`open_questions.md`):** OQ-070's and OQ-071's
+  entries still said "Status: open" although answered (D-127, D-126); OQ-064's interim behaviour still
+  said S1 was planned (built in Increment 27); OQ-036 pointed to "Increment 25" from the old plan
+  numbering (now the A8 increment).
+- **Checked against the code and the latest run:** the 17 rules and their failure codes (read from the
+  rule modules), the statuses (all pending in `rules.yaml`; A5, A8 and S1 held back in the demo), the
+  placeholder values in `engine.yaml`, 946 tests (1 skipped: the charging-sound test, D-048), 10 demo
+  scenarios, report version 16, and every cited D-, OQ- and P- ID.
+
