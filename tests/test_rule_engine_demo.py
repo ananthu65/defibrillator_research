@@ -55,8 +55,11 @@ class DemoConfig(unittest.TestCase):
         self.demo = yaml.safe_load(demo.DEMO_CONFIG.read_text(encoding="utf-8"))
         self.real = yaml.safe_load(CATALOGUE_PATH.read_text(encoding="utf-8"))
 
+    # built rules held back in the demo, with the open question that keeps them out
+    HELD_BACK = {"A5": "OQ-075: whether a shock command is required is open; the lecturer gave none"}
+
     def test_built_rules_approved_and_the_rest_disabled(self):
-        built = set(discover())
+        built = set(discover()) - set(self.HELD_BACK)
         for entry in self.demo["rules"]:
             with self.subTest(entry["id"]):
                 if entry["id"] in built:

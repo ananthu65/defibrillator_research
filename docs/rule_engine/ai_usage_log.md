@@ -128,6 +128,8 @@ falls within Level 3 for this project.*
 | 2026-11-24: recorded OQ-078, the Increment 27 note and scenario 14 | Found that under option B an implied relation across an unseen step is never judged, and proposed per-recording S1 relations from the observed steps |
 | 2026-11-24: Increment 22: built A2 and A4 (ownership per D-123, unresolved commands as neither evidence nor absence, wrong_order without a shock time, one-segment ties flagged), made command resolution use whole segments (D-125), approved both in the demo config, 25 tests on the full rules.yaml, docs | Set the order (procedure.md), D-121/D-122/D-125 and a null A4 limit for the increment |
 | 2026-11-24: confirmed A4's after_shock without a continue (test added), recorded the restart-near-the-shock consequence of the resolution change and reprioritised the requests to Sanjeevan | Approved the resolution change and asked for the case check and the upstream priority |
+| 2026-11-24: Increment 23: built A5 (presence with a cross-modal tie, timing not checked with the tolerance unset, numeric tolerance refused), kept it pending and held back in the demo, a test that R5 is unaffected, 15 tests on the full rules.yaml, docs | Set A5's scope (A5 -> R5 only), kept it pending because of OQ-075, and the null tolerance |
+| 2026-11-24: made a shock command certainly after the shock fail `after_shock`, updated the tests and docs, added the "shock delivered" / "no shock advised" guard upstream | Corrected the plan's treatment of a post-shock command as a timing question: it is an order mistake on A5's own relation |
 
 ## How I evaluated the AI's work
 

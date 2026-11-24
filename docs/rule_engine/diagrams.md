@@ -519,3 +519,18 @@ flowchart TD
         S1 -->|"no continue, or only unresolved"| SN["Not evaluable because of A2"]
     end
 ```
+
+## (s) A5 the verbal shock command (P-042, built in Increment 23; pending, OQ-075)
+
+```mermaid
+flowchart TD
+    S{"Shock time?"} -->|yes| C{"A shock command?"}
+    C -->|"within the cross-modal tie"| P1["Pass, at the shock"]
+    C -->|"before the shock"| P2["Pass<br/>how long before: not checked (tolerance unset)"]
+    C -->|"only after the shock"| F2["Fail after_shock"]
+    C -->|none| M{"Audio clear throughout?"}
+    M -->|yes| F["Fail missing"]
+    M -->|no| U["Unable to Verify"]
+    S -->|no| N["Not evaluable because of R5<br/>(Fail missing with clear audio and no command)"]
+    R5["R5 shock on screen"] -.-|"never affected by A5"| S
+```

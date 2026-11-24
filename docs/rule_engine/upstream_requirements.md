@@ -197,7 +197,9 @@ it is final, OQ-067). The phrase list in `configs/pipeline.yaml` is the single l
    they are detected, **A4, A5 and A8 give Unable to Verify**.
 3. **Clear-audio intervals** (OQ-068): details below.
 4. **Single-word phrases** (such as "shock", "discharge"): match whole words only, with a guard
-   against phrases such as "no shock" or "shock advised".
+   against phrases such as "no shock" or "shock advised". Phrases such as **"shock delivered"** and
+   **"no shock advised"** (often read from or spoken by the defibrillator) must not be detected as the
+   shock command (2026-11-24).
 5. **Unrecognised speech:** keep it for review. It is what learners said, so it is data: under the
    gitignored `data/` folder, never committed.
 6. **Confirm the input format** is final (OQ-067). Strict or lenient phrasing is an open question

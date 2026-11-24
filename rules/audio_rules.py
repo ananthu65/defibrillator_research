@@ -268,3 +268,67 @@ def _missing_without_shock(ctx, rule_id, event_name, what, shock):
                       "(D-122); no shock time is needed to judge this (D-121)", uses=(found,))
     return checks.partly_evaluable(rule_id, shock, "R5", f"{what} not heard, and the audio was not clear throughout "
                                    f"({found.coverage.status}), so whether it was said is unknown too", uses=(found,))
+
+
+# ---- A5: the shock command ----------------------------------------------------------------------------
+
+SHOCK_COMMAND = "shock_command"
+
+
+@rule("A5", requires=(SHOCK_COMMAND, SHOCK), description="The verbal shock command, before or at the shock")
+def shock_command(ctx, definition, results):
+    """A5 (P-042): the verbal shock command. Its result never affects R5: the shock is judged visually (proposal).
+
+    A5 owns only "shock command before or at the shock" (A5 -> R5, D-123). Its place among the shocking actions
+    is unknown (OQ-075), and stop -> shock command is A7's. Whether A5 is required at all is open (OQ-075;
+    the lecturer gave none), so it stays pending.
+    1. With a shock time: a command not certainly after the shock satisfies A5 (any one occurrence): within the
+       cross-modal tie it is "at" the shock -> Pass; before it -> Pass, but how long before is unset
+       (shock_command_tolerance_seconds) -> timing_not_checked; an approved "no limit" passes fully (D-103); an
+       approved number is refused (engine_error), since no failure code is defined for "too early".
+    2. Commands only certainly after the shock -> Fail `after_shock`: an order mistake on A5's own relation, like
+       A1 and A3, not a time-limit question.
+    3. No command -> Fail `missing` only if the audio was clear throughout the recording (D-122); otherwise
+       Unable to Verify. Low confidence is never a Fail.
+    4. Without a shock time (D-121): a command seen -> Not evaluable because of R5, naming it; none while the
+       audio was clear throughout -> Fail `missing`; otherwise Not evaluable because of R5.
+    """
+    commands, shock = ctx.named(SHOCK_COMMAND), ctx.shock
+    if not shock.present:
+        if commands:
+            command = commands[0]
+            return checks.partly_evaluable("A5", shock, "R5", f"shock command said at {command.start:g} s; whether "
+                                           "before or at the shock can't be judged", evidence=(command.event_id,),
+                                           timestamps={SHOCK_COMMAND: command.start})
+        return _missing_without_shock(ctx, "A5", SHOCK_COMMAND, "the shock command", shock)
+    if not commands:
+        found = ctx.missing(SHOCK_COMMAND)
+        if found.outcome == "fail":
+            return failed("A5", "missing", "the shock command not said in the recording, although the audio was clear "
+                          "throughout (D-122)", evidence=(shock.event_id,), uses=(shock, found))
+        reason = ("a command may have been heard with low confidence" if LOW_CONFIDENCE_FLAG in found.flags else
+                  f"the audio was not clear throughout ({found.coverage.status}: {found.coverage.basis})")
+        return unable("A5", f"the shock command not heard, but {reason}", evidence=found.low_confidence_event_ids,
+                      uses=(shock, found))
+    screen = _screen(ctx)
+    ties = [c for c in commands if checks.relation_between(ctx, c, screen) == checks.SIMULTANEOUS]
+    before = [c for c in commands if checks.relation_between(ctx, c, screen) == checks.BEFORE]
+    if ties:
+        command = ties[0]
+        return passed("A5", f"shock command said at {command.start:g} s, at (within the tolerance of) the shock on the "
+                      f"screen at {shock.time:g} s", (command.event_id, shock.event_id), uses=(shock,),
+                      timestamps={SHOCK_COMMAND: command.start, SHOCK: shock.time})
+    if not before:
+        late = commands[0]
+        return failed("A5", "after_shock", f"shock command said only at {late.start:g} s, after the shock on the screen "
+                      f"at {shock.time:g} s", evidence=(late.event_id, shock.event_id), uses=(shock,),
+                      timestamps={SHOCK_COMMAND: late.start, SHOCK: shock.time})
+    limit = ctx.config.limit("shock_command_tolerance_seconds")
+    if limit.value is not None and limit.approved:
+        raise ValueError("A5: an approved shock-command tolerance (how long before the shock) is not implemented; "
+                         "only an approved 'no limit' is (D-103)")
+    check = checks.time_limit(None, limit)
+    command = before[-1]   # the one closest to the shock
+    return passed("A5", f"shock command said at {command.start:g} s, before the shock on the screen at {shock.time:g} s; "
+                  f"how long before: {check.note}", (command.event_id, shock.event_id), uses=(shock, check),
+                  timestamps={SHOCK_COMMAND: command.start, SHOCK: shock.time}, timing_checked=check.checked)

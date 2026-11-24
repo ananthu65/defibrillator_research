@@ -286,6 +286,19 @@ shock (P-011).
 | A2/A4: no command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
 | No shock time; a command seen | **Not evaluable because of R5**, naming it | — |
 
+#### P-042 A5 the verbal shock command (built, Increment 23; pending, held back in the demo, OQ-075)
+A5 owns only "shock command before or at the shock" (D-123). Its result never affects R5.
+
+| Condition | Outcome | Code and flags |
+|---|---|---|
+| Shock time; a command within the cross-modal tie of the shock | Pass – Direct, at the shock | — |
+| Shock time; a command certainly before the shock | Pass – Direct; how long before is not checked (tolerance unset) | `timing_not_checked` |
+| Shock time; commands only certainly after the shock | Fail: an order mistake on A5's own relation | `after_shock` |
+| Shock time; an approved numeric tolerance | engine_error: no failure code is defined for "too early" | — |
+| No command, the audio clear throughout | Fail | `missing` |
+| No command, low confidence or the audio not clear | Unable to Verify (or Not evaluable because of R5 without a shock time) | `low_confidence_evidence` |
+| No shock time; a command seen | **Not evaluable because of R5**, naming it | — |
+
 ### Stage: configuration
 
 #### P-039 Procedure order (built, Increment 20; NOT clinically approved, OQ-062)
@@ -1281,3 +1294,12 @@ today.
 4. "Stop compressions, continue" in one segment → **A4 Pass, flagged `order_partially_checked`**.
 5. No shock on the screen: stop at 4 s and continue at 8 s → still **A4 Fail `wrong_order`**: the
    order needs no shock time (D-121).
+
+### W-92 The shock command, or none
+*(Built in Increment 23; P-042.)*
+1. "Shocking now" in a segment 14–16 s, the shock on the screen at 15 s → **A5 Pass**, at the shock.
+2. "Shock" at 10 s, 5 s before the shock → **A5 Pass**; how long before is not checked (the tolerance
+   is unset). Said only at 20 s, after the shock → **A5 Fail `after_shock`**.
+3. The lecturer's demonstration: no shock command at all, clear audio → A5 would fail `missing`. So
+   A5 stays pending and is held back in the demo until the supervisor answers OQ-075. R5 is the same
+   either way.

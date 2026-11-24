@@ -5135,3 +5135,55 @@ Increment 23 (A5) on Arnikan's "continue".
 - **Results:** full suite **816 tests run, all pass, 1 skipped**; the docs test passes; the demo
   matches all seven expected results; the pipeline command exits with 0.
 
+## Increment 23: A5 the verbal shock command (2026-11-24)
+
+Increment 22 was committed (`777da42`) and pushed. This increment is not committed.
+
+### What was built
+`rules/audio_rules.py` (P-042). A5 owns only "shock command before or at the shock" (A5 → R5).
+Its place among the shocking actions stays unknown (OQ-075), and A4 → A5 stays with A7.
+- **Presence:** with the tolerance unset (`shock_command_tolerance_seconds` null), only presence is
+  judged. A command within the cross-modal tie of the shock is "at" it. Before or after, beyond the
+  tie, it passes with timing not checked. `after_shock` comes only with an approved tolerance; an
+  approved number is refused as engine_error.
+- **Missing:** `missing` only with clear audio throughout (D-122). Without a shock time, Not
+  evaluable because of R5, or `missing` with clear audio (D-121).
+- **Never affects R5:** a test shows R5 is the same with or without a shock command, and when A5
+  fails.
+- **Pending in `rules.yaml` and held back in the demo config** (not approved), so a lecturer-like
+  scenario without a shock command doesn't fail. The demo test lists A5 as held back, with OQ-075.
+
+### Tests (816 → 831)
+New `tests/test_rule_engine_a5.py` (15 tests, full `rules.yaml`):
+- before, at (overlap and tolerance) and after the shock; a command at the shock preferred;
+- missing (clear audio, no intervals, not analysed, partly clear); low confidence; without a shock
+  time;
+- the limits;
+- R5 independence;
+- pending; held back in the demo; ownership.
+
+Results: full suite **831 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.
+
+### Documents updated
+- `decision_flow.yaml` (P-042), `pathways.md` (P-042, W-92), `diagrams.md` ((s));
+- `anomalies.md`, `output_contract.md` (`missing` built for A5; version unchanged), `rules_status.md`;
+- `demo_walkthrough.md`, `audio_integration_plan.md` (Increment 23 built);
+- `progress.md`, `ai_usage_log.md`.
+
+### Next
+Increment 24 (R7/A6) on Arnikan's "continue".
+
+### Review fix (Arnikan, 2026-11-24): A5 after the shock is an order mistake
+- **The fix:** a shock command only certainly after the shock (beyond the cross-modal tie) now fails
+  `after_shock`. That is an order mistake on A5's own relation (A5 → R5), like A1 and A3. The plan
+  had treated it as a timing question.
+- **Unchanged:** only "how long before the shock" depends on `shock_command_tolerance_seconds`
+  (still null, so timing not checked). Any one occurrence before or at the shock still satisfies
+  A5.
+- **Tests:** after the shock → `after_shock`; any occurrence before or at the shock satisfies A5;
+  how long before → timing not checked (the closest command before the shock is used).
+- **Docs:** the plan row, P-042, W-92, diagram (s), the output contract (`after_shock` built for A5),
+  anomalies, rules_status.
+- **Upstream:** "shock delivered" and "no shock advised" must not be detected as the shock command.
+
+- **Results:** full suite **832 tests run, all pass, 1 skipped**; the docs test passes; the demo matches all seven expected results; the pipeline command exits with 0.

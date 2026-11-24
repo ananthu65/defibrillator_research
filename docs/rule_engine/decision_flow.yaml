@@ -1268,6 +1268,43 @@ decision_points:
     assumptions: []
     open_questions: [OQ-009, OQ-010, OQ-016, OQ-068, OQ-076]
 
+  - id: P-042
+    name: A5 the verbal shock command
+    stage: rule
+    status: built
+    decides: A5's result (Increment 23); pending in rules.yaml and held back in the demo, because whether it is required is open (OQ-075). A5 owns only "shock command before or at the shock" (D-123); its result never affects R5 (the shock is judged visually, proposal)
+    inputs: [shock_command (audio, Whisper segment), shock anchor (the screen only), the audio region's clear-audio intervals (D-122), rules.yaml shock_command_tolerance_seconds]
+    branches:
+      - condition: Shock time; a command within the cross-modal tie of the shock (its segment overlapping it, or within cross_modal_tolerance_seconds)
+        outcome: Pass – Direct, at the shock
+      - condition: Shock time; a command certainly before the shock (any one occurrence)
+        outcome: Pass – Direct; how long before the shock is unset (shock_command_tolerance_seconds), so timing not checked; an approved no limit passes fully (D-103); an approved number is refused as engine_error
+        flags: [timing_not_checked]
+        next: P-024
+      - condition: Shock time; commands only certainly after the shock
+        outcome: Fail after_shock - an order mistake on A5's own relation (A5 -> R5), like A1 and A3, not a time-limit question
+        failure_codes: [after_shock]
+      - condition: Shock time; no command, the audio clear throughout the recording
+        outcome: Fail missing
+        failure_codes: [missing]
+      - condition: Shock time; no command, low confidence or the audio not clear throughout
+        outcome: Unable to Verify, never Fail (D-010, D-122)
+        flags: [low_confidence_evidence]
+      - condition: No shock time; a command seen
+        outcome: Not evaluable because of R5, naming it (D-121)
+        next: P-020
+      - condition: No shock time; no command while the audio was clear throughout
+        outcome: Fail missing (D-121)
+        failure_codes: [missing]
+      - condition: No shock time; otherwise
+        outcome: Not evaluable because of R5
+        next: P-020
+    config: [configs/rules.yaml timing_limits.shock_command_tolerance_seconds, engine.yaml cross_modal_tolerance_seconds, engine.yaml coverage_policy (audio region)]
+    code: rules/audio_rules.py (shock_command)
+    decisions: [D-062, D-103, D-121, D-122, D-123, D-125]
+    assumptions: []
+    open_questions: [OQ-009, OQ-010, OQ-016, OQ-068, OQ-075]
+
   # ---- Configuration: the procedure order (Increment 20; S1 and A7 read it from Increments 26-27) ----
   - id: P-039
     name: Procedure order (precedence graph)
